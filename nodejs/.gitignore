@@ -1,6 +1,6 @@
-node_modules
-db_data
 .env
+node_modules
 pnpm-lock.yaml
 yarn.lock
 .vscode
+db_data
