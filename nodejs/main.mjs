@@ -1,11 +1,20 @@
 import dotenv from 'dotenv';
 import ejs from 'ejs';
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT;
+
+// __dirname を ES モジュールで使用できるように設定
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 静的ファイルを提供するためのミドルウェアを設定
+app.use('/theme', express.static(path.join(__dirname, process.env.THEME)));
 
 app.get('/', (req, res) => {
     let result = {
@@ -29,7 +38,7 @@ app.get('/api/*', (req, res) => {
 });
 
 app.get('/admin', (req, res) => {
-    ejs.renderFile('views/admin.ejs', { title: 'Home' }, (err, str) => {
+    ejs.renderFile('views/admin/admin.ejs', { title: 'Home' }, (err, str) => {
         if (err) {
             res.status(500).send(err.message);
         } else {
@@ -39,5 +48,5 @@ app.get('/admin', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+    console.log(`Server is running on http://localhost:${port}/admin`);
 });
