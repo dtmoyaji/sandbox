@@ -14,19 +14,23 @@
             ここにトップバーを入れる
     </div>
     <div id="body">
-        <div id="left">
-            左側のメニュー
+        <div id="left" open="true">
+            <%- include('../controls/projectPane.ejs') %>
         </div>
-        <div id="right">
-            右側のメニュー
-        </div>
-        <div id="center">
+
+        <div id="center" open="true">
             真ん中
         </div>
     </div>
     <div id="footer">
         ここにフッターを入れる
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            bindSidePanel('left');
+            bindCenterPanel('center');
+        });
+    </script>
 </body>
 
 </html>

@@ -1,3 +1,31 @@
 <!-- スタートボタン -->
 <button class="panelButton" id="startButton">スタート</button>
 
+<script>
+    var centerPanel;
+    var sidePanel;
+    var startButton = document.getElementById('startButton');
+
+    function bindSidePanel(id) {
+        sidePanel = document.getElementById(id);
+        console.log(sidePanel);
+        startButton.addEventListener('click', function() {
+            if (sidePanel.getAttribute('open') === 'true') {
+                sidePanel.setAttribute('open', 'false');
+            } else {
+                sidePanel.setAttribute('open', 'true');
+            }
+        });
+    }
+    function bindCenterPanel(id) {
+        centerPanel = document.getElementById(id);
+        console.log(centerPanel);
+        startButton.addEventListener('click', function() {
+            if (centerPanel.getAttribute('open') === 'true') {
+                centerPanel.setAttribute('open', 'false');
+            } else {
+                centerPanel.setAttribute('open', 'true');
+            }
+        });
+    }
+</script>

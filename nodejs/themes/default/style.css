@@ -5,6 +5,7 @@
     --background-color: #ecf0f1;
     --text-color: #2c3e50;
     --header-background-color: #34495e;
+    --header-background-hover-color: #4f6d8b;
     --footer-background-color: #95a5a6;
 }
 
@@ -42,35 +43,48 @@
     color: var(--text-color);
 }
 
-#left{
+#left[open="true"]{
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0;
     width: 20%;
+    min-width: 200px;
     background-color: var(--header-background-color);
     color: var(--background-color);
 }
 
-#right{
+#left[open="false"]{
     position: absolute;
     top: 0;
     bottom: 0;
+    left: 0;
+    width: 0;
+    background-color: var(--header-background-color);
+    color: var(--background-color);
+}
+
+#center[open="true"]{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 80%;
+    max-width: calc(100% - 200px);
     right: 0;
-    width: 20%;
     background-color: var(--background-color);
     color: var(--text-color);
 }
 
-#center{
+#center[open="false"]{
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 20%;
-    right: 20%;
+    width: 100%;
+    right: 0;
     background-color: var(--background-color);
     color: var(--text-color);
 }
+
 
 .panelButton{
     background-color: var(--primary-color);
@@ -93,3 +107,48 @@
 
 }
 
+.sidePanelTitle{
+    padding: 0 5px;
+}
+
+.sidePanelTitle label{
+    font-size: 0.9em;
+    display: inline-block;
+    width: calc(100% - 30px);
+    height: 1.5em;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.sidePanelTitle button{
+    font-size: 0.9em;
+    display: inline-block;
+    right: 0;
+    width: 24px;
+    height: 1.5em;
+    vertical-align: middle;
+    background-color: var(--header-background-color);
+    background-size: cover;
+    border-style: none;
+    text-indent: -9999px; /* テキストを非表示にする */
+}
+
+.sidePanelTitle button[open="true"]{
+    background-image: url("/theme/down.png");
+}
+
+.sidePanelTitle button[open="false"]{
+    background-image: url("/theme/next.png");
+}
+
+.sidePanelTitle button:hover{
+    background-color: var(--header-background-hover-color);
+}
+
+#projectList[open="true"]{
+    visibility: visible;
+}
+
+#projectList[open="false"]{
+    visibility: hidden;
+}
