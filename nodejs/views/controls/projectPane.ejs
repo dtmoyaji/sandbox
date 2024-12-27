@@ -1,11 +1,12 @@
 <div class="sidebarPanel" id="projectView">
-    <div class="sidePanelTitle" >
+    <div class="sidePanelTitle">
         <label>プロジェクト</label>
+        <button class="smallButton" id="newProject" >新規</button>
         <button class="smallButton" id="expandSwitch" open="true">あちょー</button>
     </div>
     <div class="projectList" id="projectList" open="true">
         <div class="projectItem">
-            <label>プロジェクト1</label>
+            <label><a href="/admin?s=project&p=0001">プロジェクト1</a></label>
         </div>
         <div class="projectItem">
             <label>プロジェクト2</label>
@@ -17,19 +18,15 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var projectView = document.getElementById('projectView');
-        var expandSwitch = document.getElementById('expandSwitch');
-        var projectList = document.querySelector('.projectList');
+    document.addEventListener('DOMContentLoaded', () => {
+        const projectList = document.getElementById('projectList');
+        const expandSwitch = document.getElementById('expandSwitch');
 
-        expandSwitch.addEventListener('click', function() {
-            if (projectList.getAttribute('open') === 'true') {
-                projectList.setAttribute('open', 'false');
-                expandSwitch.setAttribute('open', 'false');
-            } else {
-                projectList.setAttribute('open', 'true');
-                expandSwitch.setAttribute('open', 'true');
-            }
+        expandSwitch.addEventListener('click', () => {
+            const isOpen = projectList.getAttribute('open') === 'true';
+            projectList.setAttribute('open', !isOpen);
+            expandSwitch.setAttribute('open', !isOpen); // ボタンのopen属性を制御
+            expandSwitch.textContent = isOpen ? '展開' : '縮小'; // ボタンのテキストを変更
         });
     });
 </script>

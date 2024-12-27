@@ -6,6 +6,9 @@
     --text-color: #2c3e50;
     --header-background-color: #34495e;
     --header-background-hover-color: #4f6d8b;
+    --menu-item-background-color: #16202b;
+    --menu-item-selected-background-color: #2c3e50;
+    --menu-item-hover-background-color: #627d9b;
     --footer-background-color: #95a5a6;
 }
 
@@ -87,7 +90,7 @@
 
 
 .panelButton{
-    background-color: var(--primary-color);
+    background-color: var(--header-background-color);
     color: white;
     border: none;
     padding: 10px 20px;
@@ -108,16 +111,32 @@
 }
 
 .sidePanelTitle{
-    padding: 0 5px;
+    padding: 0 0;
 }
 
 .sidePanelTitle label{
     font-size: 0.9em;
     display: inline-block;
-    width: calc(100% - 30px);
+    width: calc(100% - 60px);
     height: 1.5em;
     vertical-align: middle;
-    text-align: center;
+    padding: 0 1em;
+}
+
+#newProject{
+    width: 24px;
+    height: 24px;
+    background-color: var(--header-background-color);
+    background-image: url("/theme/plus.png");
+    background-size: cover;
+    background-position: 50% 50%;
+    overflow: hidden;
+    text-indent: -9999px; /* テキストを非表示にする */
+    border-style: none;
+}
+
+#newProject:hover{
+    background-color: var(--header-background-hover-color);
 }
 
 .sidePanelTitle button{
@@ -125,7 +144,7 @@
     display: inline-block;
     right: 0;
     width: 24px;
-    height: 1.5em;
+    height: 24px;
     vertical-align: middle;
     background-color: var(--header-background-color);
     background-size: cover;
@@ -152,3 +171,24 @@
 #projectList[open="false"]{
     visibility: hidden;
 }
+
+.menuItem, .projectItem{
+    font-size: 0.9em;
+    padding: 5px 1em;
+    background-color: var(--menu-item-background-color);
+    color: white;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+    width: 100%;
+}
+
+.menuItem:hover, .projectItem:hover{
+    background-color: var(--menu-item-hover-background-color);
+}
+
+.menuItem a, .projectItem a{
+    color: white;
+    text-decoration: none;
+}
+

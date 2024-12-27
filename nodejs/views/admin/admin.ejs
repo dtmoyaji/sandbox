@@ -11,10 +11,12 @@
 <body>
     <div id="top">
         <%- include('../controls/startButton/startButton.ejs') %>
-            ここにトップバーを入れる
     </div>
     <div id="body">
         <div id="left" open="true">
+            <div class="menuItem">
+                <a href="/admin?s=monitor">モニター</a>
+            </div>
             <%- include('../controls/projectPane.ejs') %>
         </div>
 

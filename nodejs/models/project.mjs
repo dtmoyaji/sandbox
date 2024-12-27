@@ -25,7 +25,8 @@ export class Project {
     async newProject(name, description) {
         const key = uuidv4(); // keyにuuidを生成して代入
         const sql = `INSERT INTO ${this.table_name} (key, name, description) VALUES ($1, $2, $3)`;
-        return await this.connection.query(sql, [key, name, description]);
+        await this.connection.query(sql, [key, name, description]);
+        return key;
     }
 
     // プロジェクトを取得するメソッド
@@ -49,6 +50,12 @@ export class Project {
     // 全てのプロジェクトを取得するメソッド
     async getAllProjects() {
         const sql = `SELECT * FROM ${this.table_name} WHERE deleted_at IS NULL`;
+        return await this.connection.query(sql);
+    }
+
+    // 全てのプロジェクトを削除するメソッド
+    async trunacateTable() {
+        const sql = `TRUNCATE TABLE ${this.table_name}`;
         return await this.connection.query(sql);
     }
 

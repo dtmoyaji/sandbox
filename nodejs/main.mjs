@@ -3,6 +3,7 @@ import ejs from 'ejs';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Scheduler, Task } from './controllers/scheduler.mjs';
 
 dotenv.config();
 
@@ -50,3 +51,9 @@ app.get('/admin', (req, res) => {
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}/admin`);
 });
+
+let scheduler = new Scheduler();
+// 毎秒実行
+let task = new Task('simpleClock', '* * * * * *', 'timerStub');
+scheduler.addTask(task);
+scheduler.start();
