@@ -16,7 +16,7 @@ export async function getBindObjects(){
 
 // スクリプトの実行処理
 export async function run() {
-    let response = await parameters.modules.gemini.doPrompt('ハロー');
+    let response = await parameters.modules.gemini.doPrompt('こんにちはございます。');
     let returnValue = {result: 200, response: response};
     return returnValue;
 }

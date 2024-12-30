@@ -1,80 +1,111 @@
-import { v4 as uuidv4 } from "uuid"; // uuidパッケージをインポート
+import { v4 as uuidv4 } from 'uuid'; // uuidパッケージをインポート
 
 // Projectクラスの定義
 export class Project {
     // コンストラクタ
     constructor(connection) {
-        this.table_name = "project"; // テーブル名
-        this.connection = connection; // データベース接続
+        this.connection = connection.knex; // データベース接続
+        this.table_name = 'project'; // テーブル名
+    }
+
+    // 接続を開くメソッド
+    async connect() {
+        try {
+            await this.knex.raw('SELECT 1+1 AS result'); // データベースに接続を確認するためのクエリ
+            console.log('Connected to PostgreSQL database');
+        } catch (err) {
+            console.error('Failed to connect to PostgreSQL database', err);
+        }
+    }
+
+    // 接続を閉じるメソッド
+    async disconnect() {
+        try {
+            await this.knex.destroy(); // データベース接続を閉じる
+            console.log('Disconnected from PostgreSQL database');
+        } catch (err) {
+            console.error('Failed to disconnect from PostgreSQL database', err);
+        }
     }
 
     // テーブルを作成するメソッド
     async createTable() {
-        const sql = `CREATE TABLE IF NOT EXISTS ${this.table_name} (
-            id SERIAL PRIMARY KEY,
-            key VARCHAR(255) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            description TEXT,
-            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-            deleted_at TIMESTAMPTZ DEFAULT NULL
-        )`;
-        return await this.connection.query(sql);
+        try {
+            const exists = await this.connection.schema.hasTable(this.table_name);
+            if (!exists) {
+                await this.connection.schema.createTable(this.table_name, (table) => {
+                    table.increments('id').primary();
+                    table.string('key').notNullable();
+                    table.string('name').notNullable();
+                    table.text('description');
+                    table.timestamp('created_at').defaultTo(this.connection.fn.now());
+                    table.timestamp('deleted_at').nullable();
+                });
+            }
+        } catch (err) {
+            console.error('Create table error', err.stack);
+        }
+    }
+
+    // テーブルを空にするメソッド
+    async truncateTable() {
+        await this.connection(this.table_name)
+            .truncate();
     }
 
     // 新しいプロジェクトを作成するメソッド
     async newProject(name, description) {
-        const key = uuidv4(); // keyにuuidを生成して代入
-        const sql = `INSERT INTO ${this.table_name} (key, name, description) VALUES ($1, $2, $3)`;
-        await this.connection.query(sql, [key, name, description]);
+        const key = uuidv4();
+        await this.connection(this.table_name)
+            .insert({ key, name, description });
         return key;
     }
 
     // プロジェクトを取得するメソッド
     async getProject(key) {
-        const sql = `SELECT * FROM ${this.table_name} WHERE key = $1 AND deleted_at IS NULL`;
-        return await this.connection.query(sql, [key]);
+        return await this.connection(this.table_name)
+            .where({ key, deleted_at: null }).first();
     }
 
     // プロジェクトを更新するメソッド
     async updateProject(key, name, description) {
-        const sql = `UPDATE ${this.table_name} SET name = $2, description = $3 WHERE key = $1 AND deleted_at IS NULL`;
-        return await this.connection.query(sql, [key, name, description]);
+        return await this.connection(this.table_name)
+            .where({ key, deleted_at: null })
+            .update({ name, description });
     }
 
     // プロジェクトを削除するメソッド
     async deleteProject(key) {
-        const sql = `UPDATE ${this.table_name} SET deleted_at = CURRENT_TIMESTAMP WHERE key = $1 AND deleted_at IS NULL`;
-        return await this.connection.query(sql, [key]);
+        return await this.connection(this.table_name)
+            .where({ key })
+            .update({ deleted_at: new Date() });
     }
 
-    // 全てのプロジェクトを取得するメソッド
+    // すべてのプロジェクトを取得するメソッド
     async getAllProjects() {
-        const sql = `SELECT * FROM ${this.table_name} WHERE deleted_at IS NULL`;
-        return await this.connection.query(sql);
-    }
-
-    // 全てのプロジェクトを削除するメソッド
-    async trunacateTable() {
-        const sql = `TRUNCATE TABLE ${this.table_name}`;
-        return await this.connection.query(sql);
+        return await this.connection(this.table_name)
+            .where({ deleted_at: null });
     }
 
     // keyからプロジェクトを取得するメソッド
     async getProjectByKey(key) {
-        const sql = `SELECT * FROM ${this.table_name} WHERE key = $1 AND deleted_at IS NULL`;
-        return await this.connection.query(sql, [key]);
+        return await this.connection(this.table_name)
+            .where({ key, deleted_at: null })
+            .first();
     }
 
     // idからプロジェクトを取得するメソッド
     async getProjectById(id) {
-        const sql = `SELECT * FROM ${this.table_name} WHERE id = $1 AND deleted_at IS NULL`;
-        return await this.connection.query(sql, [id]);
+        return await this.connection(this.table_name)
+            .where({ id, deleted_at: null })
+            .first();
     }
 
     // nameからプロジェクトを取得するメソッド
     async getProjectByName(name) {
-        const sql = `SELECT * FROM ${this.table_name} WHERE name = $1 AND deleted_at IS NULL`;
-        return await this.connection.query(sql, [name]);
+        return await this.connection(this.table_name)
+            .where({ name, deleted_at: null })
+            .first();
     }
-    
+
 }

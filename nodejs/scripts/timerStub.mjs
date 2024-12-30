@@ -20,4 +20,3 @@ export async function run() {
     let returnValue = {result: 200, response: response};
     return returnValue;
 }
-

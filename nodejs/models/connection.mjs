@@ -1,6 +1,5 @@
 import dotenv from 'dotenv'; // dotenvパッケージをインポート
-import pkg from 'pg'; // pgパッケージをインポート
-const { Client } = pkg; // Clientクラスをデフォルトエクスポートから取得
+import knex from 'knex'; // knexパッケージをインポート
 
 dotenv.config(); // .envファイルの内容を読み込む
 
@@ -9,30 +8,22 @@ export class Connection {
     // コンストラクタ
     constructor() {
         this.config = {
-            user: process.env.DB_USER,
-            host: process.env.DB_HOST,
-            database: process.env.DB_DATABASE,
-            password: process.env.DB_PASSWORD,
-            port: process.env.DB_PORT,
+            client: process.env.DB_CLIENT,
+            connection: {
+                user: process.env.DB_USER,
+                host: process.env.DB_HOST,
+                database: process.env.DB_DATABASE,
+                password: process.env.DB_PASSWORD,
+                port: process.env.DB_PORT,
+            },
         }; // 接続設定
-        this.client = new Client(this.config); // クライアントインスタンスを作成
-    }
-
-    // 接続を開くメソッド
-    async connect() {
-        try {
-            await this.client.connect(); // データベースに接続
-            console.log('Connected to PostgreSQL database');
-        } catch (err) {
-            console.error('Connection error', err.stack);
-            throw err; // エラーを再スロー
-        }
+        this.knex = knex(this.config); // knexインスタンスを作成
     }
 
     // クエリを実行するメソッド
     async query(sql, params) {
         try {
-            const res = await this.client.query(sql, params); // クエリを実行
+            const res = await this.knex.raw(sql, params); // クエリを実行
             return res;
         } catch (err) {
             console.error('Query error', err.stack);
@@ -40,14 +31,25 @@ export class Connection {
         }
     }
 
-    // 接続を閉じるメソッド
-    async close() {
+    // 接続を開くメソッド
+    async connect() {
         try {
-            await this.client.end(); // 接続を閉じる
+            await this.knex.raw('SELECT 1+1 AS result'); // データベースに接続を確認するためのクエリ
+            console.log('Connected to PostgreSQL database');
+        } catch (err) {
+            console.error('Failed to connect to PostgreSQL database', err);
+        }
+    }
+
+    // 接続を閉じるメソッド
+    async disconnect() {
+        try {
+            await this.knex.destroy(); // データベース接続を閉じる
             console.log('Disconnected from PostgreSQL database');
         } catch (err) {
-            console.error('Disconnection error', err.stack);
-            throw err; // エラーを再スロー
+            console.error('Failed to disconnect from PostgreSQL database', err);
         }
     }
 }
+
+export default new Connection();

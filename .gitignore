@@ -4,3 +4,4 @@ db_data
 pnpm-lock.yaml
 yarn.lock
 .vscode
+bun.lockb
