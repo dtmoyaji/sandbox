@@ -3,20 +3,27 @@ import ejs from 'ejs';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Scheduler, Task } from './controllers/scheduler.mjs';
+import { project_controller } from './controllers/rest/project_controller.mjs';
 
 dotenv.config();
 
-const app = express();
 const port = process.env.PORT;
 
 // __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const app = express();
+
 // 静的ファイルを提供するためのミドルウェアを設定
 app.use('/theme', express.static(path.join(__dirname, process.env.THEME)));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// プロジェクトのリゾルバを設定
+app.use('/api/projects', project_controller);
+
+// リゾルバ
 app.get('/', (req, res) => {
     let result = {
         "system:": "sandbox",
@@ -88,10 +95,11 @@ app.delete('/api/*', (req, res) => {
 
 // GUIを提供する場合は変数が指定されないケースを想定する。
 app.get(['/admin', '/admin/*'], (req, res) => {
-
     const path = req.params[0] || ''; // パスがない場合は空文字列を使用
     const nameParts = path.split('/');
     const queryParams = req.query;
+
+    //console.log(queryParams);
 
     ejs.renderFile('views/admin/admin.ejs',
         { title: 'Home', path: nameParts, params: queryParams },
@@ -102,15 +110,14 @@ app.get(['/admin', '/admin/*'], (req, res) => {
                 res.send(str);
             }
         });
-
 });
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}/admin`);
 });
 
-let scheduler = new Scheduler();
+//let scheduler = new Scheduler();
 // 毎秒実行
-let task = new Task('simpleClock', '* * * * * *', 'timerStub');
-scheduler.addTask(task);
-scheduler.start();
+//let task = new Task('simpleClock', '* * * * * *', 'timerStub');
+//scheduler.addTask(task);
+//scheduler.start();

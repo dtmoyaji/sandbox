@@ -15,20 +15,32 @@
     <div id="body">
         <div id="left" open="true">
             <div class="menuItem">
-                <a href="/admin?s=monitor">モニター</a>
+                <a href="/admin/monitor">モニター</a>
             </div>
-            <%- include('../controls/projectPane.ejs') %>
+            <%- include('../controls/projects/projectSidePane.ejs') %>
         </div>
 
         <div id="center" open="true">
-            真ん中
+            <%
+                switch(path[0]){
+                    case 'projects':
+            %>
+                        <%- include('../controls/projects/projectPane.ejs') %>
+            <%
+                    break;
+                    default:
+            %>
+                        <%- include('../controls/404.ejs') %>
+            <%
+                }
+            %>
         </div>
     </div>
     <div id="footer">
         ここにフッターを入れる
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             bindSidePanel('left');
             bindCenterPanel('center');
         });

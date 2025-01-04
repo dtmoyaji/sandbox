@@ -1,33 +1,11 @@
 import { v4 as uuidv4 } from 'uuid'; // uuidパッケージをインポート
+import { Table } from './table.mjs';
 
 // Projectクラスの定義
-export class Project {
-    // コンストラクタ
-    constructor(connection) {
-        this.connection = connection.knex; // データベース接続
-        this.table_name = 'project'; // テーブル名
-    }
+export class Project extends Table {
 
-    // 接続を開くメソッド
-    async connect() {
-        try {
-            await this.knex.raw('SELECT 1+1 AS result'); // データベースに接続を確認するためのクエリ
-            console.log('Connected to PostgreSQL database');
-        } catch (err) {
-            console.error('Failed to connect to PostgreSQL database', err);
-        }
-    }
-
-    // 接続を閉じるメソッド
-    async disconnect() {
-        try {
-            await this.knex.destroy(); // データベース接続を閉じる
-            console.log('Disconnected from PostgreSQL database');
-        } catch (err) {
-            console.error('Failed to disconnect from PostgreSQL database', err);
-        }
-    }
-
+    table_name = 'project'; // テーブル名
+    
     // テーブルを作成するメソッド
     async createTable() {
         try {
@@ -45,12 +23,6 @@ export class Project {
         } catch (err) {
             console.error('Create table error', err.stack);
         }
-    }
-
-    // テーブルを空にするメソッド
-    async truncateTable() {
-        await this.connection(this.table_name)
-            .truncate();
     }
 
     // 新しいプロジェクトを作成するメソッド

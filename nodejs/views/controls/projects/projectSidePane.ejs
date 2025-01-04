@@ -1,0 +1,62 @@
+<div class="sidebarPanel" id="projectView">
+    <div class="sidePanelTitle">
+        <label>プロジェクト</label>
+        <button class="smallButton" id="newProject"></button>
+        <button class="smallButton" id="expandSwitch" open="true"></button>
+    </div>
+    <div class="projectList" id="projectList" open="true">
+        <div class="projectItem">
+        </div>
+    </div>
+</div>
+
+<script>
+    let clientPath = undefined;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // クライアントのパスを取得して表示
+        clientPath = window.location.pathname;
+
+        const projectList = document.getElementById('projectList');
+        const expandSwitch = document.getElementById('expandSwitch');
+
+        expandSwitch.addEventListener('click', () => {
+            const isOpen = projectList.getAttribute('open') === 'true';
+            projectList.setAttribute('open', !isOpen);
+            expandSwitch.setAttribute('open', !isOpen); // ボタンのopen属性を制御
+            expandSwitch.textContent = isOpen ? '展開' : '縮小'; // ボタンのテキストを変更
+        });
+
+        refreshProjectList();
+    });
+
+    async function refreshProjectList() {
+        let projectData = await fetchProjectList();
+        let projectList = document.getElementById('projectList');
+        projectList.innerHTML = '';
+        projectData.forEach(async project => {
+            let projectItem = document.createElement('div');
+            projectItem.classList.add('projectItem');
+            let projectLabel = document.createElement('label');
+            let projectLink = document.createElement('a');
+            projectLink.href = `/admin/projects/keys/${project.key}`;
+            projectLink.textContent = project.name;
+            projectLabel.appendChild(projectLink);
+            projectItem.appendChild(projectLabel);
+            projectList.appendChild(projectItem);
+        });
+    }
+
+    async function fetchProjectList() {
+        let data = await fetch('/api/projects/all')
+            .then(response => response.json())
+            .then(data => {
+                //console.log(data);
+                return data;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        return data;
+    }
+</script>

@@ -1,0 +1,37 @@
+<div class="project-pane">
+    <div class="project-title" id="project">
+        <h2 class="body-pane-title" id="project-title"></h2>
+    </div>
+    <div class="tabs">
+        <button class="tab-button" id="baseInfo" selected="true">概要</button>
+        <button class="tab-button" id="trigger">トリガー</button>
+        <button class="tab-button" id="steps">ステップ</button>
+        <button class="tab-button" id="notice">通知</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        let path = window.location.pathname;
+        let params = path.split('/');
+        await drawProjectInfo(await fetchProject(params[4]));
+    });
+
+    async function drawProjectInfo(projectInfo){
+        const projectTitle = document.getElementById('project-title');
+        const title = `プロジェクト: ${projectInfo.name}`;
+        projectTitle.textContent = title;
+    }
+
+    async function fetchProject(projectKey) {
+        let data = await fetch('/api/projects/keys/'+projectKey)
+            .then(response => response.json())
+            .then(data => {
+                return data;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        return data;
+    }
+</script>

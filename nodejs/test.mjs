@@ -13,8 +13,8 @@ let key = await proj.newProject('test', 'test project');
 await proj.updateProject(key, 'test2', 'test project2');
 console.log(JSON.stringify(await proj.getAllProjects(), null, 2));
 
-await proj.deleteProject(key);
-console.log(JSON.stringify(await proj.getAllProjects(), null, 2));
+//await proj.deleteProject(key);
+//console.log(JSON.stringify(await proj.getAllProjects(), null, 2));
 
 console.log(JSON.stringify(await fork.listScripts(), null, 2));
 console.log(JSON.stringify(await fork.fork('hello', ['arg1', 'arg2']), null, 2));
