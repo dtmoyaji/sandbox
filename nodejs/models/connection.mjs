@@ -37,8 +37,14 @@ export class Connection {
             await this.knex.raw('SELECT 1+1 AS result'); // データベースに接続を確認するためのクエリ
             console.log('Connected to PostgreSQL database');
         } catch (err) {
-            console.error('Failed to connect to PostgreSQL database', err);
-        }
+            if (err instanceof AggregateError) {
+                for (const individualError of err.errors) {
+                    console.error('Failed to connect to PostgreSQL database', individualError);
+                }
+            } else {
+                console.error('Failed to connect to PostgreSQL database', err);
+            }
+   }
     }
 
     // 接続を閉じるメソッド
