@@ -8,9 +8,9 @@ export class Table {
     // コンストラクタ
     constructor(connection) {
         if (!connection) {
-            this.connection = new Connection();
+            this.knex = new Connection().knex;
         } else {
-            this.connection = connection.knex; // データベース接続
+            this.knex = connection.knex; // データベース接続
         }
     }
 
@@ -41,13 +41,13 @@ export class Table {
 
     // テーブルを空にするメソッド
     async truncateTable() {
-        await this.connection(this.table_name)
+        await this.knex(this.table_name)
             .truncate();
     }
 
     // テーブルを削除するメソッド
     async dropTable() {
-        await this.connection.schema.dropTable(this.table_name);
+        await this.knex.schema.dropTable(this.table_name);
     }
 
 }
