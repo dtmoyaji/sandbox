@@ -8,8 +8,10 @@ export class Table {
     // コンストラクタ
     constructor(connection) {
         if (!connection) {
+            this.knex = new Connection();
             this.knex = new Connection().knex;
         } else {
+            this.knex = connection;
             this.knex = connection.knex; // データベース接続
         }
     }

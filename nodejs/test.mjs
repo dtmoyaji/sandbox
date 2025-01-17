@@ -5,6 +5,7 @@ import * as project from './models/project.mjs';
 
 let conn = new Connection();
 await conn.connect();
+
 let proj = new project.Project(conn);
 await proj.createTable();
 await proj.truncateTable();
