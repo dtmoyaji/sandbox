@@ -1,26 +1,36 @@
-import * as fork from './controllers/fork.mjs';
-import { Scheduler, Task } from './controllers/scheduler.mjs';
 import { Connection } from './models/connection.mjs'; // 正しいパスに修正
-import * as project from './models/project.mjs';
+import { ModelManager } from './models/model-manager.mjs';
 
 let conn = new Connection();
 await conn.connect();
 
-let proj = new project.Project(conn);
+let modelManager = new ModelManager();
+modelManager.reloadModels();
+
+let proj = modelManager.getModel('project');
+console.log(await proj.exists());
+await proj.dropTable();
 await proj.createTable();
 await proj.truncateTable();
 
-let key = await proj.newProject('test', 'test project');
-await proj.updateProject(key, 'test2', 'test project2');
-console.log(JSON.stringify(await proj.getAllProjects(), null, 2));
+let projectTemplate = await proj.getJsonTemplate();
+delete projectTemplate.id;
+projectTemplate.name = 'My Project';
+projectTemplate.description = 'This is a test project';
 
-//await proj.deleteProject(key);
-//console.log(JSON.stringify(await proj.getAllProjects(), null, 2));
+// undefinedの値を削除
+Object.keys(projectTemplate).forEach(key => {
+    if (projectTemplate[key] === undefined) {
+        console.log(`Deleting ${key}`);
+        delete projectTemplate[key];
+    }
+});
 
-console.log(JSON.stringify(await fork.listScripts(), null, 2));
-console.log(JSON.stringify(await fork.fork('hello', ['arg1', 'arg2']), null, 2));
 
-let scheduler = new Scheduler();
-let task = new Task('simpleClock', '* * * * * *', 'simpleClock');
-scheduler.addTask(task);
-scheduler.start();
+await proj.put(projectTemplate);
+
+console.log(JSON.stringify(projectTemplate, null, 2));
+
+await proj.get({name : ['like', 'M%']}).then((projects) => {
+    console.log(JSON.stringify(projects, null, 2));
+});

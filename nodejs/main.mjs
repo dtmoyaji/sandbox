@@ -3,11 +3,13 @@ import ejs from 'ejs';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { project_controller } from './controllers/rest/project_controller.mjs';
+import { ModelController } from './controllers/rest/model-controller.mjs';
+import { ModelManager } from './models/model-manager.mjs';
 
 dotenv.config();
 
 const port = process.env.PORT;
+const modelManager = new ModelManager();
 
 // __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
@@ -21,7 +23,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // プロジェクトのリゾルバを設定
-app.use('/api/projects', project_controller);
+app.use('/api/models', ModelController); 
 
 // リゾルバ
 app.get('/', (req, res) => {
@@ -113,7 +115,7 @@ app.get(['/admin', '/admin/*'], (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}/admin`);
+    console.log(`Server is running on http://localhost:${port}/api/models/project?name=like|My%&created_at=%3E=|%272024-01-01%27`);
 });
 
 //let scheduler = new Scheduler();

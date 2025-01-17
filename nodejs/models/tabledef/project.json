@@ -1,0 +1,30 @@
+{
+    "name": "project",
+    "version" : "0.0.1",
+    "fields": {
+        "id": {
+            "type": "INTEGER",
+            "autoIncrement": true,
+            "primaryKey": true
+        },
+        "name": {
+            "type": "STRING",
+            "notNull": true
+        },
+        "description": {
+            "type": "TEXT"
+        },
+        "created_at": {
+            "type": "DATETIME",
+            "defaultValue": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+            "type": "DATETIME",
+            "defaultValue": "CURRENT_TIMESTAMP"
+        },
+        "deleted_at": {
+            "type": "DATETIME",
+            "nullable": true
+        }
+    }
+}
