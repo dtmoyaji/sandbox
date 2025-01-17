@@ -1,8 +1,8 @@
 {
-    "name": "project",
-    "version" : "0.0.1",
-    "description": "Project table definition",
-    "scope" : "public",
+    "name": "system_property",
+    "version": "0.0.1",
+    "description": "System property table definition",
+    "scope" : "protected",
     "fields": [
         {
             "name": "id",
@@ -11,13 +11,20 @@
             "autoIncrement": true
         },
         {
-            "name": "name",
+            "name": "property_name",
             "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "property_value",
+            "type": "TEXT",
             "notNull": true
         },
         {
             "name": "description",
-            "type": "TEXT"
+            "type": "TEXT",
+            "notNull": true
         },
         {
             "name": "created_at",

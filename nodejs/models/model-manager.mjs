@@ -4,51 +4,30 @@ import { fileURLToPath } from 'url';
 import { Connection } from './connection.mjs'; // Connectionクラスをインポート
 import { Table } from './table.mjs';
 
+
 export class ModelManager {
     constructor() {
         this.__dirname = path.dirname(fileURLToPath(import.meta.url));
         this.Connection = new Connection();
         this.knex = this.Connection.knex;
-        this.models = {};
+        this.models = [];
     }
 
     // モデルを読み込むメソッド
-    reloadModels() {
-        this.models = {};
+    async reloadModels() {
+        this.models = [];
         const tableDefDir = path.join(this.__dirname, 'tabledef');
         let modelFiles = fs.readdirSync(tableDefDir);
         for (let modelFile of modelFiles) {
             let modelDef = JSON.parse(fs.readFileSync(path.join(tableDefDir, modelFile), 'utf8'));
-            let modelName = modelDef.name;
-            let model = new Table();
-            model.createTable(modelDef);
-            this.addModel(modelName, model);
+            let model = new Table(this.Connection);
+            await model.createTable(modelDef);
+            this.models.push(model);
         }
     }
 
-    // モデルを追加するメソッド
-    addModel(modelName, model) {
-        this.models[modelName] = model;
+    async getModel(name) {
+        let matched = this.models.filter(model => model.table_name === name);
+        return matched.length > 0 ? matched[0] : null;
     }
-
-    // モデルを取得するメソッド
-    getModel(modelName) {
-        return this.models[modelName];
-    }
-
-    // モデルを削除するメソッド
-    removeModel(modelName) {
-        delete this.models[modelName];
-    }
-
-    // モデルのリストを取得するメソッド
-    getModelList() {
-        return Object.keys(this.models);
-    }
-
-    // SQLを直接実行するメソッド
-    async raw(sql) {
-        return await this.knex.raw(sql);
-    }
-
 }

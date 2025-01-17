@@ -5,6 +5,10 @@ import { Connection } from './connection.mjs'; // Connectionクラスをイン�
  * テーブルの作成、削除、データの挿入、更新、取得などの機能を提供します。
  */
 export class Table {
+
+    static MODEL_SCOPE_PUBLIC = 'public';
+    static MODEL_SCOPE_PROTECTED = 'protected';
+
     table_name = 'table'; // テーブル名
     connection;
     knex;
@@ -16,6 +20,18 @@ export class Table {
     constructor(connection) {
         this.connection = connection || new Connection();
         this.knex = this.connection.knex;
+    }
+
+    /**
+     * テーブルのセキュリティレベルを取得するメソッド
+     * @returns {string} - テーブルのセキュリティレベル
+     */
+    async getScope() {
+        if (this.tableDefinition.scope) {
+            return this.tableDefinition.scope;
+        } else {
+            return Table.MODEL_SCOPE_UNKNOWN;
+        }
     }
 
     /**
@@ -43,8 +59,9 @@ export class Table {
             case 'INTEGER':
                 column = fieldDef.autoIncrement ? table.increments(fieldName) : table.integer(fieldName);
                 break;
+            case 'VARCHAR':
             case 'STRING':
-                column = table.string(fieldName);
+                column = table.string(fieldName, fieldDef.length || 255);
                 break;
             case 'TEXT':
                 column = table.text(fieldName);
@@ -92,8 +109,8 @@ export class Table {
             }
             if (!await this.exists()) {
                 await this.knex.schema.createTable(this.tableDefinition.name, (table) => {
-                    for (const [fieldName, fieldDef] of Object.entries(this.tableDefinition.fields)) {
-                        this.createColumn(table, fieldName, fieldDef);
+                    for (const fieldDef of this.tableDefinition.fields) {
+                        this.createColumn(table, fieldDef.name, fieldDef);
                     }
                 });
                 console.log(`Table '${this.table_name}' created`);
@@ -101,7 +118,7 @@ export class Table {
                 console.log(`Table '${this.table_name}' already exists`);
             }
         } catch (err) {
-            console.error('Create table error', err.stack);
+            console.error(`Error creating table '${this.table_name}':`, err);
         }
     }
 
@@ -148,9 +165,9 @@ export class Table {
             const exists = await this.exists();
             if (exists) {
                 await this.knex.schema.dropTable(this.table_name);
-                console.log(`Table ${this.table_name} dropped`);
+                console.log(`Table '${this.table_name}' dropped`);
             } else {
-                console.log(`Table ${this.table_name} does not exist`);
+                console.log(`Table '${this.table_name}' does not exist`);
             }
         } catch (err) {
             console.error('Drop table error', err.stack);
@@ -163,7 +180,8 @@ export class Table {
      */
     async getJsonTemplate() {
         let template = {};
-        for (const [fieldName, fieldDef] of Object.entries(this.tableDefinition.fields)) {
+        for (const fieldDef of this.tableDefinition.fields) {
+            const fieldName = fieldDef.name;
             if (fieldDef.defaultValue) {
                 // デフォルト値がCURRENT_TIMESTAMPの場合は現在時刻を設定
                 if (fieldDef.defaultValue === 'CURRENT_TIMESTAMP') {
@@ -191,7 +209,7 @@ export class Table {
      * @param {object} [filter] - データ取得のためのフィルタオブジェクト
      * @returns {Promise<object[]>} - 取得したデータの配列
      */
-    async get(filter) { 
+    async get(filter) {
         try {
             let query = this.knex(this.table_name).where({ deleted_at: null });
             if (filter) {
@@ -199,11 +217,20 @@ export class Table {
                     if (Array.isArray(value) && value.length === 2) {
                         query = query.where(key, value[0], value[1]);
                     } else {
-                        query = query.where(key, value);
+                        const lowerValue = typeof value[0] === 'string' ? value[0].toLowerCase() : value;
+                        if (lowerValue === 'is not null') {
+                            query = query.whereNotNull(key);
+                        } else if (lowerValue === 'is null') {
+                            query = query.whereNull(key);
+                        } else {
+                            query = query.where(key, value);
+                        }
                     }
                 }
             }
-            return await query;
+            let result = await query;
+
+            return result;
         } catch (err) {
             console.error('Get data error', err.stack);
             throw err;
@@ -219,7 +246,7 @@ export class Table {
         try {
             return await this.knex(this.table_name).insert(data);
         } catch (err) {
-            console.error('Insert data error', err.stack);
+            console.error('Insert data error: ', err.stack);
             throw err;
         }
     }

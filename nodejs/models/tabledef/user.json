@@ -1,0 +1,55 @@
+{
+    "name": "user",
+    "version": "0.0.1",
+    "description": "ユーザーを管理するテーブル",
+    "scope" : "protected",
+    "fields": [
+        {
+            "name": "id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "autoIncrement": true
+        },
+        {
+            "name": "user_name",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "user_email",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "user_password",
+            "type": "STRING",
+            "length": 128,
+            "secret": true,
+            "notNull": true
+        },
+        {
+            "name": "secret_key",
+            "type": "STRING",
+            "length": 16,
+            "secret": true,
+            "notNull": true
+        },
+        {
+            "name": "created_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "updated_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "deleted_at",
+            "type": "DATETIME",
+            "nullable": true
+        }
+    ]
+}
