@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+
 dotenv.config();
 
 /**
@@ -82,3 +83,4 @@ export async function hashPassword(password) {
 export async function verifyPassword(password, hash) {
     return await bcrypt.compare(password, hash);
 }
+

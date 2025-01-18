@@ -3,8 +3,8 @@ import ejs from 'ejs';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ModelManager } from './controllers/model-manager.mjs';
 import { ModelController } from './controllers/rest/model-controller.mjs';
-import { ModelManager } from './models/model-manager.mjs';
 
 dotenv.config();
 

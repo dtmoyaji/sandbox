@@ -1,6 +1,5 @@
 import express from 'express';
-import { ModelManager } from '../../models/model-manager.mjs';
-import { verifyJWT } from '../credencial.mjs';
+import { ModelManager } from '../model-manager.mjs';
 
 export const ModelController = express.Router();
 const modelManager = new ModelManager();
@@ -27,7 +26,7 @@ ModelController.get('/*', async (req, res) => {
         if (model.tableDefinition.scope !== 'public') {
             const user = req.headers['x-user'];
             const token = req.headers['x-access-token'];
-            const result = await verifyAccessToken(token, user);
+            const result = await modelManager.verifyAccessToken(token, user);
 
             if (!result.auth) {
                 return res.status(401).send(result);
@@ -54,7 +53,6 @@ ModelController.get('/*', async (req, res) => {
             });
         }
 
-
         res.json(result);
     } catch (err) {
         console.error('Error fetching model data:', err);
@@ -62,41 +60,30 @@ ModelController.get('/*', async (req, res) => {
     }
 });
 
-/**
- * アクセストークンを検証する関数
- * @param {string} token - 検証するアクセストークン
- * @param {string} user - ユーザー名
- * @returns {Promise<object>} 検証結果
- */
-export async function verifyAccessToken(token, user) {
-    if (!token || !user) {
-        return { auth: false, message: 'Authorization required' };
+ModelController.put('/*', async (req, res) => {
+    try {
+        const user = req.headers['x-user'];
+        const token = req.headers['x-access-token'];
+        const verifyResult = await modelManager.verifyAccessToken(token, user);
+
+        if (!verifyResult.auth) {
+            return res.status(401).send(result);
+        }
+
+        const path = req.params[0];
+        const nameParts = path.split('/');
+        const modelName = nameParts[0];
+        const model = await modelManager.getModel(modelName);
+
+        if (!model) {
+            return res.status(404).send({ message: 'Model not found' });
+        }
+
+        const payload = req.body;
+        const result = await model.put(payload);
+        res.json(result);
+    } catch (err) {
+        console.error('Error updating model data:', err);
+        res.status(500).send({ message: 'Internal server error' });
     }
-
-    // ユーザー情報を取得
-    const userTable = await modelManager.getModel('user');
-    const userRecord = await userTable.get({ user_name: user });
-
-    if (userRecord.length === 0) {
-        return { auth: false, message: 'Invalid user' };
-    }
-
-    // トークンを検証
-    const secretKey = userRecord[0].secret_key;
-    const result = await verifyJWT(secretKey, token);
-
-    // トークンが無効な場合、エラーメッセージを返す
-    if (!result.auth) {
-        return { auth: false, message: 'Invalid token' };
-    }
-
-    const password = result.decoded.password;
-
-    // パスワードが一致しない場合、エラーメッセージを返す
-    if (password !== userRecord[0].user_password) {
-        return { auth: false, message: 'Invalid password' };
-    }
-
-    return { auth: true, user: userRecord[0] };
-}
-
+});

@@ -217,6 +217,10 @@ export class Table {
                     if (Array.isArray(value) && value.length === 2) {
                         query = query.where(key, value[0], value[1]);
                     } else {
+                        if (value === null) {
+                            query = query.whereNull(key);
+                            continue;
+                        }
                         const lowerValue = typeof value[0] === 'string' ? value[0].toLowerCase() : value;
                         if (lowerValue === 'is not null') {
                             query = query.whereNotNull(key);
@@ -244,7 +248,21 @@ export class Table {
      */
     async put(data) {
         try {
-            return await this.knex(this.table_name).insert(data);
+
+            await this.knex(this.table_name).insert(data);
+
+            // dataからfilterを作成
+            let filter = {};
+            for (const [key, value] of Object.entries(data)) {
+                filter[key] = value;
+            }
+
+            let record = await this.get(filter);
+            let result = {
+                result: '200',
+                new_id: record[0].id
+            };
+            return result;
         } catch (err) {
             console.error('Insert data error: ', err.stack);
             throw err;

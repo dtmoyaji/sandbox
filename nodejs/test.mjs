@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 import * as credencial from './controllers/credencial.mjs';
+import { ModelManager } from './controllers/model-manager.mjs';
 import { Connection } from './models/connection.mjs';
-import { ModelManager } from './models/model-manager.mjs';
 
 dotenv.config();
 
