@@ -47,9 +47,13 @@ if(user.length === 0) {
     let user = await userTable.get();
     
     userTemplate.access_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password }, userTemplate.secret_key, '1d');
-    userTemplate.refresh_token = credential.generateToken({ user: userTemplate.name, password: userTemplate.password }, userTemplate.secret_key, '90d');
+    userTemplate.refresh_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password }, userTemplate.secret_key, '90d');
     fs.writeFileSync('token.txt', JSON.stringify(userTemplate, null, 2));
-    console.log('token.txt created. this file user info, contains access_token and refresh_token.');
+    console.log('********************************');
+    console.log('token.txt created.');
+    console.log('this file user info,');
+    console.log(' contains access_token and refresh_token.');
+    console.log('********************************');
     let result = await credential.verifyJWT(userTemplate.secret_key, userTemplate.access_token);
 
 }
