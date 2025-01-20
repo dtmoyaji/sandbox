@@ -17,9 +17,8 @@
             "notNull": true
         },
         {
-            "name": "domain_admin_user_id",
-            "type": "INTEGER",
-            "notNull": true
+            "name": "domain_description",
+            "type": "TEXT"
         },
         {
             "name": "created_at",

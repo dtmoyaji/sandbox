@@ -67,7 +67,7 @@ ModelController.put('/*', async (req, res) => {
         const verifyResult = await modelManager.verifyAccessToken(token, user);
 
         if (!verifyResult.auth) {
-            return res.status(401).send(result);
+            return res.status(401).send(verifyResult);
         }
 
         const path = req.params[0];
@@ -84,6 +84,62 @@ ModelController.put('/*', async (req, res) => {
         res.json(result);
     } catch (err) {
         console.error('Error updating model data:', err);
+        res.status(500).send({ message: 'Internal server error' });
+    }
+});
+
+ModelController.post('/*', async (req, res) => {
+    try {
+        const user = req.headers['x-user'];
+        const token = req.headers['x-access-token'];
+        const verifyResult = await modelManager.verifyAccessToken(token, user);
+
+        if (!verifyResult.auth) {
+            return res.status(401).send(verifyResult);
+        }
+
+        const path = req.params[0];
+        const nameParts = path.split('/');
+        const modelName = nameParts[0];
+        const model = await modelManager.getModel(modelName);
+
+        if (!model) {
+            return res.status(404).send({ message: 'Model not found' });
+        }
+
+        const payload = req.body;
+        const result = await model.post(payload);
+        res.json(result);
+    } catch (err) {
+        console.error('Error creating model data:', err);
+        res.status(500).send({ message: 'Internal server error' });
+    }
+});
+
+ModelController.delete('/*', async (req, res) => {
+    try {
+        const user = req.headers['x-user'];
+        const token = req.headers['x-access-token'];
+        const verifyResult = await modelManager.verifyAccessToken(token, user);
+
+        if (!verifyResult.auth) {
+            return res.status(401).send(verifyResult);
+        }
+
+        const path = req.params[0];
+        const nameParts = path.split('/');
+        const modelName = nameParts[0];
+        const model = await modelManager.getModel(modelName);
+
+        if (!model) {
+            return res.status(404).send({ message: 'Model not found' });
+        }
+
+        const payload = req.body;
+        const result = await model.delete(payload);
+        res.json(result);
+    } catch (err) {
+        console.error('Error creating model data:', err);
         res.status(500).send({ message: 'Internal server error' });
     }
 });

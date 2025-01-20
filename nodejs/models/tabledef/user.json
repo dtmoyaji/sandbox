@@ -37,6 +37,22 @@
             "notNull": true
         },
         {
+            "name": "user_domain_id",
+            "type": "INTEGER",
+            "notNull": true,
+            "default": -1,
+            "foreignKey": {
+                "table": "user_domain",
+                "field": "id"
+            }
+        },
+        {
+            "name": "admin_flag",
+            "type": "INTEGER",
+            "default": -1,
+            "notNull": true
+        },
+        {
             "name": "created_at",
             "type": "DATETIME",
             "default": "CURRENT_TIMESTAMP"

@@ -18,21 +18,14 @@ for (const model of modelManager.models) {
     await model.createTable();
 }
 
-let proj = await modelManager.getModel('project');
-console.log(await proj.exists());
-console.log(await proj.getScope());
-
-await proj.createTable();
-await proj.truncateTable();
-
-let projectTemplate = await proj.getJsonTemplate();
-delete projectTemplate.id;
-projectTemplate.name = 'My Project';
-projectTemplate.description = 'This is a test project';
-
-await proj.put(projectTemplate);
-let projects = await proj.get();
-console.log(JSON.stringify(projects, null, 2));
+let userDomain = await modelManager.getModel('user_domain');
+let userDomainTemplate = await userDomain.getJsonTemplate();
+delete userDomainTemplate.id;
+userDomainTemplate.domain_name = 'system';
+userDomainTemplate.domain_description = 'System domain';
+await userDomain.put(userDomainTemplate);
+userDomain = await userDomain.get({ domain_name: 'system' });
+let userDomainId = userDomain[0].id;
 
 let userTable = await modelManager.getModel('user');
 let user = await userTable.get();
@@ -44,6 +37,8 @@ if(user.length === 0) {
     userTemplate.user_password = await credencial.hashPassword(process.env.ADMIN_PASSWORD);
     userTemplate.user_name = process.env.ADMIN_USER;
     userTemplate.secret_key = await credencial.generateSecretKey(userTemplate.user_password);
+    userTemplate.user_domain_id = userDomainId;
+    userTemplate.admin_flag = 1;
 
     await userTable.put(userTemplate);
 

@@ -276,7 +276,25 @@ export class Table {
      */
     async post(data) {
         try {
-            return await this.knex(this.table_name).update(data);
+            if(!await this.hasPrimaryKey(data)) {
+                throw new Error('post data error: primary key not found');
+            }
+
+            // primarykeyを取得
+            let definition = this.tableDefinition.fields;
+            let primarykey = definition.filter((field) => field.primaryKey === true);
+            let where = {};
+            for (let i = 0; i < primarykey.length; i++) {
+                where[primarykey[i].name] = data[primarykey[i].name];
+                delete data[primarykey[i].name];
+            }
+            data.updated_at = new Date();
+            let updatedCount = await this.knex(this.table_name).where(where).update(data);
+            let result = {
+                result: '200',
+                message: `${updatedCount} rows updated.`
+            }
+            return result;
         } catch (err) {
             console.error('Update data error', err.stack);
             throw err;
@@ -289,9 +307,33 @@ export class Table {
      * @returns {Promise<number>} - 削除された行数
      */
     async delete(filter) {
-        return await this.knex(this.table_name).where(filter)
+        if(!await this.hasPrimaryKey(filter)) {
+            throw new Error('delete data error: primary key not found');
+        }
+        let deltedCount = await this.knex(this.table_name).where(filter)
             .update({ deleted_at: new Date() });
+        let result = {
+            result: '200',
+            message: `${deltedCount} rows deleted.`
+        }
+        return result;
     };
+
+    /**
+     * データがprimarykeyを持つか確認するメソッド
+     */
+    async hasPrimaryKey(data) {
+        let definition = this.tableDefinition.fields;
+        let primarykey = definition.filter((field) => field.primaryKey === true);
+        let hasPrimaryKey = false;
+        for (let i = 0; i < primarykey.length; i++) {
+            if (data[primarykey[i].name]) {
+                hasPrimaryKey = true;
+                break;
+            }
+        }
+        return hasPrimaryKey;
+    }
 
     /**
      * 任意のSQLクエリを実行するメソッド
