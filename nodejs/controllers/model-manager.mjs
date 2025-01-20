@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Connection } from '../models/connection.mjs'; // Connectionクラスをインポート
 import { Table } from '../models/table.mjs';
-import { verifyJWT } from './credencial.mjs'; // verifyJWT関数をインポート
+import { verifyJWT } from './credential.mjs'; // verifyJWT関数をインポート
 
 export class ModelManager {
     constructor() {

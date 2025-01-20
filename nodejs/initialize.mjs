@@ -1,6 +1,7 @@
-import dotenv from 'dotenv';
 import fs from 'fs';
-import * as credencial from './controllers/credencial.mjs';
+import * as credential from './controllers/credential.mjs';
+
+import dotenv from 'dotenv';
 import { ModelManager } from './controllers/model-manager.mjs';
 import { Connection } from './models/connection.mjs';
 
@@ -24,6 +25,7 @@ delete userDomainTemplate.id;
 userDomainTemplate.domain_name = 'system';
 userDomainTemplate.domain_description = 'System domain';
 await userDomain.put(userDomainTemplate);
+console.log("System domain created.");
 userDomain = await userDomain.get({ domain_name: 'system' });
 let userDomainId = userDomain[0].id;
 
@@ -34,25 +36,22 @@ if(user.length === 0) {
 
     delete userTemplate.id;
     userTemplate.user_email = process.env.ADMIN_MAIL;
-    userTemplate.user_password = await credencial.hashPassword(process.env.ADMIN_PASSWORD);
+    userTemplate.user_password = await credential.hashPassword(process.env.ADMIN_PASSWORD);
     userTemplate.user_name = process.env.ADMIN_USER;
-    userTemplate.secret_key = await credencial.generateSecretKey(userTemplate.user_password);
+    userTemplate.secret_key = await credential.generateSecretKey(userTemplate.user_password);
     userTemplate.user_domain_id = userDomainId;
     userTemplate.admin_flag = 1;
 
     await userTable.put(userTemplate);
 
     let user = await userTable.get();
-    console.log(JSON.stringify(user, null, 2));
     
-    userTemplate.access_token = credencial.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password }, userTemplate.secret_key, '1d');
-    userTemplate.refresh_token = credencial.generateToken({ user: userTemplate.name, password: userTemplate.password }, userTemplate.secret_key, '90d');
-
+    userTemplate.access_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password }, userTemplate.secret_key, '1d');
+    userTemplate.refresh_token = credential.generateToken({ user: userTemplate.name, password: userTemplate.password }, userTemplate.secret_key, '90d');
     fs.writeFileSync('token.txt', JSON.stringify(userTemplate, null, 2));
-    let result = await credencial.verifyJWT(userTemplate.secret_key, userTemplate.access_token);
-    console.log(JSON.stringify(result, null, 2));
+    console.log('token.txt created. this file user info, contains access_token and refresh_token.');
+    let result = await credential.verifyJWT(userTemplate.secret_key, userTemplate.access_token);
 
 }
-
 
 await conn.disconnect();
