@@ -46,8 +46,8 @@ if(user.length === 0) {
 
     let user = await userTable.get();
     
-    userTemplate.access_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password }, userTemplate.secret_key, '1d');
-    userTemplate.refresh_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password }, userTemplate.secret_key, '90d');
+    userTemplate.access_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password, type: 'access_token' }, userTemplate.secret_key, '1d');
+    userTemplate.refresh_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password, type: 'refresh_token' }, userTemplate.secret_key, '90d');
     fs.writeFileSync('token.txt', JSON.stringify(userTemplate, null, 2));
     console.log('********************************');
     console.log('token.txt created.');

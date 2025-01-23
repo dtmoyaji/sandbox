@@ -1,15 +1,23 @@
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import ejs from 'ejs';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import * as credential from './controllers/credential.mjs';
 import { ModelManager } from './controllers/model-manager.mjs';
-import { ModelController } from './controllers/rest/model-controller.mjs';
+import { createAuthController } from './controllers/rest/auth-controller.mjs';
+import { createModelController } from './controllers/rest/model-controller.mjs';
 
 dotenv.config();
 
 const port = process.env.PORT;
+
 const modelManager = new ModelManager();
+await modelManager.reloadModels();
+
+const modelController = await createModelController(modelManager);
+const authController = await createAuthController(modelManager);
 
 // __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
@@ -21,9 +29,11 @@ const app = express();
 app.use('/theme', express.static(path.join(__dirname, process.env.THEME)));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // プロジェクトのリゾルバを設定
-app.use('/api/models', ModelController); 
+app.use('/api/auth', authController);
+app.use('/api/models', modelController);
 
 // リゾルバ
 app.get('/', (req, res) => {
@@ -114,8 +124,43 @@ app.get(['/admin', '/admin/*'], (req, res) => {
         });
 });
 
+app.get('/login', (req, res) => {
+    ejs.renderFile('views/admin/login.ejs',
+        { title: 'Login' },
+        (err, str) => {
+            if (err) {
+                res.status(500).send(err.message);
+            } else {
+                res.send(str);
+            }
+        });
+});
+
+app.post('/login', async (req, res) => {
+    const user = req.body.username;
+    const password = req.body.password;
+    let userTable = await modelManager.getModel('user');
+    let registerdUser = await userTable.get({ user_name: user });
+    
+    if(registerdUser.length === 0) {
+        res.status(401).send('Invalid user or password');
+    } else {
+        let registerdPassword = registerdUser[0].user_password;
+        if(await credential.verifyPassword(password, registerdPassword)) {
+            let secretKey = registerdUser[0].secret_key;
+            let refreshToken = await credential.generateToken({ user: user, password: registerdPassword, type: 'refresh_token' }, secretKey, '1d');
+            res.cookie('x-user', user, { sameSite: 'Strict' });
+            res.cookie('refreshToken', refreshToken, { sameSite: 'Strict' });
+            // adminページにリダイレクト
+            res.redirect('/admin');
+        } else {
+            res.status(401).send('Invalid user or password');
+        }
+    }
+});
+
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}/api/models/project?name=like|My%&created_at=%3E=|%272024-01-01%27`);
+    console.log(`Server is running on http://localhost:${port}/login`);
 });
 
 //let scheduler = new Scheduler();

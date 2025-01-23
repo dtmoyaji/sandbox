@@ -36,9 +36,10 @@ export class ModelManager {
      * アクセストークンを検証する関数
      * @param {string} token - 検証するアクセストークン
      * @param {string} user - ユーザー名
+     * @param {string} type - トークンの種類
      * @returns {Promise<object>} 検証結果
      */
-    async verifyAccessToken(token, user) {
+    async verifyToken(token, user, type = 'access_token') {
         if (!token || !user) {
             return { auth: false, message: 'Authorization required' };
         }
@@ -57,7 +58,12 @@ export class ModelManager {
 
         // トークンが無効な場合、エラーメッセージを返す
         if (!result.auth) {
-            return { auth: false, message: 'Invalid token' };
+            return result;
+        }
+
+        // タイプの異なるトークン代用は許可しない
+        if (result.decoded.type !== type) {
+            return { auth: false, message: 'Invalid token type' };
         }
 
         const password = result.decoded.password;
