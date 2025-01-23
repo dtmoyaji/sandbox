@@ -141,22 +141,19 @@ app.post('/login', async (req, res) => {
     const password = req.body.password;
     let userTable = await modelManager.getModel('user');
     let registerdUser = await userTable.get({ user_name: user });
-    
-    if(registerdUser.length === 0) {
-        res.status(401).send('Invalid user or password');
-    } else {
+
+    if (registerdUser.length !== 0) {
         let registerdPassword = registerdUser[0].user_password;
-        if(await credential.verifyPassword(password, registerdPassword)) {
+        if (await credential.verifyPassword(password, registerdPassword)) {
             let secretKey = registerdUser[0].secret_key;
             let refreshToken = await credential.generateToken({ user: user, password: registerdPassword, type: 'refresh_token' }, secretKey, '1d');
             res.cookie('x-user', user, { sameSite: 'Strict' });
             res.cookie('refreshToken', refreshToken, { sameSite: 'Strict' });
             // adminページにリダイレクト
             res.redirect('/admin');
-        } else {
-            res.status(401).send('Invalid user or password');
         }
     }
+    res.status(401).send('Invalid user or password');
 });
 
 app.listen(port, () => {
