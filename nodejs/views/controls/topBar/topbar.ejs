@@ -1,0 +1,24 @@
+<div class="topbar">
+  <a class="topbar-user-link">
+    <div id="user-icon" ></div>
+    <span id="topbar-user-name">ユーザー名</span>
+  </a>
+  <button class="logout-button">ログアウト</button>
+</div>
+<script>
+  document.querySelector('.logout-button').addEventListener('click', function() {
+    window.location.href = '/logout';
+  });
+
+  // クッキーからユーザー名を取得して表示
+  document.addEventListener('DOMContentLoaded', function() {
+    const cookie = document.cookie;
+    const cookieArray = cookie.split(';');
+    for (let i = 0; i < cookieArray.length; i++) {
+      const cookieItem = cookieArray[i].split('=');
+      if (cookieItem[0].trim() === 'x-user') {
+        document.getElementById('topbar-user-name').textContent = cookieItem[1];
+      }
+    }
+  });
+</script>

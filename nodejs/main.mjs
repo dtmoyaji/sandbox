@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import * as credential from './controllers/credential.mjs';
 import { ModelManager } from './controllers/model-manager.mjs';
 import { createAuthController } from './controllers/rest/auth-controller.mjs';
-import { createModelController } from './controllers/rest/model-controller.mjs';
+import { createModelController, verifyToken } from './controllers/rest/model-controller.mjs';
 
 dotenv.config();
 
@@ -106,7 +106,15 @@ app.delete('/api/*', (req, res) => {
 });
 
 // GUIを提供する場合は変数が指定されないケースを想定する。
-app.get(['/admin', '/admin/*'], (req, res) => {
+app.get(['/admin', '/admin/*'], async (req, res) => {
+
+    // トークンの検証
+    let tokenCheck = await verifyToken(req, res);
+    if(!tokenCheck.auth) {
+        res.redirect('/login');
+        return;
+    }
+
     const path = req.params[0] || ''; // パスがない場合は空文字列を使用
     const nameParts = path.split('/');
     const queryParams = req.query;

@@ -26,7 +26,7 @@ async function createModelController(manager) {
             }
 
             if (model.tableDefinition.scope !== 'public') {
-                const result = await verfyToken(req, res);
+                const result = await verifyToken(req, res);
                 if (!result.auth) {
                     return res.status(401).send(result);
                 }
@@ -61,7 +61,7 @@ async function createModelController(manager) {
 
     ModelController.put('/*', async (req, res) => {
         try {
-            const verifyResult = await verfyToken(req, res);
+            const verifyResult = await verifyToken(req, res);
 
             if (!verifyResult.auth) {
                 return res.status(401).send(verifyResult);
@@ -87,7 +87,7 @@ async function createModelController(manager) {
 
     ModelController.post('/*', async (req, res) => {
         try {
-            const verifyResult = await verfyToken(req, res);
+            const verifyResult = await verifyToken(req, res);
             if (!verifyResult.auth) {
                 return res.status(401).send(verifyResult);
             }
@@ -112,7 +112,7 @@ async function createModelController(manager) {
 
     ModelController.delete('/*', async (req, res) => {
         try {
-            const verifyResult = await verfyToken(req, res);
+            const verifyResult = await verifyToken(req, res);
 
             if (!verifyResult.auth) {
                 return res.status(401).send(verifyResult);
@@ -145,7 +145,7 @@ async function createModelController(manager) {
  * @param {*} res 
  * @returns {Promise<object>} 検証結果
  */
-async function verfyToken(req, res){
+async function verifyToken(req, res) {
     let user = req.headers['x-user'];
     let token = req.headers['x-access-token'];
     let verfyResult = await modelManager.verifyToken(token, user, 'access_token');
@@ -156,8 +156,12 @@ async function verfyToken(req, res){
         if (token) {
             const refreshResult = await modelManager.verifyToken(token, user, 'access_token');
             if (refreshResult.auth) {
-                const newAccessToken = await credential.generateToken({ user, password: refreshResult.user.user_password, type: 'access_token' }, refreshResult.user.secret_key, '1d');
-                res.cookie('x-access-token', newAccessToken, { sameSite: 'Strict' });
+                if (!res.headersSent) {
+                    const newAccessToken = await credential.generateToken(
+                        { user, password: refreshResult.user.user_password, type: 'access_token' }
+                        , refreshResult.user.secret_key, '1d');
+                    res.cookie('x-access-token', newAccessToken, { sameSite: 'Strict' });
+                }
             }
             return refreshResult
         }
@@ -166,6 +170,7 @@ async function verfyToken(req, res){
 }
 
 export {
-    createModelController
+    createModelController,
+    verifyToken
 };
 

@@ -1,4 +1,13 @@
 {
+	"name": "sandbox",
+	"version": "0.0.1",
+	"description": "A sandbox project for Node.js",
+	"main": "main.mjs",
+	"scripts": {
+		"start": "node main.mjs"
+	},
+	"author": "Takahiro",
+	"license": "ISC",
 	"dependencies": {
 		"@google/generative-ai": "^0.21.0",
 		"bcrypt": "^5.1.1",
