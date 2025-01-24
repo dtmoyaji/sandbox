@@ -337,7 +337,9 @@ export class Table {
     }
 
     /**
-     * 任意のSQLクエリを実行するメソッド
+     * 任意のSQLクエリを実行するメソッド.
+     * 複雑なSQLの発行や、複数のテーブルを結合する場合に使用します.
+     *
      * @param {string} query - 実行するSQLクエリ
      * @param {object} [params] - クエリに渡すパラメータ
      * @returns {Promise<object>} - クエリの実行結果

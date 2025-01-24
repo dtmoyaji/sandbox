@@ -1,0 +1,60 @@
+{
+    "name": "query_template",
+    "version" : "0.0.1",
+    "description": "Query template table definition",
+    "scope" : "protected",
+    "fields": [
+        {
+            "name": "id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "autoIncrement": true
+        },
+        {
+            "name": "user_domain_id",
+            "type": "INTEGER",
+            "default": -1,
+            "notNull": true,
+            "foreignKey": {
+                "table": "user_domain",
+                "field": "id"
+            }
+        },
+        {
+            "name": "name",
+            "type": "STRING",
+            "notNull": true
+        },
+        {
+            "name": "tabledef",
+            "type": "TEXT"
+        },
+        {
+            "name": "query",
+            "type": "TEXT"
+        },
+        {
+            "name": "parameters",
+            "type": "TEXT"
+        },
+        {
+            "name": "description",
+            "type": "TEXT"
+        },
+        {
+            "name": "created_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "updated_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "deleted_at",
+            "type": "DATETIME",
+            "nullable": true
+        }
+    ]
+}
