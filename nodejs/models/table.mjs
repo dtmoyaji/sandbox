@@ -40,7 +40,8 @@ export class Table {
      */
     async exists() {
         try {
-            return await this.knex.schema.hasTable(this.table_name);
+            const result = await this.knex.schema.hasTable(this.table_name);
+            return result;
         } catch (err) {
             console.error('Table exists error', err.stack);
             return false;
@@ -162,7 +163,7 @@ export class Table {
      */
     async dropTable() {
         try {
-            const exists = await this.exists();
+            let exists = await this.exists();
             if (exists) {
                 await this.knex.schema.dropTable(this.table_name);
                 console.log(`Table '${this.table_name}' dropped`);

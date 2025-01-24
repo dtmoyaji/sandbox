@@ -225,3 +225,27 @@
 .tab-button[selected="true"] {
     background-color: var(--primary-color);
 }
+
+.auth-page{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--menu-item-background-color);
+}
+
+.fixed-dialog{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 33%;
+    height: 25%;
+    transform: translate(-50%, -50%);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 5px;
+    padding: 1em;
+    z-index: 100;
+}

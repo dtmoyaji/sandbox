@@ -125,7 +125,7 @@ app.get(['/admin', '/admin/*'], (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-    ejs.renderFile('views/admin/login.ejs',
+    ejs.renderFile('views/auth/login.ejs',
         { title: 'Login' },
         (err, str) => {
             if (err) {
@@ -147,13 +147,30 @@ app.post('/login', async (req, res) => {
         if (await credential.verifyPassword(password, registerdPassword)) {
             let secretKey = registerdUser[0].secret_key;
             let refreshToken = await credential.generateToken({ user: user, password: registerdPassword, type: 'refresh_token' }, secretKey, '1d');
+            let accessToken = await credential.generateToken({ user: user, password: registerdPassword, type: 'access_token'}, secretKey, '1d');
             res.cookie('x-user', user, { sameSite: 'Strict' });
-            res.cookie('refreshToken', refreshToken, { sameSite: 'Strict' });
+            res.cookie('x-access-token', accessToken, { sameSite: 'Strict' });
+            res.cookie('x-refresh-token', refreshToken, { sameSite: 'Strict' });
             // adminページにリダイレクト
-            res.redirect('/admin');
+            return res.redirect('/admin');
         }
     }
-    res.status(401).send('Invalid user or password');
+    return res.status(401).send('Invalid user or password');
+});
+
+app.get('/logout', (req, res) => {
+    ejs.renderFile('views/auth/logout.ejs',
+        { title: 'Logout' },
+        (err, str) => {
+            if (err) {
+                res.status(500).send(err.message);
+            } else {
+                res.cookie('x-user', '', { sameSite: 'Strict' });
+                res.cookie('x-access-token', '', { sameSite: 'Strict' });
+                res.cookie('x-refresh-token', '', { sameSite: 'Strict' });
+                res.send(str);
+            }
+        });
 });
 
 app.listen(port, () => {

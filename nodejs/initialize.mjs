@@ -21,13 +21,14 @@ for (const model of modelManager.models) {
 
 let userDomain = await modelManager.getModel('user_domain');
 let userDomainTemplate = await userDomain.getJsonTemplate();
-delete userDomainTemplate.id;
+delete userDomainTemplate.domain_user_id;
+userDomainTemplate.domain_type = 'system';
 userDomainTemplate.domain_name = 'system';
 userDomainTemplate.domain_description = 'System domain';
 await userDomain.put(userDomainTemplate);
 console.log("System domain created.");
 userDomain = await userDomain.get({ domain_name: 'system' });
-let userDomainId = userDomain[0].id;
+let userDomainId = userDomain[0].user_domain_id;
 
 let userTable = await modelManager.getModel('user');
 let user = await userTable.get();
@@ -51,8 +52,8 @@ if(user.length === 0) {
     fs.writeFileSync('token.txt', JSON.stringify(userTemplate, null, 2));
     console.log('********************************');
     console.log('token.txt created.');
-    console.log('this file user info,');
-    console.log(' contains access_token and refresh_token.');
+    console.log('this file conains admin user info,');
+    console.log('initial access_token and refresh_token.');
     console.log('********************************');
     let result = await credential.verifyJWT(userTemplate.secret_key, userTemplate.access_token);
 

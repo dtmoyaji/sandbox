@@ -5,10 +5,16 @@
     "scope" : "protected",
     "fields": [
         {
-            "name": "id",
+            "name": "user_domain_id",
             "type": "INTEGER",
             "primaryKey": true,
             "autoIncrement": true
+        },
+        {
+            "name": "domain_type",
+            "type": "STRING",
+            "default": "user",
+            "notNull": true
         },
         {
             "name": "domain_name",

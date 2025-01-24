@@ -43,7 +43,7 @@
             "default": -1,
             "foreignKey": {
                 "table": "user_domain",
-                "field": "id"
+                "field": "user_domain_id"
             }
         },
         {

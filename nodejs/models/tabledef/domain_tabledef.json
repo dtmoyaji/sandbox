@@ -1,7 +1,7 @@
 {
-    "name": "project",
+    "name": "domain_tabledef",
     "version" : "0.0.1",
-    "description": "Project table definition",
+    "description": "Domain table definition",
     "scope" : "protected",
     "fields": [
         {
@@ -21,9 +21,18 @@
             }
         },
         {
-            "name": "name",
+            "name": "table_logical_name",
             "type": "STRING",
             "notNull": true
+        },
+        {
+            "name": "table_phisical_name",
+            "type": "STRING",
+            "notNull": true
+        },
+        {
+            "name": "tabledef",
+            "type": "TEXT"
         },
         {
             "name": "description",

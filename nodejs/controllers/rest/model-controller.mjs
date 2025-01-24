@@ -152,12 +152,12 @@ async function verfyToken(req, res){
 
     if (!verfyResult.auth) {
         user = req.cookies['x-user'];
-        let refreshToken = req.cookies['refreshToken'];
-        if (refreshToken) {
-            const refreshResult = await modelManager.verifyToken(refreshToken, user, 'refresh_token');
+        let token = req.cookies['x-access-token'];
+        if (token) {
+            const refreshResult = await modelManager.verifyToken(token, user, 'access_token');
             if (refreshResult.auth) {
                 const newAccessToken = await credential.generateToken({ user, password: refreshResult.user.user_password, type: 'access_token' }, refreshResult.user.secret_key, '1d');
-                res.cookie('accessToken', newAccessToken, { sameSite: 'Strict' });
+                res.cookie('x-access-token', newAccessToken, { sameSite: 'Strict' });
             }
             return refreshResult
         }

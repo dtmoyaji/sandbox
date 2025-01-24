@@ -44,7 +44,7 @@ export class Connection {
             } else {
                 console.error('Failed to connect to PostgreSQL database', err);
             }
-   }
+        }
     }
 
     // 接続を閉じるメソッド

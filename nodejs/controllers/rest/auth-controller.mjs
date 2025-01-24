@@ -13,7 +13,7 @@ function createAuthController(manager) {
      */
     AuthController.post('/refresh-token', async (req, res) => {
         const user_name = req.headers['x-user'];
-        const refreshToken = req.cookies['refreshToken'];
+        const refreshToken = req.cookies['x-refresh-token'];
 
         if (!refreshToken) {
             return res.status(400).send('Refresh token is required');
@@ -43,8 +43,9 @@ function createAuthController(manager) {
             const newRefreshToken = credential.generateToken({ user: user_name, password, type: 'refresh_token' }, secretKey, '90d');
 
             // 新しいリフレッシュトークンをHTTP Only Cookieに設定
-            res.cookie('refreshToken', newRefreshToken, { sameSite: 'Strict' });
-            res.cookie('message', 'Refresh token updated', { secure: true, sameSite: 'Strict' });
+            res.cookie('x-refresh-token', newRefreshToken, { sameSite: 'Strict' });
+            res.cookie('x-access-token', newAccessToken, { sameSite: 'Strict' });
+            res.cookie('x-user', user_name, { sameSite: 'Strict' });
             res.send({ accessToken: newAccessToken });
 
         } catch (err) {
