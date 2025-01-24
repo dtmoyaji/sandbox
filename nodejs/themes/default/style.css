@@ -281,7 +281,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: var(--menu-item-background-color);
+    background-color: var(--header-background-hover-color);
 }
 
 .fixed-dialog{
