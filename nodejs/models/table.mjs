@@ -9,6 +9,7 @@ export class Table {
     static MODEL_SCOPE_PUBLIC = 'public';
     static MODEL_SCOPE_PROTECTED = 'protected';
 
+    user_domain_id = 1; // テーブルのドメイン
     table_name = 'table'; // テーブル名
     connection;
     knex;
