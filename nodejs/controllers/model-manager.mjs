@@ -6,6 +6,7 @@ import { Table } from '../models/table.mjs';
 import { verifyJWT } from './credential.mjs'; // verifyJWT関数をインポート
 
 export class ModelManager {
+
     constructor() {
         this.__dirname = path.dirname(fileURLToPath(import.meta.url));
         this.__rootDir = path.join(this.__dirname, '..');
@@ -17,12 +18,25 @@ export class ModelManager {
     // モデルを読み込むメソッド
     async reloadModels() {
         this.models = [];
+
+        // システムテーブルの読み込み
         const tableDefDir = path.join(this.__rootDir, 'models', 'tabledef');
         let modelFiles = fs.readdirSync(tableDefDir);
         for (let modelFile of modelFiles) {
             let modelDef = JSON.parse(fs.readFileSync(path.join(tableDefDir, modelFile), 'utf8'));
             let model = new Table(this.Connection);
             await model.createTable(modelDef);
+            model.user_domain_id = 1; // システムドメインID
+            this.models.push(model);
+        }
+
+        // ドメインテーブルの読み込み
+        const domainTables = await this.knex('domain_tabledef').select('*');
+        for (let domainTable of domainTables) {
+            let domainTableDef = JSON.parse(domainTable.tabledef);
+            let model = new Table(this.Connection);
+            await model.createTable(domainTableDef);
+            model.user_domain_id = domainTable.user_domain_id;
             this.models.push(model);
         }
     }
@@ -49,7 +63,10 @@ export class ModelManager {
         const userRecord = await userTable.get({ user_name: user });
 
         if (userRecord.length === 0) {
-            return { auth: false, message: 'Invalid user' };
+            return {
+                auth: false,
+                message: 'Invalid user'
+            };
         }
 
         // トークンを検証

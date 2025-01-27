@@ -20,15 +20,24 @@ async function createModelController(manager) {
             const nameParts = path.split('/');
             const modelName = nameParts[0];
             const model = await modelManager.getModel(modelName);
+            const model_user_domain_id = model.user_domain_id;
 
             if (!model) {
                 return res.status(404).send({ message: 'Model not found' });
             }
 
+            let verifyResult = undefined;
             if (model.tableDefinition.scope !== 'public') {
-                const result = await verifyToken(req, res);
-                if (!result.auth) {
-                    return res.status(401).send(result);
+                verifyResult = await verifyToken(req, res);
+                if (!verifyResult.auth) {
+                    return res.status(401).send(verifyResult);
+                }
+                // 管理者以外はユーザーが所属するドメインのデータのみ取得する
+                if (
+                    model_user_domain_id !== verifyResult.user.user_domain_id
+                    && verifyResult.user.admin_flag !== 1
+                ) {
+                    return res.status(403).send({ message: 'Forbidden' });
                 }
             }
 
@@ -37,6 +46,13 @@ async function createModelController(manager) {
 
             for (const [key, value] of Object.entries(queryParams)) {
                 filter[key] = value.split('|');
+            }
+
+            // システムドメインに所属しない管理者ユーザーは、所属ドメインのデータのみ取得する
+            if (model.user_domain_id !== verifyResult.user.user_domain_id
+                && model_user_domain_id === 1
+            ) {
+                filter['user_domain_id'] = verifyResult.user.user_domain_id;
             }
 
             const result = await model.get(filter);
