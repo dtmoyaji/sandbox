@@ -79,7 +79,6 @@ if(user.length === 0) {
     userTemplate.admin_flag = 1;
     await userTable.put(userTemplate);
 
-
 }
 
 await conn.disconnect();

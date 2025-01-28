@@ -7,7 +7,8 @@ import { fileURLToPath } from 'url';
 import * as credential from './controllers/credential.mjs';
 import { ModelManager } from './controllers/model-manager.mjs';
 import { createAuthController } from './controllers/rest/auth-controller.mjs';
-import { createModelController, verifyToken } from './controllers/rest/model-controller.mjs';
+import { createModelController } from './controllers/rest/model-controller.mjs';
+import { RestUtil } from './controllers/rest/rest-util.mjs';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ const port = process.env.PORT;
 const modelManager = new ModelManager();
 await modelManager.reloadModels();
 
+const restUtil = new RestUtil(modelManager);
 const modelController = await createModelController(modelManager);
 const authController = await createAuthController(modelManager);
 
@@ -109,7 +111,7 @@ app.delete('/api/*', (req, res) => {
 app.get(['/admin', '/admin/*'], async (req, res) => {
 
     // トークンの検証
-    let tokenCheck = await verifyToken(req, res);
+    let tokenCheck = await restUtil.verifyToken(req, res);
     if(!tokenCheck.auth) {
         res.redirect('/login');
         return;

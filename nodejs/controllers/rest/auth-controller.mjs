@@ -1,12 +1,15 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import * as credential from '../credential.mjs';
+import { RestUtil } from './rest-util.mjs';
 
 let modelManager = undefined;
+let restUtil = undefined;
 
 function createAuthController(manager) {
     const AuthController = express.Router();
     modelManager = manager;
+    restUtil = new RestUtil(manager);
 
     /**
      * リフレッシュトークンを使用して新しいアクセストークンを取得するエンドポイント
@@ -55,12 +58,16 @@ function createAuthController(manager) {
     });
 
     AuthController.get('/encrypt-password', async (req, res) => {
+        let verifyResult = await restUtil.verifyToken(req, res);
+        if(!verifyResult.auth) {
+            return res.status(401).send('Unauthorized');
+        }
         const password = req.query.password;
         if (!password) {
             return res.status(400).send('Password is required');
         }
 
-        const encrypted = await credential.encryptPassword(password);
+        const encrypted = await credential.hashPassword(password);
         res.send({ encrypted });
     });
 
