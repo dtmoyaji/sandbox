@@ -92,6 +92,25 @@ async function createModelController(manager) {
                 return res.status(404).send({ message: 'Model not found' });
             }
 
+            // 管理者でないユーザーは、他のユーザードメインのデータを更新できない
+            if (
+                model.user_domain_id !== verifyResult.user.user_domain_id
+                && verifyResult.user.admin_flag !== 1
+            ) {
+                return res.status(403).send({ message: 'Forbidden' });
+            }
+
+            // 管理者は、システムドメインのデータのうち、所属ドメイン以外のデータを更新できない
+            // ただし、システムドメインの管理者は、全てのデータを更新できる
+            if (
+                model.user_domain_id === 1
+                && verifyResult.user.admin_flag === 1
+                && req.body.user_domain_id !== verifyResult.user.user_domain_id
+                && verifyResult.user.user_domain_id !== 1
+            ) {
+                return res.status(403).send({ message: 'Forbidden' });
+            }
+
             const payload = req.body;
             const result = await model.put(payload);
             res.json(result);
@@ -115,6 +134,25 @@ async function createModelController(manager) {
 
             if (!model) {
                 return res.status(404).send({ message: 'Model not found' });
+            }
+
+            // 管理者でないユーザーは、他のユーザードメインのデータを更新できない
+            if (
+                model.user_domain_id !== verifyResult.user.user_domain_id
+                && verifyResult.user.admin_flag !== 1
+            ) {
+                return res.status(403).send({ message: 'Forbidden' });
+            }
+
+            // 管理者は、システムドメインのデータのうち、所属ドメイン以外のデータを更新できない
+            // ただし、システムドメインの管理者は、全てのデータを更新できる
+            if (
+                model.user_domain_id === 1
+                && verifyResult.user.admin_flag === 1
+                && req.body.user_domain_id !== verifyResult.user.user_domain_id
+                && verifyResult.user.user_domain_id === 1
+            ) {
+                return res.status(403).send({ message: 'Forbidden' });
             }
 
             const payload = req.body;
@@ -141,6 +179,25 @@ async function createModelController(manager) {
 
             if (!model) {
                 return res.status(404).send({ message: 'Model not found' });
+            }
+
+            // 管理者でないユーザーは、他のユーザードメインのデータを更新できない
+            if (
+                model.user_domain_id !== verifyResult.user.user_domain_id
+                && verifyResult.user.admin_flag !== 1
+            ) {
+                return res.status(403).send({ message: 'Forbidden' });
+            }
+
+            // 管理者は、システムドメインのデータのうち、所属ドメイン以外のデータを更新できない
+            // ただし、システムドメインの管理者は、全てのデータを更新できる
+            if (
+                model.user_domain_id === 1
+                && verifyResult.user.admin_flag === 1
+                && req.body.user_domain_id !== verifyResult.user.user_domain_id
+                && verifyResult.user.user_domain_id === 1
+            ) {
+                return res.status(403).send({ message: 'Forbidden' });
             }
 
             const payload = req.body;

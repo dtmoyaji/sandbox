@@ -54,6 +54,16 @@ function createAuthController(manager) {
         }
     });
 
+    AuthController.get('/encrypt-password', async (req, res) => {
+        const password = req.query.password;
+        if (!password) {
+            return res.status(400).send('Password is required');
+        }
+
+        const encrypted = await credential.encryptPassword(password);
+        res.send({ encrypted });
+    });
+
     return AuthController;
 }
 
