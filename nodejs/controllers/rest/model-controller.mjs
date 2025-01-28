@@ -1,10 +1,13 @@
 import express from 'express';
-import * as credential from '../credential.mjs';
+import { RestUtil } from './rest-util.mjs';
 
+let restUtil = undefined;
 let modelManager = undefined;
 
 async function createModelController(manager) {
     const ModelController = express.Router();
+
+    restUtil = new RestUtil(manager);
     modelManager = manager;
 
     /**
@@ -28,7 +31,7 @@ async function createModelController(manager) {
 
             let verifyResult = undefined;
             if (model.tableDefinition.scope !== 'public') {
-                verifyResult = await verifyToken(req, res);
+                verifyResult = await restUtil.verifyToken(req, res);
                 if (!verifyResult.auth) {
                     return res.status(401).send(verifyResult);
                 }
@@ -77,7 +80,7 @@ async function createModelController(manager) {
 
     ModelController.put('/*', async (req, res) => {
         try {
-            const verifyResult = await verifyToken(req, res);
+            const verifyResult = await restUtil.verifyToken(req, res);
 
             if (!verifyResult.auth) {
                 return res.status(401).send(verifyResult);
@@ -122,7 +125,7 @@ async function createModelController(manager) {
 
     ModelController.post('/*', async (req, res) => {
         try {
-            const verifyResult = await verifyToken(req, res);
+            const verifyResult = await restUtil.verifyToken(req, res);
             if (!verifyResult.auth) {
                 return res.status(401).send(verifyResult);
             }
@@ -166,7 +169,7 @@ async function createModelController(manager) {
 
     ModelController.delete('/*', async (req, res) => {
         try {
-            const verifyResult = await verifyToken(req, res);
+            const verifyResult = await restUtil.verifyToken(req, res);
 
             if (!verifyResult.auth) {
                 return res.status(401).send(verifyResult);
@@ -212,38 +215,7 @@ async function createModelController(manager) {
     return ModelController;
 }
 
-/**
- * アクセストークンを検証する関数
- * @param {*} req 
- * @param {*} res 
- * @returns {Promise<object>} 検証結果
- */
-async function verifyToken(req, res) {
-    let user = req.headers['x-user'];
-    let token = req.headers['x-access-token'];
-    let verfyResult = await modelManager.verifyToken(token, user, 'access_token');
-
-    if (!verfyResult.auth) {
-        user = req.cookies['x-user'];
-        let token = req.cookies['x-access-token'];
-        if (token) {
-            const refreshResult = await modelManager.verifyToken(token, user, 'access_token');
-            if (refreshResult.auth) {
-                if (!res.headersSent) {
-                    const newAccessToken = await credential.generateToken(
-                        { user, password: refreshResult.user.user_password, type: 'access_token' }
-                        , refreshResult.user.secret_key, '1d');
-                    res.cookie('x-access-token', newAccessToken, { sameSite: 'Strict' });
-                }
-            }
-            return refreshResult
-        }
-    }
-    return verfyResult;
-}
-
 export {
-    createModelController,
-    verifyToken
+    createModelController
 };
 
