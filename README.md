@@ -19,3 +19,7 @@ This project aims to provide a backend system that simplifies these tasks. It is
 ## Operating Environment
 
 It operates in a docker + node.js environment. It supports the creation of a PostgreSQL instance within docker.
+
+## system behavior definitions
+
+The important aspects of the system behavior definition are defined in the workflows within each .bpmn file in sysdesign.
