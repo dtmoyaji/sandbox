@@ -93,6 +93,29 @@ export class ModelManager {
         return { auth: true, user: userRecord[0] };
     }
 
+    // 事前登録したクエリを実行する
+    async execQuery(queryName, params) {
+        const query_template = await this.getModel('query_template');
+        const query = await query_template.get({ name: queryName });
+        let result = {};
+        if (query.length > 0) {
+            result = await this.knex.raw(query[0].query, params);
+            result = result.rows;
+        }
+        return result;
+    }
+
+    // クエリのドメインIDをチェックする
+    async checkQueryDomainId(queryName, userDomainId) {
+        const query_template = await this.getModel('query_template');
+        const query = await query_template.get({ name: queryName });
+        if (query.length > 0) {
+            if (query[0].user_domain_id !== userDomainId) {
+                return false;
+            }
+        }
+        return true;
+    }
 
 }
 

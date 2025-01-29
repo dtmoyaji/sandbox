@@ -32,6 +32,12 @@ class RestUtil {
         return verfyResult;
     }
 
+    /**
+     * ヘッダーまたはクッキーからリクエストパラメータを取得する
+     * @param {*} req
+     * @param {*} name 
+     * @returns パラメータ。見つからない場合はundefined
+     */
     getRequestParameter(req, name) {
         let value = req.headers[name];
         if (!value) {

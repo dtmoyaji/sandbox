@@ -8,7 +8,9 @@ import * as credential from './controllers/credential.mjs';
 import { ModelManager } from './controllers/model-manager.mjs';
 import { createAuthController } from './controllers/rest/auth-controller.mjs';
 import { createModelController } from './controllers/rest/model-controller.mjs';
+import { createQueryController } from './controllers/rest/query-controller.mjs';
 import { RestUtil } from './controllers/rest/rest-util.mjs';
+import { PageRenderer } from './views/renderer/page-renderer.mjs';
 
 dotenv.config();
 
@@ -19,7 +21,8 @@ await modelManager.reloadModels();
 
 const restUtil = new RestUtil(modelManager);
 const modelController = await createModelController(modelManager);
-const authController = await createAuthController(modelManager);
+const authController = createAuthController(modelManager);
+const queryController = createQueryController(modelManager);
 
 // __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +39,7 @@ app.use(cookieParser());
 // プロジェクトのリゾルバを設定
 app.use('/api/auth', authController);
 app.use('/api/models', modelController);
+app.use('/api/query', queryController);
 
 // リゾルバ
 app.get('/', (req, res) => {
@@ -117,21 +121,15 @@ app.get(['/admin', '/admin/*'], async (req, res) => {
         return;
     }
 
-    const path = req.params[0] || ''; // パスがない場合は空文字列を使用
-    const nameParts = path.split('/');
-    const queryParams = req.query;
+    // ページをレンダリング
+    let pageRenderer = new PageRenderer(restUtil, modelManager);
+    let renderResult = await pageRenderer.render(req, res);
+    if (renderResult.status === 200) {
+        res.send(renderResult.body);
+    } else {
+        res.status(500).send(renderResult.message);
+    }
 
-    //console.log(queryParams);
-
-    ejs.renderFile('views/admin/admin.ejs',
-        { title: 'Home', path: nameParts, params: queryParams },
-        (err, str) => {
-            if (err) {
-                res.status(500).send(err.message);
-            } else {
-                res.send(str);
-            }
-        });
 });
 
 app.get('/login', (req, res) => {
