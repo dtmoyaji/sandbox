@@ -26,10 +26,6 @@
             "notNull": true
         },
         {
-            "name": "tabledef",
-            "type": "TEXT"
-        },
-        {
             "name": "query",
             "type": "TEXT"
         },

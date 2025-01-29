@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%- pageTitle %></title>
+    <link rel="stylesheet" href="/theme/style.css">
+</head>
+
+<body>
+    <div id="top">
+        <%- startButton %>
+        <%- topBar %>
+    </div>
+    <div id="body">
+        <div id="left" open="true">
+            <%- sidebarPanel %>
+        </div>
+
+        <div id="center" open="true">
+            <%- centerPanel %>
+        </div>
+    </div>
+    <div id="footer">
+        <%- footer %>
+    </div>
+</body>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        bindSidePanel('left');
+        bindCenterPanel('center');
+    });
+</script>
+</html>

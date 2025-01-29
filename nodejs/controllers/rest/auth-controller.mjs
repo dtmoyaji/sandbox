@@ -15,8 +15,8 @@ function createAuthController(manager) {
      * リフレッシュトークンを使用して新しいアクセストークンを取得するエンドポイント
      */
     AuthController.post('/refresh-token', async (req, res) => {
-        const user_name = req.headers['x-user'];
-        const refreshToken = req.cookies['x-refresh-token'];
+        const user_name = restUtil.getRequestParameter(req,'x-user');
+        const refreshToken = restUtil.getRequestParameter(req,'x-refresh-token');
 
         if (!refreshToken) {
             return res.status(400).send('Refresh token is required');

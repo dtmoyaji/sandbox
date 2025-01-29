@@ -79,6 +79,16 @@ if(user.length === 0) {
     userTemplate.admin_flag = 1;
     await userTable.put(userTemplate);
 
+    // query_templateのサンプル実装
+    let queryTemplate = await modelManager.getModel('query_template');
+    let queryTemplateJson = await queryTemplate.getJsonTemplate();
+    delete queryTemplateJson.id;
+    queryTemplateJson.name = 'sample_query';
+    queryTemplateJson.query = 'SELECT * FROM "user" inner join user_domain on "user".user_domain_id = user_domain.user_domain_id where "user".user_name = :user_name';
+    queryTemplateJson.parameters = '{ user_name: "string" }';
+    queryTemplateJson.description = 'サンプルクエリ';
+    queryTemplateJson.user_domain_id = userDomainId;
+    await queryTemplate.put(queryTemplateJson);
 }
 
 await conn.disconnect();
