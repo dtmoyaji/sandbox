@@ -57,7 +57,7 @@ class PageRenderer {
     async renderSidePanel(req, res, ejsParameters) {
         // パラメータの取得
         let pathNode = [];
-        if( req.path.length > 0 ) {
+        if (req.path.length > 0) {
             pathNode = req.path.split('/');
         }
         let param1 = pathNode[1] || '';
@@ -73,14 +73,14 @@ class PageRenderer {
 
         let userDomainTable = await this.modelManager.getModel('user_domain');
         let userDomain = await userDomainTable.get({ user_domain_id: userDomainId });
-        if(userDomain.length === 0) {
+        if (userDomain.length === 0) {
             return res.status(404).send('Not Found');
         }
         let userDomainName = userDomain[0].domain_name;
 
         let sidePanelRenderResult = {};
         let renderResult = { status: 200, body: '' };
-        
+
         let paneParameter = { sidePanelTitle: userDomainName, appendButtonVisible: false, user: user };
         sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideMainPanel.ejs', paneParameter);
         if (sidePanelRenderResult.status > 200) {
@@ -89,20 +89,67 @@ class PageRenderer {
         } else {
             renderResult.body += sidePanelRenderResult.body;
         }
-        
-        if(param2 !== '') {
-            paneParameter = { sidePanelTitle: param2, appendButtonVisible: false, user: user };
-            sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideSubPanel.ejs', paneParameter);
-            if (sidePanelRenderResult.status > 200) {
-                renderResult.status = sidePanelRenderResult.status;
-                renderResult.body += sidePanelRenderResult.message;
+
+        if (param2 !== '') {
+            let subMenuRenderResult = await this.renderSideSubPanel(user, param2, ejsParameters);
+            if (subMenuRenderResult.status > 200) {
+                renderResult.status = subMenuRenderResult.status;
+                renderResult.body += subMenuRenderResult.message;
             } else {
-                renderResult.body += sidePanelRenderResult.body;
+                renderResult.body += subMenuRenderResult.body;
             }
         }
-        
+
         return renderResult;
     }
+
+    async renderSideSubPanel(user, path, ejsParameters) {
+        let sidePanelRenderResult = { status: 200, body: '' };
+
+        let list = [];
+        switch (path) {
+            case 'table':
+                list = await this.getTables(user.user_domain_id);
+                break;
+            case 'query':
+                break;
+            case 'script':
+                break;
+            default:
+                break;
+        }
+
+        let paneParameter = { sidePanelTitle: path, appendButtonVisible: false, user: user, list: list };
+        sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideSubPanel.ejs', paneParameter);
+
+        if (sidePanelRenderResult.status > 200) {
+            sidePanelRenderResult.status = sidePanelRenderResult.status;
+            sidePanelRenderResult.body = sidePanelRenderResult.message;
+        } else {
+            sidePanelRenderResult.body = sidePanelRenderResult.body;
+        }
+        return sidePanelRenderResult;
+    }
+
+    async getTables(userDomainId) {
+        let tableList = this.modelManager.models;
+        if (userDomainId > 1) {
+            tableList = tableList.filter((table) => table.user_domain_id === userDomainId);
+        }
+        // テーブルの名前でソート
+        tableList.sort((a, b) => {
+            if (a.tableDefinition.table_name < b.tableDefinition.table_name) {
+                return -1;
+            }
+            if (a.tableDefinition.table_name > b.tableDefinition.table_name) {
+                return 1;
+            }
+            return 0;
+        });
+        
+        return tableList;
+    }
+
 
     /**
      * HTMLをレンダリングする
