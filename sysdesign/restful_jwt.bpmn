@@ -24,6 +24,10 @@ Cookie:Only
 x-refresh-token:</bpmn:text>
     </bpmn:textAnnotation>
     <bpmn:association id="Association_1yyxdy7" associationDirection="None" sourceRef="Activity_05uqxat" targetRef="TextAnnotation_0wif78o" />
+    <bpmn:textAnnotation id="TextAnnotation_1bwq505">
+      <bpmn:text>Authentication parameters are contained in Http header or Cookie.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1yjqfe1" associationDirection="None" sourceRef="Activity_189x9uw" targetRef="TextAnnotation_1bwq505" />
   </bpmn:collaboration>
   <bpmn:process id="Process_1" isExecutable="false">
     <bpmn:startEvent id="StartEvent_1">
@@ -209,6 +213,18 @@ x-refresh-token:</bpmn:text>
         <di:waypoint x="930" y="370" />
         <di:waypoint x="990" y="370" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_1tcqmyk_di" bpmnElement="TextAnnotation_1tcqmyk">
+        <dc:Bounds x="467" y="560" width="509.99137001170516" height="83.61811089598758" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_0wif78o_di" bpmnElement="TextAnnotation_0wif78o">
+        <dc:Bounds x="220" y="425" width="209.99918194459568" height="126.58271390801939" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_1bwq505_di" bpmnElement="TextAnnotation_1bwq505">
+        <dc:Bounds x="410" y="50" width="99.98904291273934" height="83.66062509225287" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Association_1b5x0v2_di" bpmnElement="Association_1b5x0v2">
         <di:waypoint x="556" y="391" />
         <di:waypoint x="520" y="560" />
@@ -216,6 +232,10 @@ x-refresh-token:</bpmn:text>
       <bpmndi:BPMNEdge id="Association_1yyxdy7_di" bpmnElement="Association_1yyxdy7">
         <di:waypoint x="301" y="310" />
         <di:waypoint x="274" y="425" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_1yjqfe1_di" bpmnElement="Association_1yjqfe1">
+        <di:waypoint x="360" y="107" />
+        <di:waypoint x="410" y="86" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0sbmgxe_di" bpmnElement="Flow_0sbmgxe">
         <di:waypoint x="310" y="168" />
@@ -230,14 +250,6 @@ x-refresh-token:</bpmn:text>
         <di:waypoint x="1040" y="330" />
         <di:waypoint x="1040" y="168" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="TextAnnotation_1tcqmyk_di" bpmnElement="TextAnnotation_1tcqmyk">
-        <dc:Bounds x="467" y="560" width="509.99137001170516" height="83.61811089598758" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="TextAnnotation_0wif78o_di" bpmnElement="TextAnnotation_0wif78o">
-        <dc:Bounds x="220" y="425" width="209.99918194459568" height="126.58271390801939" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
