@@ -215,6 +215,29 @@
     background-color: var(--header-background-hover-color);
 }
 
+.sidePanelMainMenu, .sidePanelSubMenu {
+    padding: 0;
+    visibility: hidden;
+    background-color: var(--menu-item-background-color);
+    height: 0;
+}
+
+.sidePanelMainMenu[open="true"], .sidePanelSubMenu[open="true"]{
+    padding: 1em 1em;
+    visibility: visible;
+    height: auto;
+}
+
+.sidePanelMainMenu li, .sidePanelSubMenu li{
+    list-style-type: none;
+    padding: 0 0 0 0.5em;
+}
+
+.sidebarPanel a{
+    color: white;
+    text-decoration: none;
+}
+
 #projectList[open="true"]{
     visibility: visible;
 }

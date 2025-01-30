@@ -1,0 +1,31 @@
+<div class="sidebarPanel" id="projectView">
+    <div class="sidePanelTitle">
+        <label><a href="/admin"><%= sidePanelTitle %></a></label>
+        <% if(appendButtonVisible) { %>
+            <button class="smallButton" id="newProject"></button>
+        <% } %>
+        <button class="smallButton" id="expandMainMenuSwitch" open="true"></button>
+    </div>
+    <div class="sidePanelMainMenu" id="sidePanelMainMenu" open="true">
+        <ul>
+            <li><a href="/admin/table">テーブル</a></li>
+            <li><a href="/admin/query">クエリ</a></li>
+            <li><a href="/admin/script">スクリプト</a></li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const projectList = document.getElementById('sidePanelMainMenu');
+        const expandSwitch = document.getElementById('expandMainMenuSwitch');
+
+        expandSwitch.addEventListener('click', () => {
+            const isOpen = projectList.getAttribute('open') === 'true';
+            projectList.setAttribute('open', !isOpen);
+            expandSwitch.setAttribute('open', !isOpen); // ボタンのopen属性を制御
+            expandSwitch.textContent = isOpen ? '展開' : '縮小'; // ボタンのテキストを変更
+        });
+    });
+
+</script>

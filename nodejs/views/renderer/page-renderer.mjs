@@ -55,6 +55,14 @@ class PageRenderer {
      * @returns {Promise<object>} レンダリング結果
      */
     async renderSidePanel(req, res, ejsParameters) {
+        // パラメータの取得
+        let pathNode = [];
+        if( req.path.length > 0 ) {
+            pathNode = req.path.split('/');
+        }
+        let param1 = pathNode[1] || '';
+        let param2 = pathNode[2] || '';
+
         let verfyResult = await this.restUtil.verifyToken(req, res);
         if (!verfyResult.auth) {
             return res.status(401).send(verfyResult.message);
@@ -63,20 +71,28 @@ class PageRenderer {
         let user = verfyResult.user;
         let userDomainId = user.user_domain_id;
 
+        let userDomainTable = await this.modelManager.getModel('user_domain');
+        let userDomain = await userDomainTable.get({ user_domain_id: userDomainId });
+        if(userDomain.length === 0) {
+            return res.status(404).send('Not Found');
+        }
+        let userDomainName = userDomain[0].domain_name;
+
         let sidePanelRenderResult = {};
         let renderResult = { status: 200, body: '' };
-        if (user.user_domain_id === 1) { // システムユーザーの場合
-            let paneParameter = { sidePanelTitle: 'システム', appendButtonVisible: false, user: user };
-            sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sidePane.ejs', paneParameter);
-            if (sidePanelRenderResult.status > 200) {
-                renderResult.status = sidePanelRenderResult.status;
-                renderResult.body += sidePanelRenderResult.message;
-            } else {
-                renderResult.body += sidePanelRenderResult.body;
-            }
-        } else { // ドメインユーザーの場合
-            let paneParameter = { sidePanelTitle: 'ドメイン', appendButtonVisible: false };
-            sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sidePane.ejs', paneParameter);
+        
+        let paneParameter = { sidePanelTitle: userDomainName, appendButtonVisible: false, user: user };
+        sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideMainPanel.ejs', paneParameter);
+        if (sidePanelRenderResult.status > 200) {
+            renderResult.status = sidePanelRenderResult.status;
+            renderResult.body += sidePanelRenderResult.message;
+        } else {
+            renderResult.body += sidePanelRenderResult.body;
+        }
+        
+        if(param2 !== '') {
+            paneParameter = { sidePanelTitle: param2, appendButtonVisible: false, user: user };
+            sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideSubPanel.ejs', paneParameter);
             if (sidePanelRenderResult.status > 200) {
                 renderResult.status = sidePanelRenderResult.status;
                 renderResult.body += sidePanelRenderResult.message;
@@ -84,7 +100,7 @@ class PageRenderer {
                 renderResult.body += sidePanelRenderResult.body;
             }
         }
-
+        
         return renderResult;
     }
 
