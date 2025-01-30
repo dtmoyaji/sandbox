@@ -10,6 +10,36 @@ async function createModelController(manager) {
     restUtil = new RestUtil(manager);
     modelManager = manager;
 
+    ModelController.get('/all', async (req, res) => {
+        try {
+            const verifyResult = await restUtil.verifyToken(req, res);
+            if (!verifyResult.auth) {
+                return res.status(401).send(verifyResult);
+            }
+
+            let result = await modelManager.models;
+            if (result.length > 0) {
+                if (verifyResult.user.user_domain_id > 1) {
+                    result = result.filter(model => model.user_domain_id === verifyResult.user.user_domain_id);
+                }
+                // result.name でソートする
+                result.sort((a, b) => {
+                    if (a.name < b.name) {
+                        return -1;
+                    }
+                    if (a.name > b.name) {
+                        return 1;
+                    }
+                    return 0;
+                });
+            }
+            res.json(result);
+        } catch (err) {
+            console.error('Error fetching model data:', err);
+            res.status(500).send({ message: 'Internal server error' });
+        }
+    });
+
     /**
      * モデルのリストを取得するAPI
      * GET /models/[model_name]?[query_params]

@@ -1,33 +1,41 @@
-<div class="sidebarPanel" id="projectView">
+<div class="sidebarPanel" id="sideSubPanel">
     <div class="sidePanelTitle">
         <label>
             <%= sidePanelTitle %>
         </label>
-        <% if(appendButtonVisible) { %>
-            <button class="smallButton" id="newProject"></button>
-            <% } %>
-                <button class="smallButton" id="expandSubMenuSwitch" open="true"></button>
     </div>
-    <div class="sidePanelSubMenu" id="sidePanelSubMenu" open="true">
+    <div class="sidePanelMenu" id="sidePanelSubMenu" open="true">
         <input type="text" id="search" placeholder="検索">
-        <ul>
-            <% for(let listItem of list){ %>
-                <li><a href="/admin/table/<%= listItem.tableDefinition.name %>"><%= listItem.tableDefinition.name %></a></li>
-            <% } %>
+        <ul id = "list">
         </ul>
     </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        const sidePanelSubMenu = document.getElementById('sidePanelSubMenu');
-        const expandSwitch = document.getElementById('expandSubMenuSwitch');
 
-        expandSwitch.addEventListener('click', () => {
-            const isOpen = sidePanelSubMenu.getAttribute('open') === 'true';
-            sidePanelSubMenu.setAttribute('open', !isOpen);
-            expandSwitch.setAttribute('open', !isOpen); // ボタンのopen属性を制御
-            expandSwitch.textContent = isOpen ? '展開' : '縮小'; // ボタンのテキストを変更
-        });
+        const listType = '<%= sidePanelTitle %>';
+        switch (listType) {
+            case 'table':
+                const tableList = await fetch('/api/models/all');
+                let listTag = document.getElementById('list');
+                listTag.replaceWith(createTableList(await tableList.json()));
+            default:
+                break;
+        }
     });
+
+    function createTableList(json) {
+        const list = document.createElement('ul');
+        list.attributes.id = 'list';
+        json.forEach((element) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = `/admin/table/${element.table_name}`;
+            a.textContent = element.table_name;
+            li.appendChild(a);
+            list.appendChild(li);
+        });
+        return list;
+    }
 </script>
