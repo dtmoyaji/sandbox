@@ -202,7 +202,7 @@
     background-color: var(--menu-item-background-color);
 }
 
-.sidePanelMenu li{
+.sidePanelMenu li {
     list-style-type: none;
     padding: 0 0.5em;
 }
@@ -213,7 +213,7 @@
     height: 100%;
 }
 
-.sidePanelMenu a{
+.sidePanelMenu a {
     color: white;
     text-decoration: none;
 }
