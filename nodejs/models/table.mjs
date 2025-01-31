@@ -217,10 +217,15 @@ export class Table {
             let query = this.knex(this.table_name).where({ deleted_at: null });
             if (filter) {
                 for (const [key, value] of Object.entries(filter)) {
-                    if (Array.isArray(value) && value.length === 2) {
-                        query = query.where(key, value[0], value[1]);
-                    } else if (Array.isArray(value)) {
+                    if (Array.isArray(value)) {
                         query = query.whereIn(key, value);
+                    } else if (typeof value === 'string' && value.includes('|')) {
+                        const values = value.split('|');
+                        if (values.length === 2) {
+                            query = query.where(key, values[0], values[1]);
+                        } else {
+                            query = query.where(key, value);
+                        }
                     } else {
                         if (value === null) {
                             query = query.whereNull(key);
@@ -277,7 +282,7 @@ export class Table {
      */
     async post(data) {
         try {
-            if(!await this.hasPrimaryKey(data)) {
+            if (!await this.hasPrimaryKey(data)) {
                 throw new Error('post data error: primary key not found');
             }
 
@@ -308,7 +313,7 @@ export class Table {
      * @returns {Promise<number>} - 削除された行数
      */
     async delete(filter) {
-        if(!await this.hasPrimaryKey(filter)) {
+        if (!await this.hasPrimaryKey(filter)) {
             throw new Error('delete data error: primary key not found');
         }
         let deltedCount = await this.knex(this.table_name).where(filter)
