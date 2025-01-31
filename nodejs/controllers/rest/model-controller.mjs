@@ -60,6 +60,12 @@ async function createModelController(manager) {
             const path = req.params[0];
             const nameParts = path.split('/');
             const modelName = nameParts[0];
+
+            // ユーザーモデルの場合は、特別な処理を行う
+            if (modelName === 'user') {
+                return await getUser(req, res);
+            }
+
             const model = await modelManager.getModel(modelName);
             const model_user_domain_id = model.user_domain_id;
 
@@ -78,7 +84,7 @@ async function createModelController(manager) {
             const queryParams = req.query;
             const filter = {};
             for (const [key, value] of Object.entries(queryParams)) {
-                filter[key] = value.split('|');
+                filter[key] = value;
             }
 
             // アクセス権の確認
@@ -223,6 +229,53 @@ async function createModelController(manager) {
             res.status(500).send({ message: 'Internal server error' });
         }
     });
+
+    async function getUser(req, res) {
+        try {
+            const path = req.params[0];
+            const nameParts = path.split('/');
+            const modelName = nameParts[0];
+            const model = await modelManager.getModel('user');
+
+            const verifyResult = await restUtil.verifyToken(req, res);
+            if (!verifyResult.auth) {
+                return res.status(401).send(verifyResult);
+            }
+            let userDomainIds = verifyResult.user_domains;
+            let userDomainLinkTable = await modelManager.getModel('user_domain_link');
+
+            let filter = {};
+            if (!userDomainIds.includes(RestUtil.SYSTEM_DOMAIN_ID)) {
+                // 同じドメインのユーザーを取得
+                let friends = await userDomainLinkTable.get({ user_domain_id: userDomainIds });
+                let friendIds = friends.map(f => f.user_id);
+                filter = { user_id: friendIds };
+            }
+
+            const queryParams = req.query;
+            for (const [key, value] of Object.entries(queryParams)) {
+                filter[key] = value;
+            }
+            const result = await model.get(filter);
+
+            // modelのtableDefinitionのfieldsに、secret=trueを持つフィールドがある場合、そのフィールドをマスクする
+            if (model.tableDefinition.fields.some(field => field.secret)) {
+                result.forEach(record => {
+                    model.tableDefinition.fields.forEach(field => {
+                        if (field.secret) {
+                            record[field.name] = '********';
+                        }
+                    });
+                });
+            }
+
+            res.json(result);
+
+        } catch (err) {
+            console.error('Error fetching model data:', err);
+            res.status(500).send({ message: 'Internal server error' });
+        }
+    }
 
     return ModelController;
 }
