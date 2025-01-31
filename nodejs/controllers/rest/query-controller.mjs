@@ -20,7 +20,7 @@ function createQueryController(manager) {
 
         // ドメインIDのチェック
         let domain_id_check = await modelManager.checkQueryDomainId(
-            queryName, verifyResult.user.user_domain_id
+            queryName, verifyResult.user.user_id
         );
         if (!domain_id_check) {
             return res.status(403).send('Forbidden');

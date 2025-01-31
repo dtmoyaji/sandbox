@@ -90,7 +90,12 @@ export class ModelManager {
             return { auth: false, message: 'Invalid password' };
         }
 
-        return { auth: true, user: userRecord[0] };
+        // ユーザーの所属ドメインIDを返す
+        let userDomainLink = await this.getModel('user_domain_link');
+        let userDomain = await userDomainLink.get({ user_id: userRecord[0].user_id });
+        let userDomainIds = userDomain.map(ud => ud.user_domain_id);
+
+        return { auth: true, user: userRecord[0], user_domains: userDomainIds };
     }
 
     // 事前登録したクエリを実行する
@@ -106,9 +111,12 @@ export class ModelManager {
     }
 
     // クエリのドメインIDをチェックする
-    async checkQueryDomainId(queryName, userDomainId) {
+    async checkQueryDomainId(queryName, user_id) {
         const query_template = await this.getModel('query_template');
         const query = await query_template.get({ name: queryName });
+        const userDomainLink = await this.getModel('user_domain_link');
+        const user = await userDomainLink.get({ user_id: user_id });
+        const userDomainId = user[0].user_domain_id;
         if (query.length > 0) {
             if (query[0].user_domain_id !== userDomainId) {
                 return false;

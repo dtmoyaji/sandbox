@@ -5,13 +5,20 @@
     "scope" : "protected",
     "fields": [
         {
-            "name": "id",
+            "name": "user_id",
             "type": "INTEGER",
             "primaryKey": true,
             "autoIncrement": true
         },
         {
             "name": "user_name",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true,
+            "unique": true
+        },
+        {
+            "name": "user_display_name",
             "type": "STRING",
             "length": 255,
             "notNull": true
@@ -35,16 +42,6 @@
             "length": 16,
             "secret": true,
             "notNull": true
-        },
-        {
-            "name": "user_domain_id",
-            "type": "INTEGER",
-            "notNull": true,
-            "default": -1,
-            "foreignKey": {
-                "table": "user_domain",
-                "field": "user_domain_id"
-            }
         },
         {
             "name": "admin_flag",

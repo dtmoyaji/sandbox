@@ -69,7 +69,9 @@ class PageRenderer {
         }
 
         let user = verfyResult.user;
-        let userDomainId = user.user_domain_id;
+        let userDomainLinkTable = await this.modelManager.getModel('user_domain_link');
+        let userDomainLink = await userDomainLinkTable.get({ user_id: user.user_id });
+        let userDomainId = userDomainLink[0].user_domain_id;
 
         let userDomainTable = await this.modelManager.getModel('user_domain');
         let userDomain = await userDomainTable.get({ user_domain_id: userDomainId });

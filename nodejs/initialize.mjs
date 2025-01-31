@@ -30,7 +30,7 @@ userDomainTemplate.domain_description = 'System domain';
 await userDomain.put(userDomainTemplate);
 console.log("System domain created.");
 let userDomainData = await userDomain.get({ domain_name: 'system' });
-let userDomainId = userDomainData[0].user_domain_id;
+let systemDomainId = userDomainData[0].user_domain_id;
 
 // create linworks bot controller domain
 userDomainTemplate = await userDomain.getJsonTemplate();
@@ -49,15 +49,22 @@ if(user.length === 0) {
     // create admin user
     let userTemplate = await userTable.getJsonTemplate();
 
-    delete userTemplate.id;
+    delete userTemplate.user_id;
     userTemplate.user_email = process.env.ADMIN_MAIL;
     userTemplate.user_password = await credential.hashPassword(process.env.ADMIN_PASSWORD);
     userTemplate.user_name = process.env.ADMIN_USER;
+    userTemplate.user_display_name = process.env.ADMIN_DISPLAY_NAME;
     userTemplate.secret_key = await credential.generateSecretKey(userTemplate.user_password);
-    userTemplate.user_domain_id = userDomainId;
     userTemplate.admin_flag = 1;
-    await userTable.put(userTemplate);
+    userTemplate = await userTable.put(userTemplate);
 
+    // create system domain link
+    let systemDomainLinkTable = await modelManager.getModel('user_domain_link');
+    let systemDomainLinkTemplate = await systemDomainLinkTable.getJsonTemplate();
+    systemDomainLinkTemplate.user_id = userTemplate.user_id;
+    systemDomainLinkTemplate.user_domain_id = systemDomainId;
+    await systemDomainLinkTable.put(systemDomainLinkTemplate);
+    
     userTemplate.access_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password, type: 'access_token' }, userTemplate.secret_key, '1d');
     userTemplate.refresh_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password, type: 'refresh_token' }, userTemplate.secret_key, '90d');
     fs.writeFileSync('token.txt', JSON.stringify(userTemplate, null, 2));
@@ -70,24 +77,34 @@ if(user.length === 0) {
     
     // create linworks bot controller domain
     userTemplate = await userTable.getJsonTemplate();
-    delete userTemplate.id;
+    delete userTemplate.user_id;
     userTemplate.user_email = process.env.LINWORKS_BOT_ADMIN_MAIL;
     userTemplate.user_password = await credential.hashPassword(process.env.LINWORKS_BOT_ADMIN_PASSWORD);
     userTemplate.user_name = process.env.LINWORKS_BOT_ADMIN_USER;
+    userTemplate.user_display_name = process.env.LINWORKS_BOT_ADMIN_DISPLAY_NAME
     userTemplate.secret_key = await credential.generateSecretKey(userTemplate.user_password);
-    userTemplate.user_domain_id = linworksBotDomainId;
     userTemplate.admin_flag = 1;
-    await userTable.put(userTemplate);
+    userTemplate = await userTable.put(userTemplate);
 
+    // create linworks bot controller domain link
+    let linworksBotDomainLink = await systemDomainLinkTable.getJsonTemplate();
+    linworksBotDomainLink.user_id = userTemplate.user_id;
+    linworksBotDomainLink.user_domain_id = linworksBotDomainId;
+    await systemDomainLinkTable.put(linworksBotDomainLink);
+    
     // query_templateのサンプル実装
     let queryTemplate = await modelManager.getModel('query_template');
     let queryTemplateJson = await queryTemplate.getJsonTemplate();
     delete queryTemplateJson.id;
     queryTemplateJson.name = 'sample_query';
-    queryTemplateJson.query = 'SELECT * FROM "user" inner join user_domain on "user".user_domain_id = user_domain.user_domain_id where "user".user_name = :user_name';
+    queryTemplateJson.query = `
+        SELECT * FROM "user" usr
+        inner join user_domain_link udl on usr.user_id = udl.user_id
+        inner join user_domain ud on udl.user_domain_id = ud.user_domain_id
+        where usr.user_name = :user_name`;
     queryTemplateJson.parameters = '{ user_name: "string" }';
     queryTemplateJson.description = 'サンプルクエリ';
-    queryTemplateJson.user_domain_id = userDomainId;
+    queryTemplateJson.user_domain_id = systemDomainId;
     await queryTemplate.put(queryTemplateJson);
 }
 
