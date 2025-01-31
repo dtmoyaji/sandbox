@@ -1,30 +1,18 @@
 {
-    "name": "user_domain",
+    "name": "user_domain_link",
     "version": "0.0.1",
     "description": "ユーザードメインを管理するテーブル",
     "scope" : "protected",
     "fields": [
         {
+            "name": "user_id",
+            "type": "INTEGER",
+            "primaryKey": true
+        },
+        {
             "name": "user_domain_id",
             "type": "INTEGER",
-            "primaryKey": true,
-            "autoIncrement": true
-        },
-        {
-            "name": "domain_type",
-            "type": "STRING",
-            "default": "user",
-            "notNull": true
-        },
-        {
-            "name": "domain_name",
-            "type": "STRING",
-            "length": 255,
-            "notNull": true
-        },
-        {
-            "name": "domain_description",
-            "type": "TEXT"
+            "primaryKey": true
         },
         {
             "name": "created_at",

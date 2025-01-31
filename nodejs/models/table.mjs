@@ -94,6 +94,7 @@ export class Table {
         if (fieldDef.notNull) column.notNullable();
         if (fieldDef.defaultValue) column.defaultTo(this.knex.raw(fieldDef.defaultValue));
         if (fieldDef.nullable) column.nullable();
+        if (fieldDef.unique) column.unique();
     }
 
     /**
@@ -218,6 +219,8 @@ export class Table {
                 for (const [key, value] of Object.entries(filter)) {
                     if (Array.isArray(value) && value.length === 2) {
                         query = query.where(key, value[0], value[1]);
+                    } else if (Array.isArray(value)) {
+                        query = query.whereIn(key, value);
                     } else {
                         if (value === null) {
                             query = query.whereNull(key);
@@ -246,7 +249,7 @@ export class Table {
     /**
      * テーブルにデータを挿入するメソッド
      * @param {object} data - 挿入するデータオブジェクト
-     * @returns {Promise<number[]>} - 挿入されたデータのID配列
+     * @returns {Promise<number[]>} - 挿入されたデータにID列を補完して返す
      */
     async put(data) {
         try {
@@ -259,12 +262,8 @@ export class Table {
                 filter[key] = value;
             }
 
-            let record = await this.get(filter);
-            let result = {
-                result: '200',
-                new_id: record[0].id
-            };
-            return result;
+            let records = await this.get(filter);
+            return records[0];
         } catch (err) {
             console.error('Insert data error: ', err.stack);
             throw err;

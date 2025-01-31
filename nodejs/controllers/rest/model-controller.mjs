@@ -1,4 +1,5 @@
 import express from 'express';
+import { Table } from '../../models/table.mjs';
 import { RestUtil } from './rest-util.mjs';
 
 let restUtil = undefined;
@@ -19,9 +20,16 @@ async function createModelController(manager) {
 
             let result = await modelManager.models;
             if (result.length > 0) {
-                if (verifyResult.user.user_domain_id > 1) {
-                    result = result.filter(model => model.user_domain_id === verifyResult.user.user_domain_id);
+                let buf = [];
+                for (let model of result) {
+                    let accessRight = await restUtil.isAccessibleModel(
+                        model.user_domain_id, verifyResult.user.user_id
+                    );
+                    if (accessRight.accessible) {
+                        buf.push(model);
+                    }
                 }
+                result = buf;
                 // result.name でソートする
                 result.sort((a, b) => {
                     if (a.name < b.name) {
@@ -59,35 +67,31 @@ async function createModelController(manager) {
                 return res.status(404).send({ message: 'Model not found' });
             }
 
-            let verifyResult = undefined;
-            if (model.tableDefinition.scope !== 'public') {
-                verifyResult = await restUtil.verifyToken(req, res);
+            let verifyResult = await restUtil.verifyToken(req, res);;
+            if (model.tableDefinition.scope !== Table.TABLE_SCOPE_PUBLIC) {
+                // アクセストークンの検証
                 if (!verifyResult.auth) {
                     return res.status(401).send(verifyResult);
-                }
-                // 管理者以外はユーザーが所属するドメインのデータのみ取得する
-                if (
-                    model_user_domain_id !== verifyResult.user.user_domain_id
-                    && verifyResult.user.admin_flag !== 1
-                ) {
-                    return res.status(403).send({ message: 'Forbidden' });
                 }
             }
 
             const queryParams = req.query;
             const filter = {};
-
             for (const [key, value] of Object.entries(queryParams)) {
                 filter[key] = value.split('|');
             }
 
-            // システムドメインに所属しない管理者ユーザーは、所属ドメインのデータのみ取得する
-            if (model.user_domain_id !== verifyResult.user.user_domain_id
-                && model_user_domain_id === 1
-            ) {
-                filter['user_domain_id'] = verifyResult.user.user_domain_id;
+            // アクセス権の確認
+            let accessRight = await restUtil.isAccessibleModel(
+                model_user_domain_id, verifyResult.user.user_id
+            );
+            if (!accessRight.accessible) {
+                let value = [];
+                for (let domain_id of verifyResult.user_domains) {
+                    value.push(domain_id);
+                }
+                filter['user_domain_id'] = value;
             }
-
             const result = await model.get(filter);
 
             // modelのtableDefinitionのfieldsに、secret=trueを持つフィールドがある場合、そのフィールドをマスクする
@@ -125,21 +129,11 @@ async function createModelController(manager) {
                 return res.status(404).send({ message: 'Model not found' });
             }
 
-            // 管理者でないユーザーは、他のユーザードメインのデータを更新できない
-            if (
-                model.user_domain_id !== verifyResult.user.user_domain_id
-                && verifyResult.user.admin_flag !== 1
-            ) {
-                return res.status(403).send({ message: 'Forbidden' });
-            }
-
             // 管理者は、システムドメインのデータのうち、所属ドメイン以外のデータを更新できない
             // ただし、システムドメインの管理者は、全てのデータを更新できる
-            if (
-                model.user_domain_id === 1
-                && verifyResult.user.admin_flag === 1
-                && req.body.user_domain_id !== verifyResult.user.user_domain_id
-                && verifyResult.user.user_domain_id !== 1
+            if (!restUtil.isAccessibleModel(
+                model.user_domain_id,
+                verifyResult.user.user_id)
             ) {
                 return res.status(403).send({ message: 'Forbidden' });
             }
@@ -149,7 +143,7 @@ async function createModelController(manager) {
             res.json(result);
         } catch (err) {
             console.error('Error updating model data:', err);
-            res.status(500).send({ message: 'Internal server error' });
+            res.status(500).send(err);
         }
     });
 
@@ -169,22 +163,10 @@ async function createModelController(manager) {
                 return res.status(404).send({ message: 'Model not found' });
             }
 
-            // 管理者でないユーザーは、他のユーザードメインのデータを更新できない
-            if (
-                model.user_domain_id !== verifyResult.user.user_domain_id
-                && verifyResult.user.admin_flag !== 1
-            ) {
-                return res.status(403).send({ message: 'Forbidden' });
-            }
-
-            // 管理者は、システムドメインのデータのうち、所属ドメイン以外のデータを更新できない
-            // ただし、システムドメインの管理者は、全てのデータを更新できる
-            if (
-                model.user_domain_id === 1
-                && verifyResult.user.admin_flag === 1
-                && req.body.user_domain_id !== verifyResult.user.user_domain_id
-                && verifyResult.user.user_domain_id === 1
-            ) {
+            let accessRight = await restUtil.isAccessibleModel(
+                model.user_domain_id, verifyResult.user.user_id
+            );
+            if (!accessRight.accessible) {
                 return res.status(403).send({ message: 'Forbidden' });
             }
 
@@ -193,7 +175,7 @@ async function createModelController(manager) {
             res.json(result);
         } catch (err) {
             console.error('Error creating model data:', err);
-            res.status(500).send({ message: 'Internal server error' });
+            res.status(500).send(err);
         }
     });
 
