@@ -1,13 +1,25 @@
 import ejs from 'ejs';
+import express from 'express';
 import { resolve } from 'path';
 
 class PageRenderer {
     restUtil = undefined;
     modelManager = undefined;
+    pageRouter = undefined;
 
     constructor(restUtil, modelManager) {
         this.restUtil = restUtil;
         this.modelManager = modelManager;
+        this.pageRouter = express.Router();
+
+        this.pageRouter.get('/*', async (req, res) => {
+            let paths = req.path.split('/');
+            let renderPanel = paths[1] || '';
+            let renderType = paths[2] || '';
+            let renderTarget = paths[3] || '';
+            let renderResult = await this.renderCenterPanel(renderType, renderTarget);
+            res.send(renderResult);
+        });
     }
 
     /**
@@ -45,6 +57,23 @@ class PageRenderer {
 
         let renderResult = this.renderHtml('views/page/page.ejs', ejsParameters); // 絶対パスを指定
         return renderResult;
+    }
+
+    async renderCenterPanel(renderType, renderTarget) {
+        let result = '';
+        switch(renderType){
+            case 'table':
+                result = await ejs.renderFile(
+                    'views/controls/centerPanel/tablePanel.ejs',
+                    {targetTable: renderTarget}
+                );
+                break;
+            case 'query':
+                break;
+            case 'script':
+                break;
+        }
+        return result;
     }
 
     /**

@@ -267,3 +267,21 @@
     padding: 1em;
     z-index: 100;
 }
+
+#centerPanel {
+    padding: 1em;
+}
+
+#centerPanel .tab-holder {
+    display: block;
+    background-color: var(--footer-background-color);
+}
+
+#centerPanel ul li {
+    list-style-type: none;
+    display: inline-block;
+    padding: 0 0.5em;
+    margin: 0;
+    background-color: var(--header-background-hover-color);
+    color: white;
+}

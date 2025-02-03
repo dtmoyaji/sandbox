@@ -30,6 +30,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const pageRenderer = new PageRenderer(restUtil, modelManager);
+
 // 静的ファイルを提供するためのミドルウェアを設定
 app.use('/theme', express.static(path.join(__dirname, process.env.THEME)));
 app.use(express.json());
@@ -40,6 +42,7 @@ app.use(cookieParser());
 app.use('/api/auth', authController);
 app.use('/api/models', modelController);
 app.use('/api/query', queryController);
+app.use('/pageRenderer', pageRenderer.pageRouter);
 
 // リゾルバ
 app.get('/', (req, res) => {
@@ -122,7 +125,6 @@ app.get(['/admin', '/admin/*'], async (req, res) => {
     }
 
     // ページをレンダリング
-    let pageRenderer = new PageRenderer(restUtil, modelManager);
     let renderResult = await pageRenderer.render(req, res);
     if (renderResult.status === 200) {
         res.send(renderResult.body);

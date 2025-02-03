@@ -6,36 +6,50 @@
     </div>
     <div class="sidePanelMenu" id="sidePanelSubMenu" open="true">
         <input type="text" id="search" placeholder="検索">
-        <ul id = "list">
+        <ul id="list">
         </ul>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
+    let listType = '<%= sidePanelTitle %>';
 
-        const listType = '<%= sidePanelTitle %>';
+    document.addEventListener('DOMContentLoaded', async () => {
         switch (listType) {
             case 'table':
                 const tableList = await fetch('/api/models/all');
                 let listTag = document.getElementById('list');
-                listTag.replaceWith(createTableList(await tableList.json()));
+                listTag.replaceWith(await createTableList(await tableList.json()));
             default:
                 break;
         }
     });
 
-    function createTableList(json) {
+    async function createTableList(json) {
         const list = document.createElement('ul');
         list.attributes.id = 'list';
         json.forEach((element) => {
             const li = document.createElement('li');
             const a = document.createElement('a');
-            a.href = `/admin/table/${element.table_name}`;
+            switch (listType) {
+                case 'table':
+                    // page.ejsのfireEvent関数を呼び出す。
+                    a.onclick = async () => {
+                        await fireEvent('table', { table: element.table_name });
+                    };
+                    break;
+                default:
+                    break;
+            }
             a.textContent = element.table_name;
+            // マウスがリンクに乗った時にカーソルをポインタに変更する。
+            a.onmouseover = () => {
+                a.style.cursor = 'pointer';
+            };
             li.appendChild(a);
             list.appendChild(li);
         });
         return list;
     }
+
 </script>
