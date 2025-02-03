@@ -55,7 +55,7 @@
     width: 20%;
     min-width: 200px;
     max-width: 300px;
-    background-color: var(--header-background-color);
+    background-color: var(--menu-item-background-color);
     color: var(--background-color);
 }
 
@@ -274,14 +274,24 @@
 
 #centerPanel .tab-holder {
     display: block;
-    background-color: var(--footer-background-color);
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--header-background-hover-color);
 }
 
 #centerPanel ul li {
     list-style-type: none;
     display: inline-block;
-    padding: 0 0.5em;
+    padding: 3px 1em;
     margin: 0;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    background-color: var(--menu-item-background-color);
+    color: white;
+}
+
+#centerPanel ul li[selected="true"] {
     background-color: var(--header-background-hover-color);
+    text-decoration: none;
     color: white;
 }
