@@ -9,6 +9,7 @@ import { ModelManager } from './controllers/model-manager.mjs';
 import { createAuthController } from './controllers/rest/auth-controller.mjs';
 import { createModelController } from './controllers/rest/model-controller.mjs';
 import { createQueryController } from './controllers/rest/query-controller.mjs';
+import { Resolver } from './controllers/rest/resolver.mjs';
 import { RestUtil } from './controllers/rest/rest-util.mjs';
 import { PageRenderer } from './views/renderer/page-renderer.mjs';
 
@@ -18,6 +19,7 @@ const port = process.env.PORT;
 
 const modelManager = new ModelManager();
 await modelManager.reloadModels();
+
 
 const restUtil = new RestUtil(modelManager);
 const modelController = await createModelController(modelManager);
@@ -39,8 +41,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // プロジェクトのリゾルバを設定
+const resolver = new Resolver(modelManager);
+await resolver.initializeResolvers();
+console.log(JSON.stringify(await resolver.resolvInfos, null, 2));
+app.use('/api/models', resolver.router);
 app.use('/api/auth', authController);
-app.use('/api/models', modelController);
+//app.use('/api/models', modelController);
 app.use('/api/query', queryController);
 app.use('/pageRenderer', pageRenderer.pageRouter);
 

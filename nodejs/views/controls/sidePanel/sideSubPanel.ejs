@@ -33,10 +33,7 @@
             const a = document.createElement('a');
             switch (listType) {
                 case 'table':
-                    // page.ejsのfireEvent関数を呼び出す。
-                    a.onclick = async () => {
-                        await fireEvent('table', { table: element.table_name });
-                    };
+                    a.href = '/admin/table/' + element.table_name;
                     break;
                 default:
                     break;

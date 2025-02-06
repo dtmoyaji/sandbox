@@ -246,8 +246,11 @@ export class Table {
 
             return result;
         } catch (err) {
-            console.error('Get data error', err.stack);
-            throw err;
+            return [{
+                result: '500',
+                message: 'Get data error',
+                error: err
+            }];
         }
     }
 

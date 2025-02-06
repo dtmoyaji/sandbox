@@ -1,22 +1,60 @@
 <div class="table-panel">
-    <h2>テーブル: <%= targetTable %></h2>
+    <h2>テーブル: <%= targetTable %>
+    </h2>
     <ul class="tab-holder">
         <li class="tab" id="data" selected="true">データ</li>
         <li class="tab" id="definition">定義</li>
+        <li class="tab" id="rest">REST</li>
     </ul>
 
     <div>
-        <div id="dataView">
+        <div class="centerView" id="dataView" style="display: block;">
             データビュー
+            <%- include('../genericTable/genericTable.ejs', {targetTable: targetTable}); %>
         </div>
-        <div id="definitionView">
-            定義ビュー
+        <div class="centerView" id="definitionView" style="display: none;">
+            <pre id="tableDefinition"></pre>
+        </div>
+        <div class="centerView" id="restView" style="display: none;">
+            REST API
         </div>
     </div>
-
 
 </div>
 
 <script>
+
+    // タブの切り替え
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabs = document.querySelectorAll('.tab');
+        const views = document.querySelectorAll('.centerView');
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                tabs.forEach((t) => {
+                    t.removeAttribute('selected');
+                });
+                tab.setAttribute('selected', 'true');
+
+                views.forEach((view) => {
+                    view.style.display = 'none';
+                });
+                document.getElementById(tab.id + 'View').style.display = 'block';
+            });
+        });
+    });
+
+    // 再描画
+    document.addEventListener('DOMContentLoaded', async function () {
+        const targetTable = '<%= targetTable %>';
+
+        try {
+            const response = await fetch(`/api/models/tableDefinition/${targetTable}`);
+            const tableDefinition = await response.text();
+            document.getElementById('tableDefinition').innerHTML = JSON.stringify(JSON.parse(tableDefinition), null, 2);
+        } catch (error) {
+            console.error('Error fetching table definition:', error);
+        }
+    });
 
 </script>

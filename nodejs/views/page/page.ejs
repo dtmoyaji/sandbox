@@ -19,8 +19,7 @@
         </div>
 
         <div id="center" open="true">
-            <div id="centerPanel">
-            </div>
+            <%- centerPanel %>
         </div>
     </div>
     <div id="footer">
@@ -48,6 +47,9 @@
                     return response.text();
                 }).then((html) => {
                     document.getElementById('centerPanel').innerHTML = html;
+                    if(window.redrawCenterPanel) {
+                        window.redrawCenterPanel();
+                    }
                 });
                 break;
             case 'query':
