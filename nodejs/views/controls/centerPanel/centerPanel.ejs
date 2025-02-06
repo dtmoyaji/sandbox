@@ -1,0 +1,16 @@
+<div id="centerPanel">
+    <%
+        let path = params.path[0];
+        let targetTable = params.path[1];
+
+        switch (path) {
+            case 'table':
+            %>
+            <%- include('./tablePanel.ejs', { targetTable: targetTable }); %>
+            <%
+                break;
+            default:
+                break;
+        }
+    %>
+</div>

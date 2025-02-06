@@ -1,0 +1,38 @@
+<div class="genericTable">
+    <div class="table-controler">
+        テーブルコントローラー
+    </div>
+    <div class="table-data">
+        <table class="table-body"></table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        let tableName = '<%= targetTable %>';
+        let table = await fetch(`/api/models/${tableName}`);
+        let tableData = await table.json();
+        let tableController = document.querySelector('.table-controler');
+        let tableBody = document.querySelector('.table-body');
+        
+        let tableHeader = document.createElement('tr');
+        // th タグを作成
+        for(let key in tableData[0]) {
+            let cell = document.createElement('th');
+            cell.textContent = key;
+            tableHeader.appendChild(cell);
+        }
+        tableBody.appendChild(tableHeader);
+        // td タグを作成
+        for(let i = 0; i < tableData.length; i++) {
+            let row = document.createElement('tr');
+            row.setAttribute('odd', odd = i % 2 === 0 ? 'true' : 'false');
+            for(let key in tableData[i]) {
+                let cell = document.createElement('td');
+                cell.textContent = tableData[i][key];
+                row.appendChild(cell);
+            }
+            tableBody.appendChild(row);
+        }
+    });
+</script>

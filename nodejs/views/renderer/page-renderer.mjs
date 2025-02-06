@@ -31,7 +31,10 @@ class PageRenderer {
     async render(req, res) {
         let path = req.params[0] || ''; // パスがない場合は空文字列を使用
         const nameParts = path.split('/');
-        const queryParams = req.query;
+        const queryParams = {
+            path: nameParts,
+            query: req.query
+        };
 
         let ejsParameters = {
             path: nameParts,
@@ -49,31 +52,16 @@ class PageRenderer {
         let topBarHtml = await this.renderHtml('views/controls/topBar/topbar.ejs', ejsParameters);
         let footerHtml = await this.renderHtml('views/controls/footBar/footbar.ejs', ejsParameters);
         let sidePanelHtml = await this.renderSidePanel(req, res, ejsParameters);
+        let centerPanelHtml = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
 
         ejsParameters.topBar = topBarHtml.body;
         ejsParameters.startButton = startButtonHtml.body;
         ejsParameters.footer = footerHtml.body;
         ejsParameters.sidebarPanel = sidePanelHtml.body;
+        ejsParameters.centerPanel = centerPanelHtml.body;
 
         let renderResult = this.renderHtml('views/page/page.ejs', ejsParameters); // 絶対パスを指定
         return renderResult;
-    }
-
-    async renderCenterPanel(renderType, renderTarget) {
-        let result = '';
-        switch(renderType){
-            case 'table':
-                result = await ejs.renderFile(
-                    'views/controls/centerPanel/tablePanel.ejs',
-                    {targetTable: renderTarget}
-                );
-                break;
-            case 'query':
-                break;
-            case 'script':
-                break;
-        }
-        return result;
     }
 
     /**
