@@ -1,33 +1,19 @@
 {
-    "name": "project",
-    "version" : "0.0.1",
-    "description": "Project table definition",
+    "name": "application_domain_link",
+    "version": "0.0.1",
+    "description": "ユーザードメインを管理するテーブル",
     "scope" : "protected",
+    "user_scope": "user_admin_readonly",
     "fields": [
         {
-            "name": "id",
+            "name": "application_id",
             "type": "INTEGER",
-            "primaryKey": true,
-            "autoIncrement": true
+            "primaryKey": true
         },
         {
             "name": "user_domain_id",
             "type": "INTEGER",
-            "default": -1,
-            "notNull": true,
-            "foreignKey": {
-                "table": "user_domain",
-                "field": "id"
-            }
-        },
-        {
-            "name": "name",
-            "type": "STRING",
-            "notNull": true
-        },
-        {
-            "name": "description",
-            "type": "TEXT"
+            "primaryKey": true
         },
         {
             "name": "created_at",

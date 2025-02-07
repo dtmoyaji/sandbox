@@ -3,6 +3,7 @@
     "version": "0.0.1",
     "description": "ユーザーを管理するテーブル",
     "scope" : "protected",
+    "user_scope": "user_admin_readwrite",
     "fields": [
         {
             "name": "user_id",

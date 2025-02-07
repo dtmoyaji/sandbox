@@ -3,6 +3,7 @@
     "version": "0.0.1",
     "description": "ユーザードメインを管理するテーブル",
     "scope" : "protected",
+    "user_scope": "user_admin_readwrite",
     "fields": [
         {
             "name": "user_id",

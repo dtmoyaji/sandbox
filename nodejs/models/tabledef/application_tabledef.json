@@ -1,23 +1,24 @@
 {
-    "name": "domain_tabledef",
+    "name": "application_tabledef",
     "version" : "0.0.1",
     "description": "Domain table definition",
     "scope" : "protected",
+    "user_scope": "user_admin_readonly",
     "fields": [
         {
-            "name": "id",
+            "name": "tabledef_id",
             "type": "INTEGER",
             "primaryKey": true,
             "autoIncrement": true
         },
         {
-            "name": "user_domain_id",
+            "name": "application_id",
             "type": "INTEGER",
             "default": -1,
             "notNull": true,
             "foreignKey": {
-                "table": "user_domain",
-                "field": "id"
+                "table": "application",
+                "field": "application_id"
             }
         },
         {

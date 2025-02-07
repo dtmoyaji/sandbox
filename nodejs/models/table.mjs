@@ -6,10 +6,18 @@ import { Connection } from './connection.mjs'; // Connectionクラスをイン�
  */
 export class Table {
 
-    static MODEL_SCOPE_PUBLIC = 'public';
-    static MODEL_SCOPE_PROTECTED = 'protected';
+    // 公開テーブル、非公開テーブルのスコープ
+    static MODEL_SCOPE_PUBLIC = 'public'; // 公開テーブル
+    static MODEL_SCOPE_PROTECTED = 'protected'; // 非公開テーブル(アクセス権はユーザースコープに従う)
 
-    user_domain_id = 1; // テーブルのドメイン
+    // ユーザーのスコープ(ユーザー、ユーザー管理者による読み書きはuser_domain_idが一致するレコードに限定される)
+    static USER_SCOPE_SYSTEM_ADMIN_READWRITE = 'system_admin_readwrite'; // システム管理者のみ読み書き可能
+    static USER_SCOPE_ADMIN_READWONLY = 'user_admin_readonly'; // ユーザー管理者のみ読み取り可能
+    static USER_SCOPE_ADMIN_READWRITE = 'user_admin_readwrite'; // ユーザー管理者のみ読み書き可能
+    static USER_SCOPE_USER_READONLY = 'user_readonly'; // ユーザーのみ読み取り可能
+    static USER_SCOPE_USER_READWRITE = 'user_readwrite'; // ユーザーのみ読み書き可能
+
+    application_id = 1; // テーブルのドメイン
     table_name = 'table'; // テーブル名
     connection;
     knex;
@@ -60,6 +68,9 @@ export class Table {
         switch (fieldDef.type) {
             case 'INTEGER':
                 column = fieldDef.autoIncrement ? table.increments(fieldName) : table.integer(fieldName);
+                break;
+            case 'SMALLINT':
+                column = fieldDef.autoIncrement ? table.increments(fieldName) : table.smallint(fieldName);
                 break;
             case 'VARCHAR':
             case 'STRING':
@@ -249,7 +260,7 @@ export class Table {
             return [{
                 result: '500',
                 message: 'Get data error',
-                error: err
+                error: err.stack
             }];
         }
     }

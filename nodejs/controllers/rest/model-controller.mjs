@@ -22,10 +22,9 @@ async function createModelController(manager) {
             if (result.length > 0) {
                 let buf = [];
                 for (let model of result) {
-                    let accessRight = await restUtil.isAccessibleModel(
-                        model.user_domain_id, verifyResult.user.user_id
-                    );
-                    if (accessRight.accessible) {
+                    if (accessRight = await restUtil.isAccessibleModel(
+                        model, verifyResult
+                    )) {
                         buf.push(model);
                     }
                 }
@@ -88,10 +87,10 @@ async function createModelController(manager) {
             }
 
             // アクセス権の確認
-            let accessRight = await restUtil.isAccessibleModel(
-                model_user_domain_id, verifyResult.user.user_id
-            );
-            if (!accessRight.accessible) {
+            if (await restUtil.isAccessibleModel(
+                model_user_domain_id,
+                verifyResult.user.user_id
+            )) {
                 let value = [];
                 for (let domain_id of verifyResult.user_domains) {
                     value.push(domain_id);
