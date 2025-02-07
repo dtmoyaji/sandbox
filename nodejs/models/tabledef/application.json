@@ -1,37 +1,25 @@
 {
-    "name": "system_property",
+    "name": "application",
     "version": "0.0.1",
-    "description": "System property table definition",
+    "description": "アプリケーションを管理するテーブル",
     "scope" : "protected",
-    "user_scope": "system_admin_readwrite",
+    "user_scope": "user_admin_readonly",
     "fields": [
         {
-            "name": "id",
+            "name": "application_id",
             "type": "INTEGER",
             "primaryKey": true,
             "autoIncrement": true
         },
         {
-            "name": "user_domain_id",
-            "type": "INTEGER",
-            "default": -1,
-            "notNull": true
-        },
-        {
-            "name": "property_name",
+            "name": "application_name",
             "type": "STRING",
-            "length": 255,
-            "notNull": true
+            "notNull": true,
+            "unique": true
         },
         {
-            "name": "property_value",
-            "type": "TEXT",
-            "notNull": true
-        },
-        {
-            "name": "description",
-            "type": "TEXT",
-            "notNull": true
+            "name": "application_description",
+            "type": "TEXT"
         },
         {
             "name": "created_at",

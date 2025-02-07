@@ -96,7 +96,7 @@ class Resolver {
 
     async tableDefinitionGet(resolvInfo, req, res) {
         let verifyResult = await this.restUtil.verifyToken(req, res);
-        if(!verifyResult.auth) {
+        if (!verifyResult.auth) {
             return res.status(401).send(verifyResult);
         }
         let params = req.params[0].split('/');
@@ -114,7 +114,7 @@ class Resolver {
     }
 
     async tableGet(resolvInfo, req, res) {
-        if(req.path === '/'){
+        if (req.path === '/') {
             return res.json({});
         }
         let verifyResult = await this.restUtil.verifyToken(req, res);
@@ -129,7 +129,7 @@ class Resolver {
         let result = {};
         if (resolvInfo.path === 'all') {
             result = this.modelManager.models;
-            result = await this.filterByUserDomainId(result, verifyResult.user_domains);
+            result = await this.filterModelsByUser(result, verifyResult);
             for (let model of result) { // connectionは外部に出さない
                 delete model.connection;
             };
@@ -137,12 +137,9 @@ class Resolver {
         }
 
         const model = await this.modelManager.getModel(modelName);
-        const model_user_domain_id = model.user_domain_id;
-
         if (!model) {
             return res.status(404).send({ message: 'Model not found' });
         }
-
         if (model.tableDefinition.scope !== Table.TABLE_SCOPE_PUBLIC) {
             // アクセストークンの検証
             if (!verifyResult.auth) {
@@ -157,10 +154,13 @@ class Resolver {
         }
 
         // アクセス権の確認
-        let accessRight = await this.restUtil.isAccessibleModel(
-            model_user_domain_id, verifyResult.user.user_id
-        );
-        if (!accessRight.accessible) {
+        if (! await this.restUtil.isAccessibleModel(
+            model, verifyResult
+        )) {
+            return result; // アクセス権がない場合は空の配列を返す
+        }
+
+        if (model.tableDefinition.fields.some(field => field.name === 'user_domain_id')) {
             let value = [];
             for (let domain_id of verifyResult.user_domains) {
                 value.push(domain_id);
@@ -246,7 +246,47 @@ class Resolver {
         }
     }
 
-    async filterByUserDomainId(data, userDomainIds) {
+
+    // ユーザーがアクセス可能なモデルのみを返す
+    async filterModelsByUser(data, verifyResult) {
+        let isSystemUser = verifyResult.user_domains.includes(RestUtil.SYSTEM_DOMAIN_ID);
+        let isAdmin = verifyResult.user.admin_flag === 1;
+
+        // システムユーザーは全てのモデルにアクセス可能
+        if (isSystemUser) {
+            return data;
+        }
+
+        let result = [];
+
+        // 管理者ユーザーはmodel.user_scopeが
+        // USER_SCOPE_SYSTEM_ADMIN_READWRITEを覗く全てのモデルにアクセス可能
+        if (isAdmin) {
+            for (let model of data) {
+                if (model.tableDefinition.user_scope !== Table.USER_SCOPE_SYSTEM_ADMIN_READWRITE) {
+                    result.push(model);
+                }
+            }
+        }
+
+        // 通常ユーザーはmodel.user_scopeが
+        // USER_SCOPE_READONLYとUSER_SCOPE_READWRITEのモデルにアクセス可能
+        else {
+            for (let model of data) {
+                if (model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READONLY
+                    || model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READWRITE) {
+                    result.push(model);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // ユーザーがアクセス可能なレコードのみを返す
+    async filterRecordsByUser(data, verifyResult) {
+        let userDomainIds = verifyResult.user_domains
+
         let result = [];
         for (let record of data) {
             if (userDomainIds.includes(record.user_domain_id)) {

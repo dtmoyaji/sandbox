@@ -3,22 +3,29 @@
     "version" : "0.0.1",
     "description": "Query template table definition",
     "scope" : "protected",
+    "user_scope": "user_readonly",
     "fields": [
         {
-            "name": "id",
+            "name": "query_template_id",
             "type": "INTEGER",
             "primaryKey": true,
             "autoIncrement": true
         },
         {
-            "name": "user_domain_id",
+            "name": "application_id",
             "type": "INTEGER",
             "default": -1,
             "notNull": true,
             "foreignKey": {
-                "table": "user_domain",
-                "field": "id"
+                "table": "application",
+                "field": "application_id"
             }
+        },
+        {
+            "name": "user_scope",
+            "type": "STRING",
+            "notNull": true,
+            "default": "user_readonly"
         },
         {
             "name": "name",

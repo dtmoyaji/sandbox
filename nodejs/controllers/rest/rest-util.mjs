@@ -1,5 +1,5 @@
+import { Table } from '../../models/table.mjs';
 import * as credential from '../credential.mjs';
-
 
 class RestUtil {
 
@@ -52,45 +52,36 @@ class RestUtil {
 
     /**
      * ユーザーが指定されたモデルにアクセス可能かどうかを判定する.
-     * @param {*} model_domain_id 
-     * @param {*} user_id 
-     * @returns 
+     * テーブル上のuser_scopeによってアクセス権を判定する.
+     * @param {*} application_id 
+     * @param {*} verifyResult
+     * @returns {boolean} アクセス可能な場合はtrue, それ以外はfalse
      */
-    async isAccessibleModel(model_domain_id, user_id) {
-        let result = { accessible: false, info: '', admin_flag: 0, user_domain_ids: [] };
+    async isAccessibleModel(model, verifyResult) {
+        let isSystemUser = verifyResult.user_domains.includes(RestUtil.SYSTEM_DOMAIN_ID);
+        let isAdmin = verifyResult.user.admin_flag === 1;
+        
+        // システムユーザーは全てのモデルにアクセス可能
+        if(isSystemUser) {
+            return true;
+        }
 
-        let userTable = await this.modelManager.getModel('user');
-        let user = (await userTable.get({ user_id: user_id }))[0];
-        if (!user) {
-            result.accessible = false;
-            result.info = 'User not found';
-            result.admin_flag = 0;
-        } else {
-            let user_domain_link = await this.modelManager.getModel('user_domain_link');
-            let user_domains = await user_domain_link.get({ user_id: user_id });
-            result.admin_flag = user.admin_flag;
-
-            // 権限が強い方の情報を残すため、ループは２つに分ける
-            // ユーザーの所属ドメインに一致するモデルかどうか
-            for (let user_domain of user_domains) {
-                if (user_domain.user_domain_id === model_domain_id) {
-                    result.accessible = true;
-                    result.info = RestUtil.INFO_DOMAIN_USER;
-                }
-                result.user_domain_ids.push(user_domain);
-            }
-            // ユーザーがシステムドメインに所属するかどうか
-            for (let user_domain of user_domains) {
-                if (user_domain.user_domain_id === RestUtil.SYSTEM_DOMAIN_ID) {
-                    result.accessible = true;
-                    result.info = RestUtil.INFO_SYSTEM_DOMAIN_USER;
-                    break;
-                }
+        // 管理者ユーザーはmodel.user_scopeが
+        // USER_SCOPE_SYSTEM_ADMIN_READWRITEを覗く全てのモデルにアクセス可能
+        if(isAdmin) {
+            if(model.tableDefinition.user_scope !== Table.USER_SCOPE_SYSTEM_ADMIN_READWRITE) {
+                return true;
             }
         }
-        return result;
+        // その他のユーザーは、USER_SCOPE_READONLY, USER_SCOPE_READWRITEのモデルにアクセス可能
+        else{
+            if(model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READONLY
+                || model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READWRITE) {
+                return true;
+            }
+        }
+        return false;
     }
-
 }
 
 export {

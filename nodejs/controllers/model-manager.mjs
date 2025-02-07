@@ -26,17 +26,17 @@ export class ModelManager {
             let modelDef = JSON.parse(fs.readFileSync(path.join(tableDefDir, modelFile), 'utf8'));
             let model = new Table(this.Connection);
             await model.createTable(modelDef);
-            model.user_domain_id = 1; // システムドメインID
+            model.application_id = 1; // システムドメインID
             this.models.push(model);
         }
 
-        // ドメインテーブルの読み込み
-        const domainTables = await this.knex('domain_tabledef').select('*');
-        for (let domainTable of domainTables) {
+        // アプリケーションテーブルの読み込み
+        const applicationTables = await this.knex('application_tabledef').select('*');
+        for (let domainTable of applicationTables) {
             let domainTableDef = JSON.parse(domainTable.tabledef);
             let model = new Table(this.Connection);
             await model.createTable(domainTableDef);
-            model.user_domain_id = domainTable.user_domain_id;
+            model.application_id = domainTable.application_id;
             this.models.push(model);
         }
     }
