@@ -6,4 +6,5 @@ yarn.lock
 .vscode
 .env
 .nextcloud.ignore
+package-lock.json
 token.txt
