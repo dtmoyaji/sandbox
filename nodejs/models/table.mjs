@@ -229,7 +229,18 @@ export class Table {
             if (filter) {
                 for (const [key, value] of Object.entries(filter)) {
                     if (Array.isArray(value)) {
-                        query = query.whereIn(key, value);
+                        if (typeof value[0] === 'string' && value[0].includes('|')) {
+                            for (let i = 0; i < value.length; i++) {
+                                if (value[i].includes('|')) {
+                                    const values = value[i].split('|');
+                                    if (values.length === 2) {
+                                        query = query.where(key, values[0], values[1]);
+                                    }
+                                }
+                            }
+                        } else {
+                            query = query.whereIn(key, value);
+                        }
                     } else if (typeof value === 'string' && value.includes('|')) {
                         const values = value.split('|');
                         if (values.length === 2) {
