@@ -1,38 +1,85 @@
 <div class="genericTable">
-    <div class="table-controler">
-        テーブルコントローラー
-    </div>
+    <div class="table-controler" id="table-controler-top"></div>
     <div class="table-data">
         <table class="table-body"></table>
     </div>
+    <div class="table-controler" id="table-controler-bottom"></div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', async function () {
+
+        let request_param = '<%- JSON.stringify(params) %>';
+        let parameters = JSON.parse(request_param).query;
+
+        let getParams = '';
+        for (let key in parameters) {
+            getParams += `${key}=${parameters[key]}&`;
+        }
+        getParams = getParams.slice(0, -1);
+
         let tableName = '<%= targetTable %>';
-        let table = await fetch(`/api/models/${tableName}`);
+        let params = JSON.parse(request_param).query;
+
+        let table = await fetch(`/api/models/${tableName}?${getParams}`);
         let tableData = await table.json();
+        console.log(tableData.data);
+        console.log(tableData.pagingInfo);
         let tableController = document.querySelector('.table-controler');
         let tableBody = document.querySelector('.table-body');
         
         let tableHeader = document.createElement('tr');
         // th タグを作成
-        for(let key in tableData[0]) {
+        for(let key in tableData.data[0]) {
             let cell = document.createElement('th');
             cell.textContent = key;
             tableHeader.appendChild(cell);
         }
         tableBody.appendChild(tableHeader);
         // td タグを作成
-        for(let i = 0; i < tableData.length; i++) {
+        for(let i = 0; i < tableData.data.length; i++) {
             let row = document.createElement('tr');
             row.setAttribute('odd', odd = i % 2 === 0 ? 'true' : 'false');
-            for(let key in tableData[i]) {
+            for(let key in tableData.data[i]) {
                 let cell = document.createElement('td');
-                cell.textContent = tableData[i][key];
+                cell.textContent = tableData.data[i][key];
                 row.appendChild(cell);
             }
             tableBody.appendChild(row);
         }
+
+        // ページング情報
+        let pagingInfo = tableData.pagingInfo;
+        let tableControlerTop = document.getElementById('table-controler-top');
+        let tableControlerBottom = document.getElementById('table-controler-bottom');
+        let controlBarTop = await generateCotnrolBar(pagingInfo, 'control-bar-top');
+        let controlBarBottom = await generateCotnrolBar(pagingInfo, 'control-bar-bottom');
+        tableControlerTop.appendChild(controlBarTop);
+        tableControlerBottom.appendChild(controlBarBottom);
+
     });
+
+    async function generateCotnrolBar(pagingInfo, tagid){
+        let controlBar = document.createElement('div');
+        controlBar.id = tagid;
+        let prevButton = document.createElement('button');
+        prevButton.id = 'page-prev';
+        prevButton.class = 'page-control-button';
+        prevButton.textContent = '<';
+        controlBar.appendChild(prevButton);
+        let currentPage = document.createElement('input');
+        currentPage.id = 'page-current';
+        currentPage.type = 'text';
+        currentPage.value = `${pagingInfo.currentPage}`;
+        controlBar.appendChild(currentPage);
+        let totalPage = document.createElement('span');
+        totalPage.textContent = ` / ${pagingInfo.pages}`;
+        controlBar.appendChild(totalPage);
+        let nextButton = document.createElement('button');
+        nextButton.textContent = '>';
+        nextButton.id = 'page-next';
+        nextButton.class = 'page-control-button';
+        controlBar.appendChild(nextButton);
+        return controlBar;
+    }
 </script>

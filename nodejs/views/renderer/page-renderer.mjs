@@ -60,7 +60,7 @@ class PageRenderer {
         ejsParameters.sidebarPanel = sidePanelHtml.body;
         ejsParameters.centerPanel = centerPanelHtml.body;
 
-        let renderResult = this.renderHtml('views/page/page.ejs', ejsParameters); // 絶対パスを指定
+        let renderResult = await this.renderHtml('views/page/page.ejs', ejsParameters); // 絶対パスを指定
         return renderResult;
     }
 

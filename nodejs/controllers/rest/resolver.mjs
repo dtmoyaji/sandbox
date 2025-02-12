@@ -121,29 +121,30 @@ class Resolver {
         const modelName = resolvInfo.parameters.model_name;
 
         // ユーザーモデルの場合は、特別な処理を行う
-        if (modelName === 'user') {
-            return await this.getUser(req, res);
-        }
-
-        // all の場合は、全てのモデルを取得する
         let result = {};
-        if (resolvInfo.path === 'all') {
-            result = this.modelManager.models;
-            result = await this.filterModelsByUser(result, verifyResult);
-            for (let model of result) { // connectionは外部に出さない
-                delete model.connection;
-            };
-            return res.json(result);
-        }
-
         const model = await this.modelManager.getModel(modelName);
-        if (!model) {
-            return res.status(404).send({ message: 'Model not found' });
-        }
-        if (model.tableDefinition.scope !== Table.TABLE_SCOPE_PUBLIC) {
-            // アクセストークンの検証
-            if (!verifyResult.auth) {
-                return res.status(401).send(verifyResult);
+        if (modelName === 'user') {
+            result = await this.getUser(req, res);
+        } else {
+
+            // all の場合は、全てのモデルを取得する
+            if (resolvInfo.path === 'all') {
+                result = this.modelManager.models;
+                result = await this.filterModelsByUser(result, verifyResult);
+                for (let model of result) { // connectionは外部に出さない
+                    delete model.connection;
+                };
+                return res.json(result);
+            }
+
+            if (!model) {
+                return res.status(404).send({ message: 'Model not found' });
+            }
+            if (model.tableDefinition.scope !== Table.TABLE_SCOPE_PUBLIC) {
+                // アクセストークンの検証
+                if (!verifyResult.auth) {
+                    return res.status(401).send(verifyResult);
+                }
             }
         }
 
@@ -167,7 +168,15 @@ class Resolver {
             }
             filter['user_domain_id'] = value;
         }
-        result = await model.get(filter);
+
+        // ページングの設定
+        const recordLimit = resolvInfo.parameters.record_limit || -1;
+        const currentPage = resolvInfo.parameters.current_page || 1;
+
+        // レコードの取得
+        result = await model.get(
+            filter, recordLimit, currentPage
+        );
 
         // modelのtableDefinitionのfieldsに、secret=trueを持つフィールドがある場合、そのフィールドをマスクする
         if (model.tableDefinition.fields.some(field => field.secret)) {
@@ -180,8 +189,16 @@ class Resolver {
             });
         }
 
-        res.json(result);
+        // ページ情報の取得
+        const pagingInfo = await model.getPagingInfo(
+            filter, recordLimit, currentPage
+        );
 
+        result = {
+            data: result,
+            pagingInfo: pagingInfo
+        }
+        res.json(result);
     }
 
     async tablePost(resolvInfo, req, res) {
@@ -238,7 +255,7 @@ class Resolver {
                 });
             }
 
-            res.json(result);
+            return result;
 
         } catch (err) {
             console.error('Error fetching model data:', err);

@@ -220,6 +220,18 @@
     text-decoration: none;
 }
 
+.tab-holder{
+    padding-left: 1em;
+    position: absolute;
+    display: block;
+    top: 50%;
+    height: 50%;
+    width: 100%;
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--header-background-hover-color);
+}
+
 .tabs {
     border-bottom: 1px solid var(--tab-button-background-color);
 }
@@ -271,7 +283,8 @@
 }
 
 #centerPanel {
-    padding: 1em;
+    padding: 0;
+    height: 100%;
 }
 
 #centerPanel .tab-holder {
@@ -284,18 +297,31 @@
 #centerPanel ul li {
     list-style-type: none;
     display: inline-block;
-    padding: 3px 1em;
+    padding: 0.5em 1em;
     margin: 0;
+    height: 100%;
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
     background-color: var(--menu-item-background-color);
     color: white;
+    vertical-align: bottom;
 }
 
 #centerPanel ul li[selected="true"] {
     background-color: var(--header-background-hover-color);
     text-decoration: none;
     color: white;
+}
+
+.centerView-holder {
+    height: 100%;
+    border: 1px solid var(--header-background-hover-color);
+}
+
+.centerView {
+    height: 100%;
+    padding: 1em;
+    overflow: auto;
 }
 
 #tableDefinition {
@@ -307,8 +333,14 @@
 
 .genericTable {
     width: 100%;
-    height: 100%;
+    bottom: 0;
     border-collapse: collapse;
+}
+
+.table-panel {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
 }
 
 .table-data{
@@ -334,4 +366,55 @@
 
 .table-body tr[odd="false"] {
     background-color: var(--table-row-eaven-background-color);
+}
+
+.panel-head{
+    position: absolute;
+    display: block;
+    top: 0;
+    height: 10%;
+    width: 100%;
+}
+
+.panel-caption{
+    position: absolute;
+    display: block;
+    top: 0;
+    height: 50%;
+    width: 100%;
+}
+
+.panel-body{
+    position: absolute;
+    display: block;
+    top: 10%;
+    bottom: 0;
+    width: 100%;
+}
+
+.table-controler{
+    display: block;
+    left: 0;
+    right: 0;
+    text-align: right;
+}
+
+#page-prev, #page-next {
+    padding: 0 0.5em;
+    margin:  0 3px;
+    background-color: var(--header-background-color);
+    color: white;
+    border: none;
+}
+
+#page-prev:hover, #page-next:hover {
+    background-color: var(--header-background-hover-color);
+}
+
+#page-current{
+    padding: 0 0.5em;
+    margin:  0 3px;
+    width: 4em;
+    height: 100%;
+    text-align: right;
 }

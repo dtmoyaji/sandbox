@@ -1,29 +1,34 @@
 <div class="table-panel">
-    <h2>テーブル: <%= targetTable %>
-    </h2>
-    <ul class="tab-holder">
-        <li class="tab" id="data" selected="true">データ</li>
-        <li class="tab" id="definition">定義</li>
-        <li class="tab" id="rest">REST</li>
-    </ul>
-
-    <div>
-        <div class="centerView" id="dataView" style="display: block;">
-            データビュー
-            <%- include('../genericTable/genericTable.ejs', {targetTable: targetTable}); %>
-        </div>
-        <div class="centerView" id="definitionView" style="display: none;">
-            <pre id="tableDefinition"></pre>
-        </div>
-        <div class="centerView" id="restView" style="display: none;">
-            REST API
+    <div class="panel-head">
+        <h2 class="panel-caption">テーブル: <%= targetTable %>
+        </h2>
+        <ul class="tab-holder">
+            <li class="tab" id="data" selected="true">データ</li>
+            <li class="tab" id="definition">定義</li>
+            <li class="tab" id="rest">REST</li>
+        </ul>
+    </div>
+    <div class="panel-body">
+        <div class="centerView-holder">
+            <div class="centerView" id="dataView" style="display: block;">
+                <h3>データビュー</h3>
+                <%
+                    let queryParameters = params;
+                %>
+                <%- include('../genericTable/genericTable.ejs', {targetTable: targetTable, params: queryParameters}); %>
+            </div>
+            <div class="centerView" id="definitionView" style="display: none;">
+                <h3>テーブル定義</h3>
+                <pre id="tableDefinition"></pre>
+            </div>
+            <div class="centerView" id="restView" style="display: none;">
+                <h3>REST API</h3>
+            </div>
         </div>
     </div>
-
 </div>
 
 <script>
-
     // タブの切り替え
     document.addEventListener('DOMContentLoaded', function () {
         const tabs = document.querySelectorAll('.tab');
@@ -56,5 +61,4 @@
             console.error('Error fetching table definition:', error);
         }
     });
-
 </script>

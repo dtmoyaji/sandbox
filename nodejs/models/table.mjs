@@ -218,14 +218,103 @@ export class Table {
         return template;
     }
 
+
+    /**
+     * ページング情報を取得するメソッド
+     * @param {*} filter 
+     * @param {*} recordLimit 
+     * @param {*} page 
+     * @returns 
+     */
+    async getPagingInfo(filter, recordLimit, page) {
+        if(recordLimit < 1){
+            recordLimit = 20;
+        }
+        if(page < 1){
+            page = 1;
+        }
+        let count = await this.getCount(filter);
+        let pages = Math.ceil(count / recordLimit);
+        let offset = (page - 1) * recordLimit;
+        if(page > pages){ // ページ数が最大ページ数を超える場合は最大ページ数に設定
+            page = pages;
+            offset = (page - 1) * recordLimit;
+        }
+        return {
+            count: count,
+            pages: pages,
+            currentPage: page,
+            offset: offset,
+        };
+    }
+
+    /**
+     * フィルタ条件に一致するデータの件数を取得するメソッド
+     * @param {*} filter 
+     * @returns 
+     */
+    async getCount(filter) {
+        try {
+            let query = this.knex(this.table_name).where({ deleted_at: null }).count({ count: '*' });
+            if (filter) {
+                for (const [key, value] of Object.entries(filter)) {
+                    if (Array.isArray(value)) {
+                        if (typeof value[0] === 'string' && value[0].includes('|')) {
+                            for (let i = 0; i < value.length; i++) {
+                                if (value[i].includes('|')) {
+                                    const values = value[i].split('|');
+                                    if (values.length === 2) {
+                                        query = query.where(key, values[0], values[1]);
+                                    }
+                                }
+                            }
+                        } else {
+                            query = query.whereIn(key, value);
+                        }
+                    } else if (typeof value === 'string' && value.includes('|')) {
+                        const values = value.split('|');
+                        if (values.length === 2) {
+                            query = query.where(key, values[0], values[1]);
+                        } else {
+                            query = query.where(key, value);
+                        }
+                    } else {
+                        if (value === null) {
+                            query = query.whereNull(key);
+                            continue;
+                        }
+                        const lowerValue = typeof value[0] === 'string' ? value[0].toLowerCase() : value;
+                        if (lowerValue === 'is not null') {
+                            query = query.whereNotNull(key);
+                        } else if (lowerValue === 'is null') {
+                            query = query.whereNull(key);
+                        } else {
+                            query = query.where(key, value);
+                        }
+                    }
+                }
+            }
+            let result = await query;
+            return result[0].count;
+        } catch (err) {
+            console.error('Count data error', err.stack);
+            throw err;
+        }
+    }
+
     /**
      * テーブルのデータを取得するメソッド
      * @param {object} [filter] - データ取得のためのフィルタオブジェクト
+     * @param {number} [limit] - 取得するデータの最大数。デフォルトは-1(全て)
+     * @param {number} [offset] - 取得するデータのオフセット。デフォルトは0(先頭)
      * @returns {Promise<object[]>} - 取得したデータの配列
      */
-    async get(filter) {
+    async get(filter, limit = -1, offset = 0) {
         try {
             let query = this.knex(this.table_name).where({ deleted_at: null });
+            if (limit > 0) {
+                query = query.limit(limit).offset(offset);
+            }
             if (filter) {
                 for (const [key, value] of Object.entries(filter)) {
                     if (Array.isArray(value)) {
