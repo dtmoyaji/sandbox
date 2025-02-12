@@ -6,7 +6,7 @@
         switch (path) {
             case 'table':
             %>
-            <%- include('./tablePanel.ejs', { targetTable: targetTable }); %>
+            <%- include('./tablePanel.ejs', { targetTable: targetTable, params: params }); %>
             <%
                 break;
             default:

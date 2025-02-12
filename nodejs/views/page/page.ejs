@@ -11,7 +11,7 @@
 <body>
     <div id="top">
         <%- startButton %>
-            <%- topBar %>
+        <%- topBar %>
     </div>
     <div id="body">
         <div id="left" open="true">
@@ -28,38 +28,12 @@
     </div>
 </body>
 <script>
+
     document.addEventListener('DOMContentLoaded', function () {
         bindSidePanel('left');
         bindCenterPanel('center');
     });
 
-    async function fireEvent(eventType, parameters) {
-        let message = document.getElementById('message');
-        switch (eventType) {
-            case 'table':
-                message.textContent = `テーブル ${parameters.table} を選択しました。`;
-                const centerPanelBody = await fetch(`/pageRenderer/centerPage/table/${parameters.table}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }).then((response) => {
-                    return response.text();
-                }).then((html) => {
-                    document.getElementById('centerPanel').innerHTML = html;
-                    if(window.redrawCenterPanel) {
-                        window.redrawCenterPanel();
-                    }
-                });
-                break;
-            case 'query':
-                message.textContent = 'クエリを実行しました。';
-                break;
-            case 'script':
-                message.textContent = 'スクリプトを実行しました。';
-                break;
-        }
-    }
 </script>
 
 </html>
