@@ -1,0 +1,47 @@
+{
+    "name": "l10n",
+    "version": "0.0.1",
+    "description": "ローカライズを管理するテーブル",
+    "scope" : "protected",
+    "user_scope": "system_admin_readwrite",
+    "fields": [
+        {
+            "name": "l10n_id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "autoIncrement": true
+        },
+        {
+            "name": "lang",
+            "type": "STRING",
+            "length": 16,
+            "notNull": true
+        },
+        {
+            "name": "src",
+            "type": "TEXT",
+            "notNull": true,
+            "unique": true
+        },
+        {
+            "name": "dst",
+            "type": "TEXT",
+            "notNull": true
+        },
+        {
+            "name": "created_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "updated_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "deleted_at",
+            "type": "DATETIME",
+            "nullable": true
+        }
+    ]
+}

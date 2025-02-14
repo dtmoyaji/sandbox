@@ -8,3 +8,5 @@ yarn.lock
 .nextcloud.ignore
 package-lock.json
 token.txt
+nodejs/applications/*
+data_restore

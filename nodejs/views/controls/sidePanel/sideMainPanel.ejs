@@ -4,7 +4,8 @@
     </div>
     <div class="sidePanelMenu" id="sidePanelMainMenu" open="true">
         <ul>
-            <li><a href="/admin/table">テーブル</a></li>
+            <li><a href="/admin/application" id="link_app">application</a></li>
+            <li><a href="/admin/table" id="link_table">table</a></li>
             <li><a href="/admin/query">クエリ</a></li>
             <li><a href="/admin/script">スクリプト</a></li>
         </ul>
@@ -13,6 +14,9 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
+        await getl10n('link_app');
+        await getl10n('link_table');
     });
+
 
 </script>

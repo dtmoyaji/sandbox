@@ -27,7 +27,7 @@
             "notNull": true
         },
         {
-            "name": "table_phisical_name",
+            "name": "table_physical_name",
             "type": "STRING",
             "notNull": true
         },

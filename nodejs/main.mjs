@@ -4,6 +4,7 @@ import ejs from 'ejs';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { bootApplications, restoreData } from './application-boot.mjs';
 import * as credential from './controllers/credential.mjs';
 import { ModelManager } from './controllers/model-manager.mjs';
 import { createAuthController } from './controllers/rest/auth-controller.mjs';
@@ -20,7 +21,6 @@ const port = process.env.PORT;
 const modelManager = new ModelManager();
 await modelManager.reloadModels();
 
-
 const restUtil = new RestUtil(modelManager);
 const modelController = await createModelController(modelManager);
 const authController = createAuthController(modelManager);
@@ -29,6 +29,11 @@ const queryController = createQueryController(modelManager);
 // __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// 組込みアプリケーションのブート
+await bootApplications(modelManager);
+await modelManager.reloadModels();
+await restoreData(modelManager);
 
 const app = express();
 
@@ -43,7 +48,7 @@ app.use(cookieParser());
 // プロジェクトのリゾルバを設定
 const resolver = new Resolver(modelManager);
 await resolver.initializeResolvers();
-console.log(JSON.stringify(await resolver.resolvInfos, null, 2));
+//console.log(JSON.stringify(await resolver.resolvInfos, null, 2));
 app.use('/api/models', resolver.router);
 app.use('/api/auth', authController);
 //app.use('/api/models', modelController);
