@@ -38,6 +38,12 @@
             "notNull": true
         },
         {
+            "name": "user_language",
+            "type": "STRING",
+            "length": 16,
+            "default": "ja"
+        },
+        {
             "name": "secret_key",
             "type": "STRING",
             "length": 16,

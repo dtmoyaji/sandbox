@@ -7,7 +7,19 @@
     <title><%- pageTitle %></title>
     <link rel="stylesheet" href="/theme/style.css">
 </head>
+<script>
+    async function getl10n(tagId) {
+        var tag = document.getElementById(tagId);
+        if (tag) {
+            let dst = await fetch('/api/models/l10n?src=' + tag.innerText);
+            let dstJson = (await dst.json()).data;
+            if(dstJson.length > 0) {
+                tag.innerText = dstJson[0].dst;
+            }
+        }
+    }
 
+</script>
 <body>
     <div id="top">
         <%- startButton %>
