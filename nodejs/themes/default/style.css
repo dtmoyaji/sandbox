@@ -11,7 +11,7 @@
     --menu-item-hover-background-color: #627d9b;
     --footer-background-color: #95a5a6;
     --tab-button-background-color: #85a1bd;
-    --table-row-eaven-background-color: #b8cfea;
+    --table-row-even-background-color: #b8cfea;
     --table-row-odd-background-color: #ffffff;
 }
 
@@ -112,7 +112,7 @@
     text-indent: -9999px; /* テキストを非表示にする */
 }
 
-.topbar{
+.top-bar{
     display: inline-block;
     position: absolute;
     margin-top: 8px;
@@ -365,7 +365,7 @@
 }
 
 .table-body tr[odd="false"] {
-    background-color: var(--table-row-eaven-background-color);
+    background-color: var(--table-row-even-background-color);
 }
 
 .panel-head{
@@ -392,22 +392,25 @@
     width: 100%;
 }
 
-.table-controler{
+.table-controller{
     display: block;
     left: 0;
     right: 0;
     text-align: right;
 }
 
-#page-prev, #page-next {
-    padding: 0 0.5em;
+.page-control-button {
+    display: inline-block;
+    padding: 3px 0.5em;
     margin:  0 3px;
+    height: 100%;
     background-color: var(--header-background-color);
     color: white;
     border: none;
+    border-radius: 5px;
 }
 
-#page-prev:hover, #page-next:hover {
+.page-control-button:hover {
     background-color: var(--header-background-hover-color);
 }
 
@@ -417,4 +420,26 @@
     width: 4em;
     height: 100%;
     text-align: right;
+}
+
+#upload-button{
+    width: 24px;
+    background-image: url('/theme/file-upload.png');
+    background-size: 22px 22px;
+    background-repeat: no-repeat;
+    background-position: 50% 50%;
+    text-indent: -9999px; /* テキストを非表示にする */
+}
+
+#download-button{
+    width: 24px;
+    background-image: url('/theme/file-download.png');
+    background-size: 22px 22px;
+    background-repeat: no-repeat;
+    background-position: 50% 50%;
+    text-indent: -9999px; /* テキストを非表示にする */
+}
+
+.table-body th, .table-body td {
+    font-size: 9pt;
 }

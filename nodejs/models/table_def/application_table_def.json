@@ -1,12 +1,12 @@
 {
-    "name": "application_tabledef",
+    "name": "application_table_def",
     "version" : "0.0.1",
     "description": "Domain table definition",
     "scope" : "protected",
     "user_scope": "user_admin_readonly",
     "fields": [
         {
-            "name": "tabledef_id",
+            "name": "application_table_def_id",
             "type": "INTEGER",
             "primaryKey": true,
             "autoIncrement": true
@@ -32,7 +32,7 @@
             "notNull": true
         },
         {
-            "name": "tabledef",
+            "name": "table_def",
             "type": "TEXT"
         },
         {

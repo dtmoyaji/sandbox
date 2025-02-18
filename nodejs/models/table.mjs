@@ -12,7 +12,7 @@ export class Table {
 
     // ユーザーのスコープ(ユーザー、ユーザー管理者による読み書きはuser_domain_idが一致するレコードに限定される)
     static USER_SCOPE_SYSTEM_ADMIN_READWRITE = 'system_admin_readwrite'; // システム管理者のみ読み書き可能
-    static USER_SCOPE_ADMIN_READWONLY = 'user_admin_readonly'; // ユーザー管理者のみ読み取り可能
+    static USER_SCOPE_ADMIN_READONLY = 'user_admin_readonly'; // ユーザー管理者のみ読み取り可能
     static USER_SCOPE_ADMIN_READWRITE = 'user_admin_readwrite'; // ユーザー管理者のみ読み書き可能
     static USER_SCOPE_USER_READONLY = 'user_readonly'; // ユーザーのみ読み取り可能
     static USER_SCOPE_USER_READWRITE = 'user_readwrite'; // ユーザーのみ読み書き可能
@@ -227,16 +227,16 @@ export class Table {
      * @returns 
      */
     async getPagingInfo(filter, recordLimit, page) {
-        if(recordLimit < 1){
+        if (recordLimit < 1) {
             recordLimit = 20;
         }
-        if(page < 1){
+        if (page < 1) {
             page = 1;
         }
         let count = await this.getCount(filter);
         let pages = Math.ceil(count / recordLimit);
         let offset = (page - 1) * recordLimit;
-        if(page > pages){ // ページ数が最大ページ数を超える場合は最大ページ数に設定
+        if (page > pages) { // ページ数が最大ページ数を超える場合は最大ページ数に設定
             page = pages;
             offset = (page - 1) * recordLimit;
         }
@@ -295,7 +295,9 @@ export class Table {
                 }
             }
             let result = await query;
-            return result[0].count;
+            // console.log(`query: ${query.toString()}`);
+            let recordCount = result[0].count;
+            return recordCount;
         } catch (err) {
             console.error('Count data error', err.stack);
             throw err;
@@ -310,6 +312,7 @@ export class Table {
      * @returns {Promise<object[]>} - 取得したデータの配列
      */
     async get(filter, limit = -1, offset = 0) {
+
         try {
             let query = this.knex(this.table_name).where({ deleted_at: null });
             if (limit > 0) {
@@ -354,7 +357,7 @@ export class Table {
                 }
             }
             let result = await query;
-
+            //console.log(`query: ${query.toString()}`);
             return result;
         } catch (err) {
             return [{
@@ -397,16 +400,16 @@ export class Table {
     async post(data) {
         try {
             if (!await this.hasPrimaryKey(data)) {
-                throw new Error('post data error: primary key not found');
+                throw new Error(`post data error: table "${this.tableDefinition.name}" primary key not found`);
             }
 
-            // primarykeyを取得
+            // primaryKeyを取得
             let definition = this.tableDefinition.fields;
-            let primarykey = definition.filter((field) => field.primaryKey === true);
+            let primaryKey = definition.filter((field) => field.primaryKey === true);
             let where = {};
-            for (let i = 0; i < primarykey.length; i++) {
-                where[primarykey[i].name] = data[primarykey[i].name];
-                delete data[primarykey[i].name];
+            for (let i = 0; i < primaryKey.length; i++) {
+                where[primaryKey[i].name] = data[primaryKey[i].name];
+                delete data[primaryKey[i].name];
             }
             data.updated_at = new Date();
             let updatedCount = await this.knex(this.table_name).where(where).update(data);
@@ -430,24 +433,24 @@ export class Table {
         if (!await this.hasPrimaryKey(filter)) {
             throw new Error('delete data error: primary key not found');
         }
-        let deltedCount = await this.knex(this.table_name).where(filter)
+        let deletedCount = await this.knex(this.table_name).where(filter)
             .update({ deleted_at: new Date() });
         let result = {
             result: '200',
-            message: `${deltedCount} rows deleted.`
+            message: `${deletedCount} rows deleted.`
         }
         return result;
     };
 
     /**
-     * データがprimarykeyを持つか確認するメソッド
+     * データがprimaryKeyを持つか確認するメソッド
      */
     async hasPrimaryKey(data) {
         let definition = this.tableDefinition.fields;
-        let primarykey = definition.filter((field) => field.primaryKey === true);
+        let primaryKey = definition.filter((field) => field.primaryKey === true);
         let hasPrimaryKey = false;
-        for (let i = 0; i < primarykey.length; i++) {
-            if (data[primarykey[i].name]) {
+        for (let i = 0; i < primaryKey.length; i++) {
+            if (data[primaryKey[i].name]) {
                 hasPrimaryKey = true;
                 break;
             }

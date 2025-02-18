@@ -32,7 +32,7 @@ console.log("System domain created.");
 let userDomainData = await userDomain.get({ domain_name: 'system' });
 let systemDomainId = userDomainData[0].user_domain_id;
 
-// create linworks bot controller domain
+// create lineworks bot controller domain
 userDomainTemplate = await userDomain.getJsonTemplate();
 delete userDomainTemplate.domain_user_id;
 userDomainTemplate.domain_type = 'user';
@@ -85,12 +85,12 @@ if (user.length === 0) {
     fs.writeFileSync('token.txt', JSON.stringify(userTemplate, null, 2));
     console.log('********************************');
     console.log('token.txt created.');
-    console.log('this file conains admin user info,');
+    console.log('this file contains admin user info,');
     console.log('initial access_token and refresh_token.');
     console.log('********************************');
     let result = await credential.verifyJWT(userTemplate.secret_key, userTemplate.access_token);
 
-    // create linworks bot controller domain
+    // create lineworks bot controller domain
     userTemplate = await userTable.getJsonTemplate();
     delete userTemplate.user_id;
     userTemplate.user_email = process.env.USER_ADMIN_MAIL;

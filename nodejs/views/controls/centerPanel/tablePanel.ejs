@@ -11,7 +11,7 @@
     <div class="panel-body">
         <div class="centerView-holder">
             <div class="centerView" id="dataView" style="display: block;">
-                <h3 id="dataViewCaption">Data View</h3>
+                <h3 id="dataViewCaption">Data View </h3>
                 <%
                     let queryParameters = params;
                 %>
@@ -32,10 +32,10 @@
     // タブの切り替え
     document.addEventListener('DOMContentLoaded', async function () {
 
-        await getl10n('dataViewCaption');
-        await getl10n('data');
-        await getl10n('definition');
-        await getl10n('rest');
+        await getL10n('dataViewCaption');
+        await getL10n('data');
+        await getL10n('definition');
+        await getL10n('rest');
 
         const tabs = document.querySelectorAll('.tab');
         const views = document.querySelectorAll('.centerView');

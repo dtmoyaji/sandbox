@@ -23,17 +23,17 @@ class RestUtil {
         let user = this.getRequestParameter(req, 'x-user');
         let token = this.getRequestParameter(req, 'x-access-token');
 
-        let verfyResult = await this.modelManager.verifyToken(token, user, 'access_token');
+        let verifyResult = await this.modelManager.verifyToken(token, user, 'access_token');
 
-        if (verfyResult.auth) {
+        if (verifyResult.auth) {
             if (!res.headersSent) {
                 const newAccessToken = await credential.generateToken(
-                    { user, password: verfyResult.user.user_password, type: 'access_token' }
-                    , verfyResult.user.secret_key, '1d');
+                    { user, password: verifyResult.user.user_password, type: 'access_token' }
+                    , verifyResult.user.secret_key, '1d');
                 res.cookie('x-access-token', newAccessToken, { sameSite: 'Strict' });
             }
         }
-        return verfyResult;
+        return verifyResult;
     }
 
     /**

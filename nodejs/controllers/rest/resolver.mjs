@@ -1,14 +1,17 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import { Table } from '../../models/table.mjs';
 import { RestUtil } from './rest-util.mjs';
+
+dotenv.config();
 
 /**
  * リゾルバークラス
  */
 class Resolver {
 
-    reouter = undefined;
-    resolvInfos = undefined;
+    router = undefined;
+    resolveInfos = undefined;
     modelManager = undefined;
     restUtil = undefined;
 
@@ -16,27 +19,27 @@ class Resolver {
         this.modelManager = modelManager;
         this.restUtil = new RestUtil(modelManager);
         this.router = express.Router();
-        this.resolvInfos = [];
+        this.resolveInfos = [];
     }
 
     async initializeResolvers() {
         // テーブルのget, post, put, delete のリゾルバを登録
         let models = this.modelManager.models;
         for (let model of models) {
-            let resolvInfo = {
+            let resolveInfo = {
                 path: model.table_name,
                 parameters: {
                     model_name: model.table_name,
                     type: 'table'
                 },
             }
-            this.resolvInfos.push(resolvInfo);
+            this.resolveInfos.push(resolveInfo);
         }
-        this.resolvInfos.push({
+        this.resolveInfos.push({
             path: 'all',
             parameters: {
                 model_name: 'all',
-                type: 'tablelist'
+                type: 'table_list'
             },
         });
         this.router.get('/*', async (req, res) => {
@@ -45,14 +48,14 @@ class Resolver {
             if (paths.length > 0) {
                 path = paths[0];
             }
-            let resolvInfo = await this.getResolveInfo(path);
+            let resolveInfo = await this.getResolveInfo(path);
             console.log('PATH: ', path);
             switch (path) {
                 case 'tableDefinition':
-                    return this.tableDefinitionGet(resolvInfo, req, res);
+                    return this.tableDefinitionGet(resolveInfo, req, res);
                     break;
                 default:
-                    return this.tableGet(resolvInfo, req, res);
+                    return this.tableGet(resolveInfo, req, res);
             }
         });
         this.router.post('/*', async (req, res) => {
@@ -60,33 +63,33 @@ class Resolver {
             if (req.params[0] !== undefined) {
                 path = req.params[0].split('/')[0];
             }
-            let resolvInfo = await this.getResolveInfo(path);
-            return this.tablePost(resolvInfo, req, res);
+            let resolveInfo = await this.getResolveInfo(path);
+            return this.tablePost(resolveInfo, req, res);
         });
         this.router.put('/*', async (req, res) => {
             let path = '';
             if (req.params[0] !== undefined) {
                 path = req.params[0].split('/')[0];
             }
-            let resolvInfo = await this.getResolveInfo(path);
-            return this.tablePut(resolvInfo, req, res);
+            let resolveInfo = await this.getResolveInfo(path);
+            return this.tablePut(resolveInfo, req, res);
         });
         this.router.delete('/*', async (req, res) => {
             let path = '';
             if (req.params[0] !== undefined) {
                 path = req.params[0].split('/')[0];
             }
-            let resolvInfo = await this.getResolveInfo(path);
-            return this.tableDelete(resolvInfo, req, res);
+            let resolveInfo = await this.getResolveInfo(path);
+            return this.tableDelete(resolveInfo, req, res);
         });
     }
 
     async getResolveInfo(path) {
         let result = {};
         if (path !== undefined) {
-            for (let resolvInfo of this.resolvInfos) {
-                if (resolvInfo.path === path) {
-                    result = resolvInfo;
+            for (let resolveInfo of this.resolveInfos) {
+                if (resolveInfo.path === path) {
+                    result = resolveInfo;
                     break;
                 }
             }
@@ -94,7 +97,7 @@ class Resolver {
         return result;
     }
 
-    async tableDefinitionGet(resolvInfo, req, res) {
+    async tableDefinitionGet(resolveInfo, req, res) {
         let verifyResult = await this.restUtil.verifyToken(req, res);
         if (!verifyResult.auth) {
             return res.status(401).send(verifyResult);
@@ -113,12 +116,12 @@ class Resolver {
         return res.send(result);
     }
 
-    async tableGet(resolvInfo, req, res) {
+    async tableGet(resolveInfo, req, res) {
         if (req.path === '/') {
             return res.json({});
         }
         let verifyResult = await this.restUtil.verifyToken(req, res);
-        const modelName = resolvInfo.parameters.model_name;
+        const modelName = resolveInfo.parameters.model_name;
 
         // ユーザーモデルの場合は、特別な処理を行う
         let result = {};
@@ -128,7 +131,7 @@ class Resolver {
         } else {
 
             // all の場合は、全てのモデルを取得する
-            if (resolvInfo.path === 'all') {
+            if (resolveInfo.path === 'all') {
                 result = this.modelManager.models;
                 result = await this.filterModelsByUser(result, verifyResult);
                 for (let model of result) { // connectionは外部に出さない
@@ -151,6 +154,9 @@ class Resolver {
         const queryParams = req.query;
         const filter = {};
         for (const [key, value] of Object.entries(queryParams)) {
+            if(key === 'current_page' || key === 'record_limit') {
+                continue;
+            }
             filter[key] = value;
         }
 
@@ -170,12 +176,14 @@ class Resolver {
         }
 
         // ページングの設定
-        const recordLimit = resolvInfo.parameters.record_limit || -1;
-        const currentPage = resolvInfo.parameters.current_page || 1;
+        const recordLimit = queryParams.record_limit || process.env.TABLE_PAGE_LINES;
+        const currentPage = queryParams.current_page || 1;
+
+        const offset = (currentPage - 1) * recordLimit;
 
         // レコードの取得
         result = await model.get(
-            filter, recordLimit, currentPage
+            filter, recordLimit, offset
         );
 
         // modelのtableDefinitionのfieldsに、secret=trueを持つフィールドがある場合、そのフィールドをマスクする
@@ -201,19 +209,19 @@ class Resolver {
         res.json(result);
     }
 
-    async tablePost(resolvInfo, req, res) {
-        console.log('tablePost', resolvInfo.path);
-        res.send(resolvInfo);
+    async tablePost(resolveInfo, req, res) {
+        console.log('tablePost', resolveInfo.path);
+        res.send(resolveInfo);
     }
 
-    async tablePut(resolvInfo, req, res) {
-        console.log('tablePut', resolvInfo.path);
-        res.send(resolvInfo);
+    async tablePut(resolveInfo, req, res) {
+        console.log('tablePut', resolveInfo.path);
+        res.send(resolveInfo);
     }
 
-    async tableDelete(resolvInfo, req, res) {
-        console.log('tableDelete', resolvInfo.path);
-        res.send(resolvInfo);
+    async tableDelete(resolveInfo, req, res) {
+        console.log('tableDelete', resolveInfo.path);
+        res.send(resolveInfo);
     }
 
     async getUser(req, res) {

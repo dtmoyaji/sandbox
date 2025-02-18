@@ -1,0 +1,47 @@
+{
+    "name": "syslog",
+    "version": "0.0.1",
+    "description": "System log",
+    "scope" : "protected",
+    "user_scope": "system_admin_read_write",
+    "fields": [
+        {
+            "name": "syslog_id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "autoIncrement": true
+        },
+        {
+            "name": "log_date",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP",
+            "notNull": true
+        },
+        {
+            "name": "level",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "log",
+            "type": "TEXT",
+            "notNull": true
+        },
+        {
+            "name": "created_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "updated_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "deleted_at",
+            "type": "DATETIME",
+            "nullable": true
+        }
+    ]
+}
