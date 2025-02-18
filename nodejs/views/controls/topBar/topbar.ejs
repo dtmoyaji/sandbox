@@ -1,7 +1,7 @@
-<div class="topbar">
+<div class="top-bar">
   <a class="topbar-user-link">
     <div id="user-icon" ></div>
-    <span id="topbar-user-name">ユーザー名</span>
+    <span id="top-bar-user-name">ユーザー名</span>
   </a>
   <button class="logout-button">ログアウト</button>
 </div>
@@ -17,7 +17,7 @@
     for (let i = 0; i < cookieArray.length; i++) {
       const cookieItem = cookieArray[i].split('=');
       if (cookieItem[0].trim() === 'x-user') {
-        document.getElementById('topbar-user-name').textContent = cookieItem[1];
+        document.getElementById('top-bar-user-name').textContent = cookieItem[1];
       }
     }
   });

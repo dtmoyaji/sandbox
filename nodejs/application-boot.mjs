@@ -5,17 +5,23 @@ let modelManager = undefined;
 export async function bootApplications(manager) {
     modelManager = manager;
     console.log('booting applications');
+    // applicationsディレクトリがない場合は処理を終了
+    if (!fs.existsSync('./applications')) {
+        console.log('applications not found');
+        return;
+    }
+
     let appDirs = fs.readdirSync('./applications');
     for (let appDir of appDirs) {
         console.log('booting application:', appDir);
         let dirRealPath = fs.realpathSync('./applications/' + appDir);
         // application.jsonが存在する場合はアプリケーションとして登録
         if (fs.existsSync(dirRealPath + '/application.json')) {
-            let application_id = await registApplication(dirRealPath + '/application.json');
+            let application_id = await registerApplication(dirRealPath + '/application.json');
             if (fs.existsSync(dirRealPath + '/models')) {
                 await installModel(application_id, dirRealPath + '/models');
             }
-            registApplicationDomainLink(application_id, 1);
+            registerApplicationDomainLink(application_id, 1);
         }
     }
     console.log('applications booted');
@@ -28,6 +34,12 @@ export async function bootApplications(manager) {
 export async function restoreData(manager) {
     modelManager = manager;
     console.log('restoring data');
+    // data_restoreディレクトリがない場合は処理を終了
+    if (!fs.existsSync('./data_restore')) {
+        console.log('data_restore not found');
+        return;
+    }
+
     let restoreFiles = fs.readdirSync('./data_restore');
     for (let restorefile of restoreFiles) {
         console.log('restoring data:', restorefile);
@@ -59,7 +71,7 @@ export async function restoreData(manager) {
  * @param {*} application_id 
  * @param {*} user_domain_id 
  */
-async function registApplicationDomainLink(application_id, user_domain_id) {
+async function registerApplicationDomainLink(application_id, user_domain_id) {
     let adl = await modelManager.getModel('application_domain_link');
     let application_domain_link = await modelManager.getModel('application_domain_link');
     let applicationDomainTemplate = await application_domain_link.getJsonTemplate();
@@ -76,11 +88,11 @@ async function registApplicationDomainLink(application_id, user_domain_id) {
 
 /**
  *  アプリケーションを登録する
- * @param {string} applicatonDefFile - アプリケーション定義ファイル
+ * @param {string} applicationDefFile - アプリケーション定義ファイル
  * @returns {number} application_id
  */
-async function registApplication(applicatonDefFile) {
-    let applicationInfo = JSON.parse(fs.readFileSync(applicatonDefFile, 'utf8'));
+async function registerApplication(applicationDefFile) {
+    let applicationInfo = JSON.parse(fs.readFileSync(applicationDefFile, 'utf8'));
     let applicationTable = await modelManager.getModel('application');
     // upsert application
     let application_name = applicationInfo.application_name;
@@ -101,22 +113,22 @@ async function installModel(application_id, applicationModelPath) {
     let modelFiles = fs.readdirSync(applicationModelPath);
     for (let modelFile of modelFiles) {
         console.log('booting model:', modelFile);
-        let mdelDef = fs.readFileSync(applicationModelPath + '/' + modelFile, 'utf8');
-        let model = JSON.parse(mdelDef);
-        let application_tabledef = await modelManager.getModel('application_tabledef');
-        let currentTabledef = await application_tabledef.get({ table_logical_name: model.name });
-        let tabledef = await application_tabledef.getJsonTemplate();
-        delete tabledef.tabledef_id;
-        tabledef.application_id = application_id;
-        tabledef.table_logical_name = model.name;
-        tabledef.table_physical_name = model.name;
-        tabledef.tabledef = JSON.stringify(model);
-        tabledef.description = model.description;
-        if (currentTabledef.length === 0) {
-            tabledef = await application_tabledef.put(tabledef);
+        let modelDef = fs.readFileSync(applicationModelPath + '/' + modelFile, 'utf8');
+        let model = JSON.parse(modelDef);
+        let application_table_def = await modelManager.getModel('application_table_def');
+        let currentTableDef = await application_table_def.get({ table_logical_name: model.name });
+        let table_def = await application_table_def.getJsonTemplate();
+        delete table_def.application_table_def_id;
+        table_def.application_id = application_id;
+        table_def.table_logical_name = model.name;
+        table_def.table_physical_name = model.name;
+        table_def.table_def = JSON.stringify(model);
+        table_def.description = model.description;
+        if (currentTableDef.length === 0) {
+            table_def = await application_table_def.put(table_def);
         } else {
-            tabledef.tabledef_id = currentTabledef[0].tabledef_id;
-            tabledef = await application_tabledef.post(tabledef);
+            table_def.application_table_def_id = currentTableDef[0].application_table_def_id;
+            table_def = await application_table_def.post(table_def);
         }
     }
 

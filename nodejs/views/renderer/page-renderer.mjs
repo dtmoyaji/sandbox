@@ -49,8 +49,8 @@ class PageRenderer {
 
         // 各部品をレンダリング
         let startButtonHtml = await this.renderHtml('views/controls/startButton/startButton.ejs', ejsParameters);
-        let topBarHtml = await this.renderHtml('views/controls/topBar/topbar.ejs', ejsParameters);
-        let footerHtml = await this.renderHtml('views/controls/footBar/footbar.ejs', ejsParameters);
+        let topBarHtml = await this.renderHtml('views/controls/topBar/topBar.ejs', ejsParameters);
+        let footerHtml = await this.renderHtml('views/controls/footBar/footBar.ejs', ejsParameters);
         let sidePanelHtml = await this.renderSidePanel(req, res, ejsParameters);
         let centerPanelHtml = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
 
@@ -80,12 +80,12 @@ class PageRenderer {
         let param1 = pathNode[1] || '';
         let param2 = pathNode[2] || '';
 
-        let verfyResult = await this.restUtil.verifyToken(req, res);
-        if (!verfyResult.auth) {
-            return res.status(401).send(verfyResult.message);
+        let verifyResult = await this.restUtil.verifyToken(req, res);
+        if (!verifyResult.auth) {
+            return res.status(401).send(verifyResult.message);
         }
 
-        let user = verfyResult.user;
+        let user = verifyResult.user;
         let userDomainLinkTable = await this.modelManager.getModel('user_domain_link');
         let userDomainLink = await userDomainLinkTable.get({ user_id: user.user_id });
         let userDomainId = userDomainLink[0].user_domain_id;

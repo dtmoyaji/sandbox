@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { bootApplications, restoreData } from './application-boot.mjs';
 import * as credential from './controllers/credential.mjs';
+import { ImportCsvController } from './controllers/file/import-csv.mjs';
 import { ModelManager } from './controllers/model-manager.mjs';
 import { createAuthController } from './controllers/rest/auth-controller.mjs';
 import { createModelController } from './controllers/rest/model-controller.mjs';
@@ -48,7 +49,11 @@ app.use(cookieParser());
 // プロジェクトのリゾルバを設定
 const resolver = new Resolver(modelManager);
 await resolver.initializeResolvers();
-//console.log(JSON.stringify(await resolver.resolvInfos, null, 2));
+const importCsvController = new ImportCsvController(modelManager);
+await importCsvController.initializeResolvers();
+
+//console.log(JSON.stringify(await resolver.resolveInfos, null, 2));
+app.use('/api/import', importCsvController.router);
 app.use('/api/models', resolver.router);
 app.use('/api/auth', authController);
 //app.use('/api/models', modelController);
@@ -161,14 +166,14 @@ app.post('/login', async (req, res) => {
     const user = req.body.username;
     const password = req.body.password;
     let userTable = await modelManager.getModel('user');
-    let registerdUser = await userTable.get({ user_name: user });
+    let registeredUser = await userTable.get({ user_name: user });
 
-    if (registerdUser.length !== 0) {
-        let registerdPassword = registerdUser[0].user_password;
-        if (await credential.verifyPassword(password, registerdPassword)) {
-            let secretKey = registerdUser[0].secret_key;
-            let refreshToken = await credential.generateToken({ user: user, password: registerdPassword, type: 'refresh_token' }, secretKey, '1d');
-            let accessToken = await credential.generateToken({ user: user, password: registerdPassword, type: 'access_token'}, secretKey, '1d');
+    if (registeredUser.length !== 0) {
+        let registeredPassword = registeredUser[0].user_password;
+        if (await credential.verifyPassword(password, registeredPassword)) {
+            let secretKey = registeredUser[0].secret_key;
+            let refreshToken = await credential.generateToken({ user: user, password: registeredPassword, type: 'refresh_token' }, secretKey, '1d');
+            let accessToken = await credential.generateToken({ user: user, password: registeredPassword, type: 'access_token'}, secretKey, '1d');
             res.cookie('x-user', user, { sameSite: 'Strict' });
             res.cookie('x-access-token', accessToken, { sameSite: 'Strict' });
             res.cookie('x-refresh-token', refreshToken, { sameSite: 'Strict' });

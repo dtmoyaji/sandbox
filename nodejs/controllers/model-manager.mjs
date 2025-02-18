@@ -20,7 +20,7 @@ export class ModelManager {
         this.models = [];
 
         // システムテーブルの読み込み
-        const tableDefDir = path.join(this.__rootDir, 'models', 'tabledef');
+        const tableDefDir = path.join(this.__rootDir, 'models', 'table_def');
         let modelFiles = fs.readdirSync(tableDefDir);
         for (let modelFile of modelFiles) {
             let modelDef = JSON.parse(fs.readFileSync(path.join(tableDefDir, modelFile), 'utf8'));
@@ -31,9 +31,9 @@ export class ModelManager {
         }
 
         // アプリケーションテーブルの読み込み
-        const applicationTables = await this.knex('application_tabledef').select('*');
+        const applicationTables = await this.knex('application_table_def').select('*');
         for (let domainTable of applicationTables) {
-            let domainTableDef = JSON.parse(domainTable.tabledef);
+            let domainTableDef = JSON.parse(domainTable.table_def);
             let model = new Table(this.Connection);
             await model.createTable(domainTableDef);
             model.application_id = domainTable.application_id;

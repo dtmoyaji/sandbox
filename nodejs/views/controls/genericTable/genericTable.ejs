@@ -1,9 +1,9 @@
 <div class="genericTable">
-    <div class="table-controler" id="table-controler-top"></div>
+    <div class="table-controller" id="table-controller-top"></div>
     <div class="table-data">
         <table class="table-body"></table>
     </div>
-    <div class="table-controler" id="table-controler-bottom"></div>
+    <div class="table-controller" id="table-controller-bottom"></div>
 </div>
 
 <script>
@@ -25,7 +25,7 @@
         let tableData = await table.json();
         console.log(tableData.data);
         console.log(tableData.pagingInfo);
-        let tableController = document.querySelector('.table-controler');
+        let tableController = document.querySelector('.table-controller');
         let tableBody = document.querySelector('.table-body');
         
         let tableHeader = document.createElement('tr');
@@ -48,38 +48,128 @@
             tableBody.appendChild(row);
         }
 
-        // ページング情報
+        // コントロールバーを生成
         let pagingInfo = tableData.pagingInfo;
-        let tableControlerTop = document.getElementById('table-controler-top');
-        let tableControlerBottom = document.getElementById('table-controler-bottom');
-        let controlBarTop = await generateCotnrolBar(pagingInfo, 'control-bar-top');
-        let controlBarBottom = await generateCotnrolBar(pagingInfo, 'control-bar-bottom');
-        tableControlerTop.appendChild(controlBarTop);
-        tableControlerBottom.appendChild(controlBarBottom);
+        let tableControllerTop = document.getElementById('table-controller-top');
+        let controlBarTop = await generateControlBar(pagingInfo, 'control-bar-top', params);
+        tableControllerTop.appendChild(controlBarTop);
+
+        let tableControllerBottom = document.getElementById('table-controller-bottom');
+        let controlBarBottom = await generateControlBar(pagingInfo, 'control-bar-bottom', params);
+        tableControllerBottom.appendChild(controlBarBottom);
 
     });
 
-    async function generateCotnrolBar(pagingInfo, tagid){
+    async function generateControlBar(pagingInfo, tag_id, params) {
+        let currentURL = window.location.href;
+        console.log(currentURL);
+        console.log(params);
+
+        let nextParams = Object.assign({}, params);
+        nextParams.current_page = parseInt(pagingInfo.currentPage, 10) + 1;
+        if(nextParams.current_page > pagingInfo.pages) {
+            nextParams.current_page = pagingInfo.pages;
+        }
+        // urlにパラメータを追加
+        let nextURL = new URL(currentURL);
+        nextURL.search = new URLSearchParams(nextParams).toString();
+
+        let prevParams = Object.assign({}, params);
+        prevParams.current_page = parseInt(pagingInfo.currentPage, 10) - 1;
+        if(prevParams.current_page < 1) {
+            prevParams.current_page = 1;
+        }
+        // urlにパラメータを追加
+        let prevURL = new URL(currentURL);
+        prevURL.search = new URLSearchParams(prevParams).toString();
+
         let controlBar = document.createElement('div');
-        controlBar.id = tagid;
+        controlBar.id = tag_id;
+
         let prevButton = document.createElement('button');
         prevButton.id = 'page-prev';
-        prevButton.class = 'page-control-button';
+        prevButton.className = 'page-control-button';
         prevButton.textContent = '<';
+        prevButton.onclick = () => window.location.href = prevURL.toString();
         controlBar.appendChild(prevButton);
+        
         let currentPage = document.createElement('input');
         currentPage.id = 'page-current';
         currentPage.type = 'text';
         currentPage.value = `${pagingInfo.currentPage}`;
         controlBar.appendChild(currentPage);
+        
         let totalPage = document.createElement('span');
         totalPage.textContent = ` / ${pagingInfo.pages}`;
         controlBar.appendChild(totalPage);
+        
         let nextButton = document.createElement('button');
         nextButton.textContent = '>';
         nextButton.id = 'page-next';
-        nextButton.class = 'page-control-button';
+        nextButton.className = 'page-control-button';
+        nextButton.onclick = () => window.location.href = nextURL.toString();
         controlBar.appendChild(nextButton);
+        
+        let uploadButton = document.createElement('button');
+        uploadButton.textContent = 'Upload';
+        uploadButton.id = 'upload-button';
+        uploadButton.className = 'page-control-button';
+        uploadButton.onclick = () => uploadData('<%= targetTable %>', pagingInfo);
+        controlBar.appendChild(uploadButton);
+
+        let downloadButton = document.createElement('button');
+        downloadButton.textContent = 'Download';
+        downloadButton.id = 'download-button';
+        downloadButton.className = 'page-control-button';
+        downloadButton.onclick = () => downloadData('<%= targetTable %>', pagingInfo);
+        controlBar.appendChild(downloadButton);
+
         return controlBar;
+    }
+
+    async function uploadData(targetTable, pagingInfo) {
+        console.log('uploadData: ' + targetTable);
+        // ファイル選択ダイアログを表示
+        let file = await showOpenFileDialog();
+        // サーバーにファイルをアップロード
+        let formData = new FormData();
+        formData.append('file', file);
+        formData.append('targetTable', targetTable);
+
+        try{
+            let response = await fetch('/api/import/csv', {
+                method: 'POST',
+                targetTable: targetTable,
+                body: formData
+            });
+            let result = await response.json();
+            console.log(result);
+        } catch (error) {
+            // ブラウザのダイアログにエラーメッセージを表示
+            alert('Error uploading file: ' + error.message);
+            console.error(error);
+        }
+
+        console.log(file);
+
+    }
+
+    async function downloadData(targetTable, pagingInfo) {
+        console.log('downloadData: ' + targetTable);
+    }
+
+    async function showOpenFileDialog() {
+        return new Promise((resolve, reject) => {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.onchange = () => {
+                if (input.files.length > 0) {
+                    resolve(input.files[0]);
+                } else {
+                    reject('No file selected');
+                }
+            };
+            input.click();
+        });
     }
 </script>
