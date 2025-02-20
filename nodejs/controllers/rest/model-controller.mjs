@@ -1,10 +1,16 @@
 import express from 'express';
 import { Table } from '../../models/table.mjs';
 import { RestUtil } from './rest-util.mjs';
+rom './rest-util.mjs';
 
 let restUtil = undefined;
 let modelManager = undefined;
 
+/**
+ * @param {*} manager 
+ * @returns 
+ * @deprecated
+ */
 async function createModelController(manager) {
     const ModelController = express.Router();
 

@@ -2,7 +2,7 @@
 <bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:collaboration id="Collaboration_0oivkt7">
     <bpmn:participant id="Participant_176v23f" name="Client" processRef="Process_1" />
-    <bpmn:participant id="Participant_1mkng88" name="model controller" processRef="Process_12xv6i3" />
+    <bpmn:participant id="Participant_1mkng88" name="rest/resolver" processRef="Process_12xv6i3" />
     <bpmn:messageFlow id="Flow_0sbmgxe" sourceRef="Activity_189x9uw" targetRef="Activity_05uqxat" />
     <bpmn:messageFlow id="Flow_1p1odlg" sourceRef="Activity_07vea1x" targetRef="Activity_0owk1ph" />
     <bpmn:messageFlow id="Flow_07ep630" sourceRef="Activity_0tfq47x" targetRef="Activity_0owk1ph" />
@@ -10,7 +10,7 @@
       <bpmn:text>All of System Domain User Allowed All Dater Operation.
 User Domain Administrator Allowed Domain Data Operation.
 User Domain Administrator Allowed System Domain Data Operation when user_domain_id is matched own user_domain_id.
-User Domain User Allowd Only User Domain Data Operation of them.</bpmn:text>
+User Domain General User Allowd Only User Domain Data Operation of them.</bpmn:text>
     </bpmn:textAnnotation>
     <bpmn:association id="Association_1b5x0v2" associationDirection="None" sourceRef="Gateway_08fydso" targetRef="TextAnnotation_1tcqmyk" />
     <bpmn:textAnnotation id="TextAnnotation_0wif78o">
@@ -28,6 +28,10 @@ x-refresh-token:</bpmn:text>
       <bpmn:text>Authentication parameters are contained in Http header or Cookie.</bpmn:text>
     </bpmn:textAnnotation>
     <bpmn:association id="Association_1yjqfe1" associationDirection="None" sourceRef="Activity_189x9uw" targetRef="TextAnnotation_1bwq505" />
+    <bpmn:textAnnotation id="TextAnnotation_0obc8yc">
+      <bpmn:text>model-controller is replaced to resolver.mjs</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_0i22xch" associationDirection="None" sourceRef="Participant_1mkng88" targetRef="TextAnnotation_0obc8yc" />
   </bpmn:collaboration>
   <bpmn:process id="Process_1" isExecutable="false">
     <bpmn:startEvent id="StartEvent_1">
@@ -213,8 +217,12 @@ x-refresh-token:</bpmn:text>
         <di:waypoint x="930" y="370" />
         <di:waypoint x="990" y="370" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_0i22xch_di" bpmnElement="Association_0i22xch">
+        <di:waypoint x="140" y="480" />
+        <di:waypoint x="203" y="614" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="TextAnnotation_1tcqmyk_di" bpmnElement="TextAnnotation_1tcqmyk">
-        <dc:Bounds x="467" y="560" width="509.99137001170516" height="83.61811089598758" />
+        <dc:Bounds x="467" y="560" width="509.98931884765625" height="83.98771667480469" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="TextAnnotation_0wif78o_di" bpmnElement="TextAnnotation_0wif78o">
@@ -250,6 +258,10 @@ x-refresh-token:</bpmn:text>
         <di:waypoint x="1040" y="330" />
         <di:waypoint x="1040" y="168" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_0obc8yc_di" bpmnElement="TextAnnotation_0obc8yc">
+        <dc:Bounds x="160" y="614" width="160" height="46" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
