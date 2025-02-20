@@ -14,7 +14,7 @@ User Domain General User Allowd Only User Domain Data Operation of them.</bpmn:t
     </bpmn:textAnnotation>
     <bpmn:association id="Association_1b5x0v2" associationDirection="None" sourceRef="Gateway_08fydso" targetRef="TextAnnotation_1tcqmyk" />
     <bpmn:textAnnotation id="TextAnnotation_0wif78o">
-      <bpmn:text>Authentication parameters
+      <bpmn:text>Authentication requier parameters
 
 Http header or Cookie:
 x-user: user name 
@@ -226,7 +226,7 @@ x-refresh-token:</bpmn:text>
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="TextAnnotation_0wif78o_di" bpmnElement="TextAnnotation_0wif78o">
-        <dc:Bounds x="220" y="425" width="209.99918194459568" height="126.58271390801939" />
+        <dc:Bounds x="220" y="425" width="209.99918194459568" height="126.98599076575657" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="TextAnnotation_1bwq505_di" bpmnElement="TextAnnotation_1bwq505">
