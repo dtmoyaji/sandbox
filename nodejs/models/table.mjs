@@ -218,7 +218,6 @@ export class Table {
         return template;
     }
 
-
     /**
      * ページング情報を取得するメソッド
      * @param {*} filter 

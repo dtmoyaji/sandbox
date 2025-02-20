@@ -10,6 +10,7 @@
     document.addEventListener('DOMContentLoaded', async function () {
 
         let request_param = '<%- JSON.stringify(params) %>';
+        console.log(request_param);
         let parameters = JSON.parse(request_param).query;
 
         let getParams = '';
@@ -23,24 +24,23 @@
 
         let table = await fetch(`/api/models/${tableName}?${getParams}`);
         let tableData = await table.json();
-        console.log(tableData.data);
-        console.log(tableData.pagingInfo);
+        params['writeable'] = tableData.writeable;
         let tableController = document.querySelector('.table-controller');
         let tableBody = document.querySelector('.table-body');
-        
+
         let tableHeader = document.createElement('tr');
         // th タグを作成
-        for(let key in tableData.data[0]) {
+        for (let key in tableData.data[0]) {
             let cell = document.createElement('th');
             cell.textContent = key;
             tableHeader.appendChild(cell);
         }
         tableBody.appendChild(tableHeader);
         // td タグを作成
-        for(let i = 0; i < tableData.data.length; i++) {
+        for (let i = 0; i < tableData.data.length; i++) {
             let row = document.createElement('tr');
             row.setAttribute('odd', odd = i % 2 === 0 ? 'true' : 'false');
-            for(let key in tableData.data[i]) {
+            for (let key in tableData.data[i]) {
                 let cell = document.createElement('td');
                 cell.textContent = tableData.data[i][key];
                 row.appendChild(cell);
@@ -67,7 +67,7 @@
 
         let nextParams = Object.assign({}, params);
         nextParams.current_page = parseInt(pagingInfo.currentPage, 10) + 1;
-        if(nextParams.current_page > pagingInfo.pages) {
+        if (nextParams.current_page > pagingInfo.pages) {
             nextParams.current_page = pagingInfo.pages;
         }
         // urlにパラメータを追加
@@ -76,7 +76,7 @@
 
         let prevParams = Object.assign({}, params);
         prevParams.current_page = parseInt(pagingInfo.currentPage, 10) - 1;
-        if(prevParams.current_page < 1) {
+        if (prevParams.current_page < 1) {
             prevParams.current_page = 1;
         }
         // urlにパラメータを追加
@@ -92,30 +92,32 @@
         prevButton.textContent = '<';
         prevButton.onclick = () => window.location.href = prevURL.toString();
         controlBar.appendChild(prevButton);
-        
+
         let currentPage = document.createElement('input');
         currentPage.id = 'page-current';
         currentPage.type = 'text';
         currentPage.value = `${pagingInfo.currentPage}`;
         controlBar.appendChild(currentPage);
-        
+
         let totalPage = document.createElement('span');
         totalPage.textContent = ` / ${pagingInfo.pages}`;
         controlBar.appendChild(totalPage);
-        
+
         let nextButton = document.createElement('button');
         nextButton.textContent = '>';
         nextButton.id = 'page-next';
         nextButton.className = 'page-control-button';
         nextButton.onclick = () => window.location.href = nextURL.toString();
         controlBar.appendChild(nextButton);
-        
-        let uploadButton = document.createElement('button');
-        uploadButton.textContent = 'Upload';
-        uploadButton.id = 'upload-button';
-        uploadButton.className = 'page-control-button';
-        uploadButton.onclick = () => uploadData('<%= targetTable %>', pagingInfo);
-        controlBar.appendChild(uploadButton);
+
+        if (params.writeable) { // テーブルが書き込み可能な場合
+            let uploadButton = document.createElement('button');
+            uploadButton.textContent = 'Upload';
+            uploadButton.id = 'upload-button';
+            uploadButton.className = 'page-control-button';
+            uploadButton.onclick = () => uploadData('<%= targetTable %>', pagingInfo);
+            controlBar.appendChild(uploadButton);
+        }
 
         let downloadButton = document.createElement('button');
         downloadButton.textContent = 'Download';
@@ -135,15 +137,16 @@
         let formData = new FormData();
         formData.append('file', file);
         formData.append('targetTable', targetTable);
+        formData.append('currentUser', getCurrentUser());
 
-        try{
-            let response = await fetch('/api/import/csv', {
+        try {
+            let currentUser = getCurrentUser();
+            // アップロードは非同期で行う
+            let response = fetch('/api/import/csv', {
                 method: 'POST',
-                targetTable: targetTable,
                 body: formData
             });
-            let result = await response.json();
-            console.log(result);
+            alert('アップロードを開始しました');
         } catch (error) {
             // ブラウザのダイアログにエラーメッセージを表示
             alert('Error uploading file: ' + error.message);

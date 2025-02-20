@@ -154,16 +154,19 @@ class Resolver {
         const queryParams = req.query;
         const filter = {};
         for (const [key, value] of Object.entries(queryParams)) {
-            if(key === 'current_page' || key === 'record_limit') {
+            // 予約語を除外（ここはあとでテーブルで管理するように変更する）
+            if(key === 'current_page' || key === 'record_limit' || key === 'writeable') {
                 continue;
             }
             filter[key] = value;
         }
 
-        // アクセス権の確認
-        if (! await this.restUtil.isAccessibleModel(
-            model, verifyResult
-        )) {
+        // アクセス権の確認(読み取り)
+        let readable = await this.restUtil.isAccessibleModel(model, verifyResult, 'read');
+        // アクセス権の確認(書き込み)
+        let writeable = await this.restUtil.isAccessibleModel(model, verifyResult, 'write');
+
+        if (! readable) {
             return result; // アクセス権がない場合は空の配列を返す
         }
 
@@ -204,8 +207,9 @@ class Resolver {
 
         result = {
             data: result,
-            pagingInfo: pagingInfo
-        }
+            pagingInfo: pagingInfo,
+            writeable: writeable
+        };
         res.json(result);
     }
 

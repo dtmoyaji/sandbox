@@ -57,7 +57,7 @@ class RestUtil {
      * @param {*} verifyResult
      * @returns {boolean} アクセス可能な場合はtrue, それ以外はfalse
      */
-    async isAccessibleModel(model, verifyResult) {
+    async isAccessibleModel(model, verifyResult, mode='read') {
         let isSystemUser = verifyResult.user_domains.includes(RestUtil.SYSTEM_DOMAIN_ID);
         let isAdmin = verifyResult.user.admin_flag === 1;
         
@@ -75,8 +75,15 @@ class RestUtil {
         }
         // その他のユーザーは、USER_SCOPE_READONLY, USER_SCOPE_READWRITEのモデルにアクセス可能
         else{
-            if(model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READONLY
-                || model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READWRITE) {
+            // mode == 'read'の場合
+            if(mode === 'read' 
+                && (model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READONLY
+                || model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READWRITE)
+            ) {
+                return true;
+            }
+            // mode == 'write'の場合
+            if(mode === 'write' && model.tableDefinition.user_scope === Table.USER_SCOPE_USER_READWRITE) {
                 return true;
             }
         }

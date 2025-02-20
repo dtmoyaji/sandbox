@@ -14,11 +14,7 @@
   document.addEventListener('DOMContentLoaded', function() {
     const cookie = document.cookie;
     const cookieArray = cookie.split(';');
-    for (let i = 0; i < cookieArray.length; i++) {
-      const cookieItem = cookieArray[i].split('=');
-      if (cookieItem[0].trim() === 'x-user') {
-        document.getElementById('top-bar-user-name').textContent = cookieItem[1];
-      }
-    }
+    document.getElementById('top-bar-user-name').textContent = getCurrentUser();
+
   });
 </script>

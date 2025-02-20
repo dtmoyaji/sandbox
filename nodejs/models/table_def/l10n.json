@@ -3,7 +3,7 @@
     "version": "0.0.1",
     "description": "ローカライズを管理するテーブル",
     "scope" : "protected",
-    "user_scope": "system_admin_readwrite",
+    "user_scope": "user_readonly",
     "fields": [
         {
             "name": "l10n_id",

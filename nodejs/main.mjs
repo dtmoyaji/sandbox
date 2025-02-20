@@ -13,6 +13,7 @@ import { createModelController } from './controllers/rest/model-controller.mjs';
 import { createQueryController } from './controllers/rest/query-controller.mjs';
 import { Resolver } from './controllers/rest/resolver.mjs';
 import { RestUtil } from './controllers/rest/rest-util.mjs';
+import { WebSocket } from './controllers/websocket/websocket.mjs';
 import { PageRenderer } from './views/renderer/page-renderer.mjs';
 
 dotenv.config();
@@ -37,6 +38,8 @@ await modelManager.reloadModels();
 await restoreData(modelManager);
 
 const app = express();
+const websocket = new WebSocket(app);
+await websocket.bindWebSocket();
 
 const pageRenderer = new PageRenderer(restUtil, modelManager);
 
@@ -49,14 +52,12 @@ app.use(cookieParser());
 // プロジェクトのリゾルバを設定
 const resolver = new Resolver(modelManager);
 await resolver.initializeResolvers();
-const importCsvController = new ImportCsvController(modelManager);
+const importCsvController = new ImportCsvController(modelManager, websocket);
 await importCsvController.initializeResolvers();
 
-//console.log(JSON.stringify(await resolver.resolveInfos, null, 2));
 app.use('/api/import', importCsvController.router);
 app.use('/api/models', resolver.router);
 app.use('/api/auth', authController);
-//app.use('/api/models', modelController);
 app.use('/api/query', queryController);
 app.use('/pageRenderer', pageRenderer.pageRouter);
 

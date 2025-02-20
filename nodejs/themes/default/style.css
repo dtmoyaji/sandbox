@@ -39,6 +39,14 @@
     background-color: var(--footer-background-color);
 }
 
+#footer * {
+    display: inline-block;
+    vertical-align: middle;
+    height: 100%;
+    padding: 3px;
+    font-size: 10pt;
+}
+
 #body {
     position: absolute;
     top: 34px;
