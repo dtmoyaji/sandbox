@@ -4,6 +4,12 @@
         <table class="table-body"></table>
     </div>
     <div class="table-controller" id="table-controller-bottom"></div>
+    <div class="recordEditPanel" visible="false">
+        <button class="close-button" onclick="document.querySelector('.recordEditPanel').setAttribute('visible', 'false')">Close</button>
+    </div>
+    <div class="filterPanel" visible="false">
+        <button class="close-button" onclick="document.querySelector('.filterPanel').setAttribute('visible', 'false')">Close</button>
+    </div>
 </div>
 
 <script>
@@ -29,16 +35,24 @@
         let tableBody = document.querySelector('.table-body');
 
         let tableHeader = document.createElement('tr');
+
         // th タグを作成
-        for (let key in tableData.data[0]) {
+        console.log(tableData.tableDefinition.fields);
+        let columnHeaders = tableData.tableDefinition.fields;
+        for (let idx in columnHeaders) {
             let cell = document.createElement('th');
-            cell.textContent = key;
+            cell.textContent = columnHeaders[idx].name;
             tableHeader.appendChild(cell);
         }
         tableBody.appendChild(tableHeader);
+
         // td タグを作成
         for (let i = 0; i < tableData.data.length; i++) {
             let row = document.createElement('tr');
+            row.addEventListener('click', () => {
+                let recordEditPanel = document.querySelector('.recordEditPanel');
+                recordEditPanel.setAttribute('visible', 'true');
+            });
             row.setAttribute('odd', odd = i % 2 === 0 ? 'true' : 'false');
             for (let key in tableData.data[i]) {
                 let cell = document.createElement('td');
@@ -70,6 +84,7 @@
         if (nextParams.current_page > pagingInfo.pages) {
             nextParams.current_page = pagingInfo.pages;
         }
+
         // urlにパラメータを追加
         let nextURL = new URL(currentURL);
         nextURL.search = new URLSearchParams(nextParams).toString();
@@ -79,6 +94,7 @@
         if (prevParams.current_page < 1) {
             prevParams.current_page = 1;
         }
+
         // urlにパラメータを追加
         let prevURL = new URL(currentURL);
         prevURL.search = new URLSearchParams(prevParams).toString();
@@ -86,29 +102,29 @@
         let controlBar = document.createElement('div');
         controlBar.id = tag_id;
 
-        let prevButton = document.createElement('button');
-        prevButton.id = 'page-prev';
-        prevButton.className = 'page-control-button';
-        prevButton.textContent = '<';
-        prevButton.onclick = () => window.location.href = prevURL.toString();
-        controlBar.appendChild(prevButton);
+        let newButton = document.createElement('button');
+        newButton.textContent = 'New';
+        newButton.id = 'new-button';
+        newButton.className = 'page-control-button';
+        newButton.onclick = () => {
+            let recordEditPanel = document.querySelector('.recordEditPanel');
+            recordEditPanel.setAttribute('visible', 'true');
+        };
+        controlBar.appendChild(newButton);
 
-        let currentPage = document.createElement('input');
-        currentPage.id = 'page-current';
-        currentPage.type = 'text';
-        currentPage.value = `${pagingInfo.currentPage}`;
-        controlBar.appendChild(currentPage);
+        let filterButton = document.createElement('button');
+        filterButton.textContent = 'Filter';
+        filterButton.id = 'filter-button';
+        filterButton.onclick = () => {
+            let filterPanel = document.querySelector('.filterPanel');
+            filterPanel.setAttribute('visible', 'true');
+        };
+        filterButton.className = 'page-control-button';
+        controlBar.appendChild(filterButton);
 
-        let totalPage = document.createElement('span');
-        totalPage.textContent = ` / ${pagingInfo.pages}`;
-        controlBar.appendChild(totalPage);
-
-        let nextButton = document.createElement('button');
-        nextButton.textContent = '>';
-        nextButton.id = 'page-next';
-        nextButton.className = 'page-control-button';
-        nextButton.onclick = () => window.location.href = nextURL.toString();
-        controlBar.appendChild(nextButton);
+        let separator = document.createElement('span');
+        separator.textContent = ' | ';
+        controlBar.appendChild(separator);
 
         if (params.writeable) { // テーブルが書き込み可能な場合
             let uploadButton = document.createElement('button');
@@ -125,6 +141,51 @@
         downloadButton.className = 'page-control-button';
         downloadButton.onclick = () => downloadData('<%= targetTable %>', pagingInfo);
         controlBar.appendChild(downloadButton);
+
+        separator = document.createElement('span');
+        separator.textContent = ' | ';
+        controlBar.appendChild(separator);
+
+        let prevButton = document.createElement('button');
+        prevButton.id = 'page-prev';
+        prevButton.className = 'page-control-button';
+        prevButton.textContent = '<';
+        prevButton.onclick = () => window.location.href = prevURL.toString();
+        controlBar.appendChild(prevButton);
+
+        let currentPage = document.createElement('input');
+        currentPage.id = 'page-current';
+        currentPage.type = 'text';
+        currentPage.value = `${pagingInfo.currentPage}`;
+        currentPage.onchange = (event) => {
+            let jumpPage = currentPage.value;
+            if (isNaN(jumpPage)) {
+                return;
+            }
+            if (jumpPage < 1) {
+                jumpPage = 1;
+            } else if (jumpPage > pagingInfo.pages) {
+                jumpPage = pagingInfo.pages;
+            }
+            let jumpParams = Object.assign({}, params);
+            jumpParams.current_page = jumpPage;
+            let jumpURL = new URL(currentURL);
+            jumpURL.search = new URLSearchParams(jumpParams).toString();
+            window.location.href = jumpURL.toString();
+
+        };
+        controlBar.appendChild(currentPage);
+
+        let totalPage = document.createElement('span');
+        totalPage.textContent = ` / ${pagingInfo.pages}`;
+        controlBar.appendChild(totalPage);
+
+        let nextButton = document.createElement('button');
+        nextButton.textContent = '>';
+        nextButton.id = 'page-next';
+        nextButton.className = 'page-control-button';
+        nextButton.onclick = () => window.location.href = nextURL.toString();
+        controlBar.appendChild(nextButton);
 
         return controlBar;
     }
@@ -146,7 +207,7 @@
                 method: 'POST',
                 body: formData
             });
-            alert('アップロードを開始しました');
+            //alert('アップロードを開始しました');
         } catch (error) {
             // ブラウザのダイアログにエラーメッセージを表示
             alert('Error uploading file: ' + error.message);

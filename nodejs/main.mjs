@@ -13,6 +13,7 @@ import { createModelController } from './controllers/rest/model-controller.mjs';
 import { createQueryController } from './controllers/rest/query-controller.mjs';
 import { Resolver } from './controllers/rest/resolver.mjs';
 import { RestUtil } from './controllers/rest/rest-util.mjs';
+import { ScriptExecutor } from './controllers/script/script-executer.mjs';
 import { WebSocket } from './controllers/websocket/websocket.mjs';
 import { PageRenderer } from './views/renderer/page-renderer.mjs';
 
@@ -27,6 +28,7 @@ const restUtil = new RestUtil(modelManager);
 const modelController = await createModelController(modelManager);
 const authController = createAuthController(modelManager);
 const queryController = createQueryController(modelManager);
+const scriptExecutor = new ScriptExecutor(modelManager);
 
 // __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
@@ -55,6 +57,7 @@ await resolver.initializeResolvers();
 const importCsvController = new ImportCsvController(modelManager, websocket);
 await importCsvController.initializeResolvers();
 
+app.use('/api/script', scriptExecutor.router);
 app.use('/api/import', importCsvController.router);
 app.use('/api/models', resolver.router);
 app.use('/api/auth', authController);

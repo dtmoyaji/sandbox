@@ -1,0 +1,62 @@
+{
+    "name": "script",
+    "version" : "0.0.1",
+    "description": "Domain table definition",
+    "scope" : "protected",
+    "user_scope": "user_admin_readonly",
+    "fields": [
+        {
+            "name": "script_id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "autoIncrement": true
+        },
+        {
+            "name": "application_id",
+            "type": "INTEGER",
+            "default": -1,
+            "notNull": true,
+            "foreignKey": {
+                "table": "application",
+                "field": "application_id"
+            }
+        },
+        {
+            "name": "script_name",
+            "type": "STRING",
+            "notNull": true
+        },
+        {
+            "name": "bind_module",
+            "type": "STRING",
+            "notNull": true
+        },
+        {
+            "name": "script",
+            "type": "TEXT"
+        },
+        {
+            "name": "parameters",
+            "type": "TEXT"
+        },
+        {
+            "name": "description",
+            "type": "TEXT"
+        },
+        {
+            "name": "created_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "updated_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "deleted_at",
+            "type": "DATETIME",
+            "nullable": true
+        }
+    ]
+}

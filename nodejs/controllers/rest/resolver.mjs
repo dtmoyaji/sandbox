@@ -121,6 +121,9 @@ class Resolver {
             return res.json({});
         }
         let verifyResult = await this.restUtil.verifyToken(req, res);
+        if(!verifyResult.auth) {
+            return res.status(401).send(verifyResult);
+        }
         const modelName = resolveInfo.parameters.model_name;
 
         // ユーザーモデルの場合は、特別な処理を行う
@@ -208,7 +211,8 @@ class Resolver {
         result = {
             data: result,
             pagingInfo: pagingInfo,
-            writeable: writeable
+            writeable: writeable,
+            tableDefinition: model.tableDefinition
         };
         res.json(result);
     }

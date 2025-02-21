@@ -1,4 +1,6 @@
 import fs from 'fs';
+import path from 'path';
+import { pathToFileURL } from 'url';
 
 let modelManager = undefined;
 
@@ -12,16 +14,51 @@ export async function bootApplications(manager) {
     }
 
     let appDirs = fs.readdirSync('./applications');
+    let application_id = 1;
     for (let appDir of appDirs) {
         console.log('booting application:', appDir);
         let dirRealPath = fs.realpathSync('./applications/' + appDir);
         // application.jsonが存在する場合はアプリケーションとして登録
         if (fs.existsSync(dirRealPath + '/application.json')) {
-            let application_id = await registerApplication(dirRealPath + '/application.json');
+            application_id = await registerApplication(dirRealPath + '/application.json');
             if (fs.existsSync(dirRealPath + '/models')) {
                 await installModel(application_id, dirRealPath + '/models');
             }
             registerApplicationDomainLink(application_id, 1);
+        }
+        // scriptsディレクトリが存在する場合はスクリプトとして登録
+        if (fs.existsSync(dirRealPath + '/scripts')) {
+            let scriptFiles = fs.readdirSync(dirRealPath + '/scripts');
+
+            // js ファイルをスクリプトとして登録
+            scriptFiles = scriptFiles.filter((file) => {
+                return file.endsWith('.mjs');
+            });
+
+            for (let scriptFile of scriptFiles) {
+                console.log('booting script:', scriptFile);
+                let srciptFullPath = path.resolve(dirRealPath, 'scripts', scriptFile);
+                let scriptUrl = pathToFileURL(srciptFullPath).href;
+                let scriptDef = await import(scriptUrl);
+                let script = scriptDef.default;
+                let scriptTable = await modelManager.getModel('script');
+                let currentScript = await scriptTable.get({ script_name: script.script_name });
+                let scriptTemplate = await scriptTable.getJsonTemplate();
+                scriptTemplate.application_id = application_id;
+                scriptTemplate.script_name = script.script_name;
+                scriptTemplate.bind_module = JSON.stringify(script.bind_module);
+                // 改行をカットする
+                scriptTemplate.script = script.script.replace(/\r?\n/g, '');
+                scriptTemplate.parameters = JSON.stringify(script.parameters);
+                scriptTemplate.description = script.description;
+                if (currentScript.length === 0) {
+                    delete scriptTemplate.script_id;
+                    scriptTemplate = await scriptTable.put(scriptTemplate);
+                } else {
+                    scriptTemplate.script_id = currentScript[0].script_id;
+                    scriptTemplate = await scriptTable.post(scriptTemplate);
+                }
+            }
         }
     }
     console.log('applications booted');

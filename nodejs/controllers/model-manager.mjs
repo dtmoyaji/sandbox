@@ -111,6 +111,7 @@ export class ModelManager {
     }
 
     // クエリのドメインIDをチェックする
+    // todo:改造＝＞ ドメインが許可されたアプリのクエリかどうかチェックする。
     async checkQueryDomainId(queryName, user_id) {
         const query_template = await this.getModel('query_template');
         const query = await query_template.get({ name: queryName });

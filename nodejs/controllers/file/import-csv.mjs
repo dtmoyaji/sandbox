@@ -82,12 +82,12 @@ export class ImportCsvController {
                             this.websocket.sendToUser(userName, {message: `Importing ${targetTable} ${counter} / ${max}`});
                         }
                     }
-                    let recordCount = await table.getCount(filter);
-                    if (recordCount == 0) {
+                    //let recordCount = await table.getCount(filter);
+                    //if (recordCount == 0) {
                         await table.put(template);
-                    } else {
+                    //} else {
                         //console.log('Already exists: ', csvData.jan_code);
-                    }
+                    //}
                     counter++;
                 }
                 this.websocket.sendToUser(userName, {message: `${targetTable} Import completed. ${counter} records.`});

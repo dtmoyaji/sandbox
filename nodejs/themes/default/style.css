@@ -13,6 +13,7 @@
     --tab-button-background-color: #85a1bd;
     --table-row-even-background-color: #b8cfea;
     --table-row-odd-background-color: #ffffff;
+    --table-row-hover-background-color: #9dcfd8;
 }
 
 *{
@@ -376,6 +377,11 @@
     background-color: var(--table-row-even-background-color);
 }
 
+.table-body tr:hover {
+    background-color: var(--table-row-hover-background-color);
+    cursor: pointer;
+}
+
 .panel-head{
     position: absolute;
     display: block;
@@ -448,6 +454,46 @@
     text-indent: -9999px; /* テキストを非表示にする */
 }
 
+#new-button{
+    width: 24px;
+    background-image: url('/theme/plus.png');
+    background-size: 18px 18px;
+    background-repeat: no-repeat;
+    background-position: 50% 50%;
+    text-indent: -9999px; /* テキストを非表示にする */
+}
+
+#filter-button{
+    width: 24px;
+    background-image: url('/theme/filter-white.png');
+    background-size: 18px 18px;
+    background-repeat: no-repeat;
+    background-position: 50% 50%;
+    text-indent: -9999px; /* テキストを非表示にする */
+}
+
 .table-body th, .table-body td {
     font-size: 9pt;
 }
+
+.recordEditPanel[visible=false],
+.filterPanel[visible=false] {
+    display: none;
+}
+
+.recordEditPanel[visible=true],
+.filterPanel[visible=true]
+ {
+    position: absolute;
+    top: 1em;
+    left: 2em;
+    right: 2em;
+    bottom: 1em;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    z-index: 100;
+    background-color: white;
+    border-radius: 0.5em;
+    border: solid 1px darkgray;
+}
+

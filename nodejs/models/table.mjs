@@ -372,10 +372,27 @@ export class Table {
      * @param {object} data - 挿入するデータオブジェクト
      * @returns {Promise<number[]>} - 挿入されたデータにID列を補完して返す
      */
-    async put(data) {
+    async put(data, onConflict = 'ignore') {
         try {
 
-            await this.knex(this.table_name).insert(data);
+            // tableDefinitionからuniqueを取得
+            let definition = this.tableDefinition.fields;
+            let unique = definition.filter((field) => field.unique === true);
+            let uniqueKeys = unique.map((field) => field.name);
+
+            if (uniqueKeys.length > 0) {
+                if (onConflict === 'ignore') {
+                    await this.knex(this.table_name).insert(data)
+                        .onConflict(uniqueKeys)
+                        .ignore();
+                } else {
+                    await this.knex(this.table_name).insert(data)
+                        .onConflict(uniqueKeys)
+                        .merge();
+                }
+            } else {
+                await this.knex(this.table_name).insert(data);
+            }
 
             // dataからfilterを作成
             let filter = {};
