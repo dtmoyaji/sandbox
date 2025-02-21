@@ -3,7 +3,7 @@
     "version" : "0.0.1",
     "description": "Domain table definition",
     "scope" : "protected",
-    "user_scope": "user_admin_readonly",
+    "user_scope": "user_readonly",
     "fields": [
         {
             "name": "script_id",

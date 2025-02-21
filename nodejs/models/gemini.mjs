@@ -155,7 +155,7 @@ export async function doPromptWithJSON(Json, query) {
     }
 }
 
-// プロンプトを用いてGeminiに指示を行いjsonを取得する
+// プロンプトを用いてGeminiに指示を行いtextを取得する
 export async function doPrompt(prompt) {
     const chatSession = model.startChat({
         safetySettings: safetySettings,
