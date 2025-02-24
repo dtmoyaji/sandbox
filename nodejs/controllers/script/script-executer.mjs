@@ -44,16 +44,8 @@ export class ScriptExecutor {
             }
 
             // スクリプトを実行するためのコンテキストを作成
-            let parameterMap = {};
-            for (const parameter of parameters) {
-                for (const key in parameter) {
-                    if (parameter.hasOwnProperty(key)) {
-                        parameterMap[key] = parameter[key];
-                    }
-                }
-            }
             const context = {
-                parameters: parameterMap,
+                parameters: parameters,
                 modules: modules,
                 result: null
             };

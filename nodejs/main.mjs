@@ -5,6 +5,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { bootApplications, restoreData } from './application-boot.mjs';
+import { UserApplication } from './controllers/app/userApplication.mjs';
 import * as credential from './controllers/credential.mjs';
 import { ImportCsvController } from './controllers/file/import-csv.mjs';
 import { ModelManager } from './controllers/model-manager.mjs';
@@ -29,6 +30,7 @@ const modelController = await createModelController(modelManager);
 const authController = createAuthController(modelManager);
 const queryController = createQueryController(modelManager);
 const scriptExecutor = new ScriptExecutor(modelManager);
+const userApplication = new UserApplication(modelManager);
 
 // __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
@@ -57,6 +59,7 @@ await resolver.initializeResolvers();
 const importCsvController = new ImportCsvController(modelManager, websocket);
 await importCsvController.initializeResolvers();
 
+app.use('/app', userApplication.router);
 app.use('/api/script', scriptExecutor.router);
 app.use('/api/import', importCsvController.router);
 app.use('/api/models', resolver.router);
