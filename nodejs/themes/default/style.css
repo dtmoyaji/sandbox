@@ -14,12 +14,18 @@
     --table-row-even-background-color: #b8cfea;
     --table-row-odd-background-color: #ffffff;
     --table-row-hover-background-color: #9dcfd8;
+    --default-a-tag-color: #30258d;
 }
 
 *{
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+a {
+    color: var(--default-a-tag-color);
+    text-decoration: none;
 }
 
 #top {
@@ -131,6 +137,13 @@
     right: 0;
     text-align: right;
     color: white;
+}
+
+.topbar-user-link{
+    display: inline-block;
+    color: white;
+    text-decoration: none;
+    vertical-align: middle;
 }
 
 #user-icon{

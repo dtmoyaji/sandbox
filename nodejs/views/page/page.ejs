@@ -7,61 +7,8 @@
     <title><%- pageTitle %></title>
     <link rel="stylesheet" href="/theme/style.css">
 </head>
-<script>
-    async function getL10n(tagId) {
-        var tag = document.getElementById(tagId);
-        if (tag) {
-            let dst = await fetch('/api/models/l10n?src=' + tag.innerText);
-            let dstJson = (await dst.json()).data;
-            if (dstJson.length > 0) {
-                tag.innerText = dstJson[0].dst;
-            }
-        }
-    }
 
-    // クッキーからユーザー名を取得する。
-    function getCurrentUser() {
-        let result = undefined;
-        const cookie = document.cookie;
-        const cookieArray = cookie.split(';');
-        for (let i = 0; i < cookieArray.length; i++) {
-            const cookieItem = cookieArray[i].split('=');
-            if (cookieItem[0].trim() === 'x-user') {
-                result = cookieItem[1];
-            }
-        }
-        return result;
-    }
-
-    // websocketの実装
-    var websocket = new WebSocket(`ws://localhost:3001/ws?currentUser=${getCurrentUser()}`);
-    window.websocket = websocket;
-
-    websocket.onopen = function () {
-        console.log('WebSocket connected');
-        sendMessage(JSON.stringify({ "message": `Hello, ${getCurrentUser()}!` }));
-    };
-
-    websocket.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        if (data.message) {
-            document.getElementById('message').innerText = data.message;
-        }
-    };
-
-    websocket.onclose = function () {
-        console.log('WebSocket closed');
-    };
-
-    websocket.onerror = function (error) {
-        console.error('WebSocket Error:', error);
-    };
-
-    function sendMessage(payload) {
-        websocket.send(payload);
-    }
-
-</script>
+<%- websocket %>
 
 <body>
     <div id="top">
@@ -79,7 +26,6 @@
     </div>
     <div id="footer">
         <%- footer %>
-            <span id="message"></span>
     </div>
 </body>
 <script>

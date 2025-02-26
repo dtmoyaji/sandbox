@@ -16,7 +16,7 @@ import { Resolver } from './controllers/rest/resolver.mjs';
 import { RestUtil } from './controllers/rest/rest-util.mjs';
 import { ScriptExecutor } from './controllers/script/script-executer.mjs';
 import { WebSocket } from './controllers/websocket/websocket.mjs';
-import { PageRenderer } from './views/renderer/page-renderer.mjs';
+import PageRenderer from './views/renderer/page-renderer.mjs';
 
 dotenv.config();
 
@@ -29,8 +29,6 @@ const restUtil = new RestUtil(modelManager);
 const modelController = await createModelController(modelManager);
 const authController = createAuthController(modelManager);
 const queryController = createQueryController(modelManager);
-const scriptExecutor = new ScriptExecutor(modelManager);
-const userApplication = new UserApplication(modelManager);
 
 // __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
@@ -45,6 +43,7 @@ const app = express();
 const websocket = new WebSocket(app);
 await websocket.bindWebSocket();
 
+const scriptExecutor = new ScriptExecutor(modelManager, websocket);
 const pageRenderer = new PageRenderer(restUtil, modelManager);
 
 // 静的ファイルを提供するためのミドルウェアを設定
@@ -58,6 +57,8 @@ const resolver = new Resolver(modelManager);
 await resolver.initializeResolvers();
 const importCsvController = new ImportCsvController(modelManager, websocket);
 await importCsvController.initializeResolvers();
+const userApplication = new UserApplication(restUtil, modelManager);
+await userApplication.initializeResolvers();
 
 app.use('/app', userApplication.router);
 app.use('/api/script', scriptExecutor.router);

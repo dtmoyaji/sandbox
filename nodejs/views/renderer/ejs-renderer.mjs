@@ -2,7 +2,7 @@ import ejs from 'ejs';
 import express from 'express';
 import { resolve } from 'path';
 
-class PageRenderer {
+class EjsRenderer {
     restUtil = undefined;
     modelManager = undefined;
     pageRouter = undefined;
@@ -11,15 +11,6 @@ class PageRenderer {
         this.restUtil = restUtil;
         this.modelManager = modelManager;
         this.pageRouter = express.Router();
-
-        this.pageRouter.get('/*', async (req, res) => {
-            let paths = req.path.split('/');
-            let renderPanel = paths[1] || '';
-            let renderType = paths[2] || '';
-            let renderTarget = paths[3] || '';
-            let renderResult = await this.renderCenterPanel(renderType, renderTarget);
-            res.send(renderResult);
-        });
     }
 
     /**
@@ -198,4 +189,4 @@ class PageRenderer {
     }
 }
 
-export default PageRenderer;
+export default EjsRenderer;

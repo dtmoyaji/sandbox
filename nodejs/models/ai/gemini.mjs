@@ -5,12 +5,10 @@ import { GoogleAIFileManager } from "@google/generative-ai/server";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from 'url';
+import { getExternalInfo } from "./externalSearch.mjs";
 
 dotenv.config();
-
-// Get the directory name of the current module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(path.dirname(__filename));
+let __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_PATH = __dirname; // Set the APP_PATH environment variable
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -155,6 +153,44 @@ export async function doPromptWithJSON(Json, query) {
     }
 }
 
+export async function doPromptWithGrounding(prompt){
+    let preQuery = "「" + prompt + "」 この文章から、キーワード10個をカンマ区切りで出力してください。";
+    let kwd = await doPrompt(preQuery);
+
+    let externalInfo = await getExternalInfo(kwd, 5);
+    let history = [];
+    let links = [];
+    for (let info of externalInfo) {
+        history.push({
+            role: "user",
+            parts: [
+                { text: info.content },
+            ],
+        });
+        links.push({
+            title: info.title,
+            link:  info.link,
+        });
+    }
+    history.push({ role: "user", parts: [{ text: prompt },],});
+    const chatSession = model.startChat({
+        safetySettings: safetySettings,
+        generationConfig,
+        history: history,
+    });
+    let result = await chatSession.sendMessage("INSERT_INPUT_HERE");
+    try {
+        let returnValue = {
+            text: await spritTextJson(result.response.text()),
+            links: links,
+        }
+        return returnValue;
+    } catch (e) {
+        console.log(e);
+        return {};
+    }
+}
+
 // プロンプトを用いてGeminiに指示を行いtextを取得する
 export async function doPrompt(prompt) {
     const chatSession = model.startChat({
@@ -168,6 +204,7 @@ export async function doPrompt(prompt) {
     });
     let result = await chatSession.sendMessage("回答:");
     try {
+        //console.log(JSON.stringify(result, null, 2));
         return await spritTextJson(result.response.text());
     } catch (e) {
         console.log(e);

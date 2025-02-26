@@ -1,4 +1,5 @@
 import express from 'express';
+import { createRequire } from 'module';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { Script, createContext } from 'vm';
@@ -6,14 +7,18 @@ import { Script, createContext } from 'vm';
 export class ScriptExecutor {
     modelManager = undefined;
     router = undefined;
+    websocket = undefined;
 
-    constructor(modelManager) {
+    constructor(modelManager, websocket) {
         this.modelManager = modelManager;
         this.router = express.Router();
+        this.websocket = websocket;
         this.router.post('/exec', async (req, res) => {
             try {
                 const script_name = req.body.script_name;
-                const parameters = req.body.parameters;
+                let parameters = req.body.parameters;
+                parameters.modelManager = this.modelManager;
+                parameters.websocket = this.websocket;
                 const result = await this.execute(script_name, parameters);
                 res.json(result);
             } catch (err) {
@@ -37,10 +42,16 @@ export class ScriptExecutor {
             const scriptContent = scriptRecord[0].script;
 
             // モジュールをインポート
+            const require = createRequire(import.meta.url);
             const modules = {};
             for (const module of bind_module) {
-                let urlPath = pathToFileURL(path.resolve(module.from)).href;
-                modules[module.name] = await import(urlPath);
+                let modulePath = module.from;
+                if (modulePath.endsWith('.mjs')) {
+                    modulePath = pathToFileURL(path.resolve(module.from)).href;
+                    modules[module.name] = await import(modulePath);
+                } else {
+                    modules[module.name] = await import(module.from);
+                }
             }
 
             // スクリプトを実行するためのコンテキストを作成
@@ -58,7 +69,7 @@ export class ScriptExecutor {
                 })()
             `;
             const script = new Script(asyncScript);
-            const vmContext = createContext({context});
+            const vmContext = createContext({ context });
             await script.runInNewContext(vmContext);
 
             return vmContext.context.result;
