@@ -1,0 +1,30 @@
+
+services:
+  db:
+    image: postgres:17
+    env_file:
+      - ./postgresql/.env
+    volumes:
+      - ./postgresql/db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+  app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.node
+    env_file:
+      - ./nodejs/.env
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+    working_dir: /app
+    volumes:
+      - ./nodejs:/app
+    ports:
+      - ${APP_PORT:-3031}:3001
+    command: sh -c "/app/start.sh"
+    depends_on:
+      - db
+
+networks:
+  isolated_network:
+    driver: bridge

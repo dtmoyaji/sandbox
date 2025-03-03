@@ -153,26 +153,44 @@ export async function doPromptWithJSON(Json, query) {
     }
 }
 
-export async function doPromptWithGrounding(prompt){
-    let preQuery = "「" + prompt + "」 この文章から、キーワード10個をカンマ区切りで出力してください。";
+function sendToUser(websocketDelegate, message) {
+    if (websocketDelegate) {
+        websocketDelegate.websocket.sendToUser(
+            websocketDelegate.current_user,
+            { message: message }
+        );
+    }
+}
+
+export async function doPromptWithGrounding(prompt, websocketDelegate = undefined) {
+    sendToUser(websocketDelegate, '検索キーワードを考案中.');
+    let preQuery = "「" + prompt + "」 この文章から、キーワード10個をカンマ区切りで出力してください。JSONなどの特殊な形式にせず、単純なテキストで出力してください。";
     let kwd = await doPrompt(preQuery);
 
+    sendToUser(websocketDelegate, 'Webを検索中.');
     let externalInfo = await getExternalInfo(kwd, 5);
+
+    sendToUser(websocketDelegate, '回答を考案中.');
     let history = [];
     let links = [];
     for (let info of externalInfo) {
-        history.push({
-            role: "user",
-            parts: [
-                { text: info.content },
-            ],
-        });
-        links.push({
-            title: info.title,
-            link:  info.link,
-        });
+        if (info.content && info.content.length > 0) {
+            if(info.content.length > 1000) {
+                info.content = info.content.slice(0, 1000);
+            }
+            history.push({
+                role: "user",
+                parts: [
+                    { text: info.content },
+                ],
+            });
+            links.push({
+                title: info.title,
+                link: info.link,
+            });
+        }
     }
-    history.push({ role: "user", parts: [{ text: prompt },],});
+    history.push({ role: "user", parts: [{ text: prompt },], });
     const chatSession = model.startChat({
         safetySettings: safetySettings,
         generationConfig,

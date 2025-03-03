@@ -137,6 +137,7 @@ async function registerApplication(applicationDefFile) {
     if (application.length === 0) {
         application = await applicationTable.getJsonTemplate();
         application.application_name = application_name;
+        application.application_protection = applicationInfo.application_protection;
         application.application_description = applicationInfo.application_description;
         application = await applicationTable.put(application);
     } else {

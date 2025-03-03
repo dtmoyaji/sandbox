@@ -2,6 +2,7 @@ import fs from 'fs';
 import * as credential from './controllers/credential.mjs';
 
 import dotenv from 'dotenv';
+import { exit } from 'process';
 import { ModelManager } from './controllers/model-manager.mjs';
 import { Connection } from './models/connection.mjs';
 
@@ -70,6 +71,7 @@ if (user.length === 0) {
     let applicationTemplate = await applicationTable.getJsonTemplate();
     delete applicationTemplate.application_id;
     applicationTemplate.application_name = 'system';
+    applicationTemplate.application_protection = 'protected';
     applicationTemplate.application_description = 'system application';
     applicationTemplate = await applicationTable.put(applicationTemplate);
 
@@ -143,3 +145,4 @@ if (user.length === 0) {
 }
 
 await conn.disconnect();
+exit(0);

@@ -52,7 +52,12 @@ export class Table {
             const result = await this.knex.schema.hasTable(this.table_name);
             return result;
         } catch (err) {
-            console.error('Table exists error', err.stack);
+            console.error(`Error checking if table '${this.table_name}' exists:`, err);
+            if(err.errors && err.errors.length > 0) {
+                for(let error of err.errors) {
+                    console.error(`Error: ${error.message}`);
+                }
+            }
             return false;
         }
     }

@@ -10,8 +10,20 @@
         }
     }
 
+    // UUIDを生成する関数
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
     // クッキーからユーザー名を取得する。
     function getCurrentUser() {
+        if(current_user) {
+            return current_user;
+        }
+        
         let result = undefined;
         const cookie = document.cookie;
         const cookieArray = cookie.split(';');
@@ -21,11 +33,15 @@
                 result = cookieItem[1];
             }
         }
+        if( !result ) {
+            result = generateUUID();
+        }
         return result;
     }
 
     // websocketの実装
-    var websocket = new WebSocket(`ws://localhost:3001/ws?currentUser=${getCurrentUser()}`);
+    var current_user = getCurrentUser();
+    var websocket = new WebSocket(`ws://localhost:3001/ws?currentUser=${current_user}`);
     window.websocket = websocket;
 
     websocket.onopen = function () {

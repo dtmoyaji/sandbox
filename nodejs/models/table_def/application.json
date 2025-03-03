@@ -18,6 +18,12 @@
             "unique": true
         },
         {
+            "name": "application_protection",
+            "type": "STRING",
+            "notNull": true,
+            "default": "protected"
+        },
+        {
             "name": "application_description",
             "type": "TEXT"
         },

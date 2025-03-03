@@ -35,6 +35,7 @@ export class UserApplication {
             }
             return;
         }
+        req.application_protection = applicationRecord[0].application_protection;
         let appViewRoute = path.resolve(this.viewRoute, applicationName);
         let appMain = path.resolve(appViewRoute, 'views', 'main.ejs');
 

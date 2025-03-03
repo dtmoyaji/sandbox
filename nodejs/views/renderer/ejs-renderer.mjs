@@ -43,16 +43,20 @@ class EjsRenderer {
         let startButtonHtml = await this.renderHtml('views/controls/startButton/startButton.ejs', ejsParameters);
         let topBarHtml = await this.renderHtml('views/controls/topBar/topBar.ejs', ejsParameters);
         let footerHtml = await this.renderHtml('views/controls/footBar/footBar.ejs', ejsParameters);
-        let sidePanelHtml = await this.renderSidePanel(req, res, ejsParameters);
         let centerPanelHtml = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
         let websocketHtml = await this.renderHtml('views/controls/websocket/websocket.ejs', ejsParameters);
 
         ejsParameters.topBar = topBarHtml.body;
         ejsParameters.startButton = startButtonHtml.body;
         ejsParameters.footer = footerHtml.body;
-        ejsParameters.sidebarPanel = sidePanelHtml.body;
         ejsParameters.centerPanel = centerPanelHtml.body;
         ejsParameters.websocket = websocketHtml.body;
+
+        // 公開ページの場合はシステムのサイドパネルを表示しない
+        if (req.application_protection !== 'public') {
+            let sidePanelHtml = await this.renderSidePanel(req, res, ejsParameters);
+            ejsParameters.sidebarPanel = sidePanelHtml.body;
+        }
 
         let renderResult = await this.renderHtml(pageEjs, ejsParameters); // 絶対パスを指定
         return renderResult;
@@ -159,7 +163,7 @@ class EjsRenderer {
             }
             return 0;
         });
-        
+
         return tableList;
     }
 
