@@ -1,6 +1,9 @@
+import dotenv from 'dotenv';
 import ejs from 'ejs';
 import express from 'express';
 import { resolve } from 'path';
+
+dotenv.config();
 
 class EjsRenderer {
     restUtil = undefined;
@@ -28,6 +31,7 @@ class EjsRenderer {
         };
 
         let ejsParameters = {
+            basePath: process.env.BASE_PATH ? process.env.BASE_PATH : '',
             path: nameParts,
             params: queryParams,
             pageTitle: 'Page Title',

@@ -43,8 +43,9 @@
     var current_user = getCurrentUser();
     // 現在のurlを取得
     var baseUrl = `${location.hostname}${location.port ? ':' + location.port : ''}`;
+    console.log('baseUrl:', baseUrl);
     var websoc_protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    var websocket = new WebSocket(`${websoc_protocol}://${baseUrl}/ws?currentUser=${current_user}`);
+    var websocket = new WebSocket(`${websoc_protocol}://${baseUrl}<%= basePath %>/ws?currentUser=${current_user}`);
     window.websocket = websocket;
 
     websocket.onopen = function () {

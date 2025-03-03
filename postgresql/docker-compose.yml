@@ -2,15 +2,10 @@ services:
 #POSTGRESQL
   db:
     image: postgres:17
-    environment:
-      - POSTGRES_DB=${DB_DATABASE}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - TZ=${DB_TIME_ZONE}
+    env_file:
+      - .env
     volumes:
       - ./db_data:/var/lib/postgresql/data
     ports:
       - ${DB_PORT:-5432}:5432
-    env_file:
-      - .env
     restart: unless-stopped
