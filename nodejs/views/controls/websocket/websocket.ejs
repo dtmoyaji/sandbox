@@ -41,7 +41,9 @@
 
     // websocketの実装
     var current_user = getCurrentUser();
-    var websocket = new WebSocket(`ws://localhost:3001/ws?currentUser=${current_user}`);
+    // 現在のurlを取得
+    var baseUrl = `${location.hostname}${location.port ? ':' + location.port : ''}`;
+    var websocket = new WebSocket(`ws://${baseUrl}/ws?currentUser=${current_user}`);
     window.websocket = websocket;
 
     websocket.onopen = function () {

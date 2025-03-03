@@ -4,3 +4,5 @@ FROM node:20
 # Install dependencies
 RUN yarn install
 
+CMD ["sh", "/app/start.sh"]
+

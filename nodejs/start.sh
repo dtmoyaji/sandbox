@@ -6,4 +6,5 @@ if [ ! -f .installed ]; then
     touch .installed
 fi
 yarn install
-npm run start
+#npm run start
+node --inspect=0.0.0.0:9229 main.mjs
