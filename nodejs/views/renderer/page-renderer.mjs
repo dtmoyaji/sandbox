@@ -107,7 +107,12 @@ class PageRenderer {
         let sidePanelRenderResult = {};
         let renderResult = { status: 200, body: '' };
 
-        let paneParameter = { sidePanelTitle: userDomainName, appendButtonVisible: false, user: user };
+        let paneParameter = {
+            sidePanelTitle: userDomainName,
+            appendButtonVisible: false,
+            user: user,
+            basePath: process.env.BASE_PATH ? process.env.BASE_PATH : ''
+        };
         sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideMainPanel.ejs', paneParameter);
         if (sidePanelRenderResult.status > 200) {
             renderResult.status = sidePanelRenderResult.status;
@@ -172,7 +177,7 @@ class PageRenderer {
             }
             return 0;
         });
-        
+
         return tableList;
     }
 
