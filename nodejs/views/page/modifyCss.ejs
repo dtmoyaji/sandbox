@@ -21,7 +21,7 @@
                     const originalUrl = urlMatch[1];
 
                     // 新しいURLを設定
-                    const newUrl = `${basepath}${originalUrl.split('/').pop()}`;
+                    const newUrl = `${basepath}/theme/${originalUrl.split('/').pop()}`;
                     element.style.backgroundImage = `url(${newUrl})`;
                 }
             }
