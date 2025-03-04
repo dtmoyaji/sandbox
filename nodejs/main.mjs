@@ -160,7 +160,7 @@ app.get(['/admin', '/admin/*'], async (req, res) => {
 
 app.get('/login', (req, res) => {
     ejs.renderFile('views/auth/login.ejs',
-        { title: 'Login' },
+        { title: 'Login', basePath: process.env.BASE_PATH },
         (err, str) => {
             if (err) {
                 res.status(500).send(err.message);
