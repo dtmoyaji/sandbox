@@ -28,7 +28,7 @@
         let tableName = '<%= targetTable %>';
         let params = JSON.parse(request_param).query;
 
-        let table = await fetch(`/api/models/${tableName}?${getParams}`);
+        let table = await fetch(`<%= basePath %>/api/models/${tableName}?${getParams}`);
         let tableData = await table.json();
         params['writeable'] = tableData.writeable;
         let tableController = document.querySelector('.table-controller');
@@ -203,7 +203,7 @@
         try {
             let currentUser = getCurrentUser();
             // アップロードは非同期で行う
-            let response = fetch('/api/import/csv', {
+            let response = fetch('<%= basePath %>/api/import/csv', {
                 method: 'POST',
                 body: formData
             });

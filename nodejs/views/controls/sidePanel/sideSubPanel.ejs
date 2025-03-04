@@ -17,7 +17,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         switch (listType) {
             case 'table':
-                const tableList = await fetch('/api/models/all');
+                const tableList = await fetch('<%= basePath %>/api/models/all');
                 let listTag = document.getElementById('list');
                 listTag.replaceWith(await createTableList(await tableList.json()));
             default:
@@ -33,7 +33,7 @@
             const a = document.createElement('a');
             switch (listType) {
                 case 'table':
-                    a.href = '/admin/table/' + element.table_name;
+                    a.href = '<%= basePath %>/admin/table/' + element.table_name;
                     break;
                 default:
                     break;

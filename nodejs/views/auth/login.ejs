@@ -5,14 +5,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ログイン</title>
-  <link rel="stylesheet" href="/theme/style.css">
+  <link rel="stylesheet" href="<%= basePath %>/theme/style.css">
 </head>
 
 <body>
   <div class="auth-page">
     <div class="fixed-dialog">
       <h1>ログイン</h1>
-      <form action="/login" method="POST">
+      <form action="<%= basePath %>/login" method="POST">
         <div class="form-group">
           <label for="username">ユーザー名:</label>
           <input type="text" id="username" name="username" required>

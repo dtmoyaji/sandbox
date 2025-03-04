@@ -60,7 +60,7 @@
         const targetTable = '<%= targetTable %>';
 
         try {
-            const response = await fetch(`/api/models/tableDefinition/${targetTable}`);
+            const response = await fetch(`<%= basePath %>/api/models/tableDefinition/${targetTable}`);
             const tableDefinition = await response.text();
             document.getElementById('tableDefinition').innerHTML = JSON.stringify(JSON.parse(tableDefinition), null, 2);
         } catch (error) {
