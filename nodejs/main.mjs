@@ -195,7 +195,7 @@ app.post('/login', async (req, res) => {
 
 app.get('/logout', (req, res) => {
     ejs.renderFile('views/auth/logout.ejs',
-        { title: 'Logout' },
+        { title: 'Logout', basePath: process.env.BASE_PATH },
         (err, str) => {
             if (err) {
                 res.status(500).send(err.message);
