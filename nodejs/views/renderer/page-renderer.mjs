@@ -122,6 +122,7 @@ class PageRenderer {
         }
 
         if (param2 !== '') {
+            ejsParameters.basePath = process.env.BASE_PATH ? process.env.BASE_PATH : '';
             let subMenuRenderResult = await this.renderSideSubPanel(user, param2, ejsParameters);
             if (subMenuRenderResult.status > 200) {
                 renderResult.status = subMenuRenderResult.status;
