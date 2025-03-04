@@ -50,7 +50,7 @@ class EjsRenderer {
         let footerHtml = await this.renderHtml('views/controls/footBar/footBar.ejs', ejsParameters);
         let centerPanelHtml = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
         let websocketHtml = await this.renderHtml('views/controls/websocket/websocket.ejs', ejsParameters);
-        let modifycssHtml = await this.renderHtml('views/page/modifycss.ejs', ejsParameters);
+        let modifycssHtml = await this.renderHtml('views/page/modifyCss.ejs', ejsParameters);
 
         ejsParameters.topBar = topBarHtml.body;
         ejsParameters.startButton = startButtonHtml.body;
