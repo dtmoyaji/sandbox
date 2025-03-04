@@ -48,7 +48,7 @@ const pageRenderer = new PageRenderer(restUtil, modelManager);
 
 // 静的ファイルを提供するためのミドルウェアを設定
 console.log(`basePath: ${process.env.BASE_PATH}`);
-app.use(`${ process.env.BASE_PATH }/theme`, express.static(path.join(__dirname, process.env.THEME)));
+app.use(`/theme`, express.static(path.join(__dirname, process.env.THEME)));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
