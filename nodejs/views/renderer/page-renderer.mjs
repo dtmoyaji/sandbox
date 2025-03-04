@@ -151,7 +151,13 @@ class PageRenderer {
                 break;
         }
 
-        let paneParameter = { sidePanelTitle: path, appendButtonVisible: false, user: user, list: list };
+        let paneParameter = { 
+            sidePanelTitle: path,
+            appendButtonVisible: false,
+            user: user,
+            list: list,
+            basePath: process.env.BASE_PATH ? process.env.BASE_PATH : ''
+        };
         sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideSubPanel.ejs', paneParameter);
 
         if (sidePanelRenderResult.status > 200) {
