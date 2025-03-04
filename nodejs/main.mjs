@@ -144,7 +144,7 @@ app.get(['/admin', '/admin/*'], async (req, res) => {
     // トークンの検証
     let tokenCheck = await restUtil.verifyToken(req, res);
     if(!tokenCheck.auth) {
-        res.redirect('/login');
+        res.redirect(`${process.env.BASE_PATH}/login`);
         return;
     }
 
@@ -186,7 +186,7 @@ app.post('/login', async (req, res) => {
             res.cookie('x-access-token', accessToken, { sameSite: 'Strict' });
             res.cookie('x-refresh-token', refreshToken, { sameSite: 'Strict' });
             // adminページにリダイレクト
-            return res.redirect('/admin');
+            return res.redirect(`${process.env.BASE_PATH}/admin`);
         }
     }
     return res.status(401).send('Invalid user or password');
