@@ -10,29 +10,30 @@
 
 <%- websocket %>
 
-<body>
-    <div id="top">
-        <%- startButton %>
-            <%- topBar %>
-    </div>
-    <div id="body">
-        <div id="left" open="true">
-            <%- sidebarPanel %>
+    <body>
+        <div id="top">
+            <%- startButton %>
+                <%- topBar %>
         </div>
+        <div id="body">
+            <div id="left" open="true">
+                <%- sidebarPanel %>
+            </div>
 
-        <div id="center" open="true">
-            <%- centerPanel %>
+            <div id="center" open="true">
+                <%- centerPanel %>
+            </div>
         </div>
-    </div>
-    <div id="footer">
-        <%- footer %>
-    </div>
-</body>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        bindSidePanel('left');
-        bindCenterPanel('center');
-    });
-</script>
+        <div id="footer">
+            <%- footer %>
+        </div>
+    </body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            bindSidePanel('left');
+            bindCenterPanel('center');
+        });
+    </script>
+    
 
 </html>

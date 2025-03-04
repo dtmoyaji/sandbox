@@ -49,7 +49,8 @@ class PageRenderer {
             sidebarPanel: '',
             centerPanel: '',
             footer: '',
-            websocket: ''
+            websocket: '',
+            modifycss: ''
         };
 
         // 各部品をレンダリング
@@ -59,6 +60,7 @@ class PageRenderer {
         let sidePanelHtml = await this.renderSidePanel(req, res, ejsParameters);
         let centerPanelHtml = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
         let websocketHtml = await this.renderHtml('views/controls/websocket/websocket.ejs', ejsParameters);
+        let modifycssHtml = await this.renderHtml('views/controls/page/modifycss.ejs', ejsParameters);
 
         ejsParameters.topBar = topBarHtml.body;
         ejsParameters.startButton = startButtonHtml.body;
@@ -66,6 +68,7 @@ class PageRenderer {
         ejsParameters.sidebarPanel = sidePanelHtml.body;
         ejsParameters.centerPanel = centerPanelHtml.body;
         ejsParameters.websocket = websocketHtml.body;
+        ejsParameters.modifycss = modifycssHtml.body;
 
         let renderResult = await this.renderHtml(pageEjs, ejsParameters); // 絶対パスを指定
         return renderResult;

@@ -1,0 +1,30 @@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        modifyCss();
+    });
+
+    function modifyCss() {
+        const basepath = '<%= basePath %>';
+
+        // すべての要素を取得
+        const allElements = document.querySelectorAll('*');
+
+        allElements.forEach(element => {
+            const style = getComputedStyle(element);
+            const backgroundImage = style.getPropertyValue('background-image');
+
+            // background-imageが設定されているかどうかを判別
+            if (backgroundImage && backgroundImage !== 'none') {
+                // URLを抽出
+                const urlMatch = backgroundImage.match(/url\(["']?([^"']*)["']?\)/);
+                if (urlMatch && urlMatch[1]) {
+                    const originalUrl = urlMatch[1];
+
+                    // 新しいURLを設定
+                    const newUrl = `${basepath}${originalUrl.split('/').pop()}`;
+                    element.style.backgroundImage = `url(${newUrl})`;
+                }
+            }
+        });
+    }
+</script>
