@@ -5,6 +5,7 @@
     </div>
     <div class="table-controller" id="table-controller-bottom"></div>
     <div class="recordEditPanel" visible="false">
+        <%- include('./recordEditPane.ejs') %>
         <button class="close-button" onclick="document.querySelector('.recordEditPanel').setAttribute('visible', 'false')">Close</button>
     </div>
     <div class="filterPanel" visible="false">
@@ -49,17 +50,22 @@
         // td タグを作成
         for (let i = 0; i < tableData.data.length; i++) {
             let row = document.createElement('tr');
-            row.addEventListener('click', () => {
-                let recordEditPanel = document.querySelector('.recordEditPanel');
-                recordEditPanel.setAttribute('visible', 'true');
-            });
             row.setAttribute('odd', odd = i % 2 === 0 ? 'true' : 'false');
+            let rowJson = {};
             for (let key in tableData.data[i]) {
                 let cell = document.createElement('td');
                 cell.textContent = tableData.data[i][key];
+                rowJson[key] = tableData.data[i][key];
                 row.appendChild(cell);
+                row.setAttribute('record', JSON.stringify(rowJson));
             }
             tableBody.appendChild(row);
+            row.addEventListener('click', () => {
+                let recordData = row.getAttribute('record');
+                drawRecord(recordData);
+                let recordEditPanel = document.querySelector('.recordEditPanel');
+                recordEditPanel.setAttribute('visible', 'true');
+            });
         }
 
         // コントロールバーを生成

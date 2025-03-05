@@ -39,7 +39,7 @@ async function searchDuckDuckGo(query, maxResults = 3, maxContentLength = 2048) 
                     url = decodeURIComponent(url.replace('//duckduckgo.com/l/?uddg=', ''));
                     url = url.split('&rut=')[0];
                     count++;
-                    console.log(count);
+                    //console.log(count);
                     results.push({
                         "role": "note",
                         "title": pageTitle,

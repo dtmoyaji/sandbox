@@ -1,0 +1,53 @@
+<div>
+    <div><%= targetTable %></div>
+    れこーどえでぃっとぺーん
+    <div id="recordEditPanel" class="recordEditPanel">
+    </div>
+</div>
+<script>
+    var targetTable = '<%= targetTable %>';
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        await createEditControls();
+    });
+
+    async function createEditControls(){
+        var recordEditPanel = document.getElementById('recordEditPanel');
+        console.log('createEditControls');
+        var tableInfo = await fetch(`<%= basePath %>/api/models/tableDefinition/${targetTable}`);
+        var tableInfoJson = await tableInfo.json();
+        var fields = tableInfoJson.fields;
+        console.log(fields);
+        for(var i = 0; i < fields.length; i++){
+            var field = fields[i];
+            var editRow = document.createElement('div');
+            editRow.setAttribute('class', 'editRow');
+            var label = document.createElement('label');
+            label.textContent = field.name;
+            var input = document.createElement('input');
+            input.setAttribute('type', 'text');
+            input.setAttribute('name', field.name);
+
+            if(field.primaryKey === true || field.notNull === true){
+                label.textContent += ' (*)';
+                input.setAttribute('required', 'true');
+            }
+
+            editRow.appendChild(label);
+            editRow.appendChild(input);
+            recordEditPanel.appendChild(editRow);
+        }
+    }
+
+    function drawRecord(recordData){
+        console.log(recordData);
+        var record = JSON.parse(recordData);
+        var editRows = document.querySelectorAll('.editRow');
+        for(var i = 0; i < editRows.length; i++){
+            var editRow = editRows[i];
+            var input = editRow.querySelector('input');
+            var fieldName = input.getAttribute('name');
+            input.value = record[fieldName];
+        }
+    }
+</script>
