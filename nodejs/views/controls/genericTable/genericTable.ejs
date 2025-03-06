@@ -78,6 +78,8 @@
         let controlBarBottom = await generateControlBar(pagingInfo, 'control-bar-bottom', params);
         tableControllerBottom.appendChild(controlBarBottom);
 
+        modifyCss();
+
     });
 
     async function generateControlBar(pagingInfo, tag_id, params) {

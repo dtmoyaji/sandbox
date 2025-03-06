@@ -1,8 +1,4 @@
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        modifyCss();
-    });
-
     function modifyCss() {
         const basepath = '<%= basePath %>';
 
@@ -23,6 +19,7 @@
                     // 新しいURLを設定
                     const newUrl = `${basepath}/theme/${originalUrl.split('/').pop()}`;
                     element.style.backgroundImage = `url(${newUrl})`;
+                    console.log(`Modified background-image: ${originalUrl} -> ${newUrl}`);
                 }
             }
         });
