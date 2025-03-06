@@ -161,7 +161,11 @@ app.get(['/admin', '/admin/*'], async (req, res) => {
 
 app.get('/login', (req, res) => {
     ejs.renderFile('views/auth/login.ejs',
-        { title: 'Login', basePath: process.env.BASE_PATH },
+        {
+            title: 'Login',
+            basePath: process.env.BASE_PATH,
+            redirectUrl: req.query.redirect || `${process.env.BASE_PATH}/admin`
+        },
         (err, str) => {
             if (err) {
                 res.status(500).send(err.message);
@@ -176,7 +180,11 @@ app.post('/login', async (req, res) => {
     const password = req.body.password;
     let userTable = await modelManager.getModel('user');
     let registeredUser = await userTable.get({ user_name: user });
-
+    // ?redirect= が指定されている場合は、そのURLにリダイレクトする
+    let redirectUrl = req.body.redirectUrl === undefined ?
+        `${process.env.BASE_PATH}/admin`
+        : `${process.env.BASE_PATH}${req.body.redirectUrl}`;
+    
     if (registeredUser.length !== 0) {
         let registeredPassword = registeredUser[0].user_password;
         if (await credential.verifyPassword(password, registeredPassword)) {
@@ -187,7 +195,7 @@ app.post('/login', async (req, res) => {
             res.cookie('x-access-token', accessToken, { sameSite: 'Strict' });
             res.cookie('x-refresh-token', refreshToken, { sameSite: 'Strict' });
             // adminページにリダイレクト
-            return res.redirect(`${process.env.BASE_PATH}/admin`);
+            return res.redirect(redirectUrl);
         }
     }
     return res.status(401).send('Invalid user or password');

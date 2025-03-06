@@ -13,6 +13,7 @@
     <div class="fixed-dialog">
       <h1>ログイン</h1>
       <form action="<%= basePath %>/login" method="POST">
+        <input type="hidden" name="redirectUrl" value="<%= redirectUrl %>">
         <div class="form-group">
           <label for="username">ユーザー名:</label>
           <input type="text" id="username" name="username" required>

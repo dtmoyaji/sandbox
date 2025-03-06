@@ -1,8 +1,6 @@
-<div>
-    <div><%= targetTable %></div>
-    れこーどえでぃっとぺーん
-    <div id="recordEditPanel" class="recordEditPanel">
-    </div>
+<div id="recordEditPane" class="recordEditPane">
+    <div id="recordEditTitle"><%= targetTable %></div>
+    <div id="recordEditPanel" class="recordEditPanel"></div>
 </div>
 <script>
     var targetTable = '<%= targetTable %>';
@@ -24,13 +22,17 @@
             editRow.setAttribute('class', 'editRow');
             var label = document.createElement('label');
             label.textContent = field.name;
+            label.setAttribute('for', field.name);
+            label.setAttribute('class', 'editLabel');
             var input = document.createElement('input');
             input.setAttribute('type', 'text');
             input.setAttribute('name', field.name);
+            input.setAttribute('class', 'editInput');
 
             if(field.primaryKey === true || field.notNull === true){
                 label.textContent += ' (*)';
                 input.setAttribute('required', 'true');
+                input.setAttribute('primary', 'true');
             }
 
             editRow.appendChild(label);

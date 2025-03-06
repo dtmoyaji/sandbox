@@ -87,7 +87,11 @@ class EjsRenderer {
 
         let verifyResult = await this.restUtil.verifyToken(req, res);
         if (!verifyResult.auth) {
-            return res.status(401).send(verifyResult.message);
+            let currentUrl = req.originalUrl;
+            let redirectUrl = '/login?redirect=' + currentUrl;
+            console.log('redirectUrl:', redirectUrl);
+            res.redirect(redirectUrl);
+            return { status: 401, body: '' };
         }
 
         let user = verifyResult.user;
@@ -105,7 +109,12 @@ class EjsRenderer {
         let sidePanelRenderResult = {};
         let renderResult = { status: 200, body: '' };
 
-        let paneParameter = { sidePanelTitle: userDomainName, appendButtonVisible: false, user: user };
+        let paneParameter = { 
+            sidePanelTitle: userDomainName,
+            appendButtonVisible: false,
+            user: user,
+            basePath: ejsParameters.basePath
+        };
         sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideMainPanel.ejs', paneParameter);
         if (sidePanelRenderResult.status > 200) {
             renderResult.status = sidePanelRenderResult.status;
