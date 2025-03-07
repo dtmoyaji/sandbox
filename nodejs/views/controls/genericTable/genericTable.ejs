@@ -6,11 +6,15 @@
     <div class="table-controller" id="table-controller-bottom"></div>
     <div class="recordEditPanel" visible="false">
         <%- include('./recordEditPane.ejs') %>
-        <button class="close-button" onclick="document.querySelector('.recordEditPanel').setAttribute('visible', 'false')">Close</button>
+        <div class="bottom-panel">
+            <button class="close-button" onclick="document.querySelector('.recordEditPanel').setAttribute('visible', 'false')">Close</button>
+        </div>
     </div>
     <div class="filterPanel" visible="false">
+        <div class="bottom-panel">
+            <button class="close-button" onclick="document.querySelector('.filterPanel').setAttribute('visible', 'false')">Close</button>
+        </div>
         <button class="close-button" onclick="document.querySelector('.filterPanel').setAttribute('visible', 'false')">Close</button>
-    </div>
 </div>
 
 <script>

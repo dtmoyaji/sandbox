@@ -1,55 +1,84 @@
 <div id="recordEditPane" class="recordEditPane">
-    <div id="recordEditTitle"><%= targetTable %></div>
-    <div id="recordEditPanel" class="recordEditPanel"></div>
+  <div id="recordEditTitle"><%= targetTable %></div>
+  <div id="inputControls" class="inputControls"></div>
 </div>
 <script>
-    var targetTable = '<%= targetTable %>';
+  var targetTable = '<%= targetTable %>';
 
-    document.addEventListener('DOMContentLoaded', async function() {
-        await createEditControls();
-    });
+  document.addEventListener('DOMContentLoaded', async function() {
+    await createEditControls();
+  });
 
-    async function createEditControls(){
-        var recordEditPanel = document.getElementById('recordEditPanel');
-        console.log('createEditControls');
-        var tableInfo = await fetch(`<%= basePath %>/api/models/tableDefinition/${targetTable}`);
-        var tableInfoJson = await tableInfo.json();
-        var fields = tableInfoJson.fields;
-        console.log(fields);
-        for(var i = 0; i < fields.length; i++){
-            var field = fields[i];
-            var editRow = document.createElement('div');
-            editRow.setAttribute('class', 'editRow');
-            var label = document.createElement('label');
-            label.textContent = field.name;
-            label.setAttribute('for', field.name);
-            label.setAttribute('class', 'editLabel');
-            var input = document.createElement('input');
-            input.setAttribute('type', 'text');
-            input.setAttribute('name', field.name);
-            input.setAttribute('class', 'editInput');
+  async function createEditControls() {
+    var inputControlls = document.getElementById('inputControls');
+    console.log('createEditControls');
+    var tableInfo = await fetch(`<%= basePath %>/api/models/tableDefinition/${targetTable}`);
+    var tableInfoJson = await tableInfo.json();
+    var fields = tableInfoJson.fields;
+    console.log(fields);
+    for (var i = 0; i < fields.length; i++) {
+      var field = fields[i];
+      var editRow = document.createElement('div');
+      editRow.setAttribute('class', 'editRow');
+      var label = document.createElement('label');
+      label.textContent = field.name;
+      label.setAttribute('for', field.name);
+      label.setAttribute('class', 'editLabel');
 
-            if(field.primaryKey === true || field.notNull === true){
-                label.textContent += ' (*)';
-                input.setAttribute('required', 'true');
-                input.setAttribute('primary', 'true');
-            }
+      var input = createInputTag(field);
+      if (field.primaryKey === true || field.notNull === true) {
+        label.textContent += ' (*)';
+        input.setAttribute('required', 'true');
+        input.setAttribute('primary', 'true');
+      }
 
-            editRow.appendChild(label);
-            editRow.appendChild(input);
-            recordEditPanel.appendChild(editRow);
-        }
+      editRow.appendChild(label);
+      editRow.appendChild(input);
+      inputControlls.appendChild(editRow);
     }
+  }
 
-    function drawRecord(recordData){
-        console.log(recordData);
-        var record = JSON.parse(recordData);
-        var editRows = document.querySelectorAll('.editRow');
-        for(var i = 0; i < editRows.length; i++){
-            var editRow = editRows[i];
-            var input = editRow.querySelector('input');
-            var fieldName = input.getAttribute('name');
-            input.value = record[fieldName];
-        }
+  function createInputTag(field) {
+    var result = undefined;
+    switch (field.type) {
+      case 'TEXT':
+        result = createTextInput(field);
+        break;
+      default:
+        result = createStringInput(field);
+        break;
     }
+    console.log(result);
+    return result;
+  }
+
+  // string field input as input type text
+  function createStringInput(field) {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'text');
+    input.setAttribute('name', field.name);
+    input.setAttribute('class', 'editInput');
+    return input;
+  }
+
+  // text field input as textarea
+  function createTextInput(field) {
+    var input = document.createElement('textarea');
+    input.setAttribute('name', field.name);
+    input.setAttribute('class', 'editInput');
+
+    return input;
+  }
+
+  function drawRecord(recordData) {
+    console.log(recordData);
+    var record = JSON.parse(recordData);
+    var editRows = document.querySelectorAll('.editRow');
+    for (var i = 0; i < editRows.length; i++) {
+      var editRow = editRows[i];
+      var input = editRow.getElementsByClassName('editInput')[0];
+      var fieldName = input.getAttribute('name');
+      input.value = record[fieldName];
+    }
+  }
 </script>
