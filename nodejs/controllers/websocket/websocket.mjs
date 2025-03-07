@@ -4,8 +4,10 @@ export class WebSocket {
     express = undefined;
     websocket = undefined;
     clients = new Map();
+    logger = undefined;
 
-    constructor(express) {
+    constructor(express, logger=undefined) {
+        this.logger = logger;
         this.express = express;
         this.websocket = expressWs(express);
     }
@@ -17,9 +19,10 @@ export class WebSocket {
                 this.clients.set(currentUser, []);
             }
             this.clients.get(currentUser).push(ws);
-            console.log('WebSocket was opened');
-            console.log(currentUser);
-            console.log(`Clients: ${this.clients.size}`);
+            if(this.logger){
+                this.logger.log(`WebSocket was opened for ${currentUser}`);
+                this.logger.log(`Clients: ${this.clients.size}`);
+            }
 
             ws.on('message', (msg) => {
                 let msgObj = JSON.parse(msg);
@@ -35,9 +38,10 @@ export class WebSocket {
                 } else {
                     this.clients.delete(currentUser);
                 }
-                console.log('WebSocket was closed');
-                console.log(currentUser);
-                console.log(`Clients: ${this.clients.size}`);
+                if(this.logger){
+                    this.logger.log('WebSocket was closed');
+                    this.logger.log(`Clients: ${this.clients.size}`);
+                }
             });
         });
         console.log('WebSocket bound');

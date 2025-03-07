@@ -8,6 +8,7 @@ import { bootApplications, restoreData } from './application-boot.mjs';
 import { UserApplication } from './controllers/app/userApplication.mjs';
 import * as credential from './controllers/credential.mjs';
 import { ImportCsvController } from './controllers/file/import-csv.mjs';
+import { Logger } from './controllers/logger.mjs';
 import { ModelManager } from './controllers/model-manager.mjs';
 import { createAuthController } from './controllers/rest/auth-controller.mjs';
 import { createModelController } from './controllers/rest/model-controller.mjs';
@@ -40,7 +41,8 @@ await modelManager.reloadModels();
 await restoreData(modelManager);
 
 const app = express();
-const websocket = new WebSocket(app);
+const logger = new Logger(modelManager);
+const websocket = new WebSocket(app, logger);
 await websocket.bindWebSocket();
 
 const scriptExecutor = new ScriptExecutor(modelManager, websocket);
