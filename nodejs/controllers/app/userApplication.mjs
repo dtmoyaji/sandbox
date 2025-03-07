@@ -27,6 +27,7 @@ export class UserApplication {
 
     async drawPage(req, res) {
         let applicationName = req.params[0];
+        req.application_name = applicationName;
         let application = await this.modelManager.getModel('application');
         let applicationRecord = await application.get({ application_name: applicationName });
         if (applicationRecord.length === 0) {

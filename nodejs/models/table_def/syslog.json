@@ -18,6 +18,12 @@
             "notNull": true
         },
         {
+            "name": "application_name",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
             "name": "level",
             "type": "STRING",
             "length": 255,

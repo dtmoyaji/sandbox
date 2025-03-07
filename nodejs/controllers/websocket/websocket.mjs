@@ -15,13 +15,17 @@ export class WebSocket {
     async bindWebSocket() {
         this.express.ws('/ws', (ws, req) => {
             let currentUser = req.query.currentUser;
+            let application_name = req.query.application_name;
             if (!this.clients.has(currentUser)) {
                 this.clients.set(currentUser, []);
             }
             this.clients.get(currentUser).push(ws);
             if(this.logger){
-                this.logger.log(`WebSocket was opened for ${currentUser}`);
-                this.logger.log(`Clients: ${this.clients.size}`);
+                this.logger.log(
+                    `WebSocket was opened for ${currentUser}. Clients: ${this.clients.size}`,
+                    'info',
+                    application_name
+                );
             }
 
             ws.on('message', (msg) => {
@@ -39,8 +43,7 @@ export class WebSocket {
                     this.clients.delete(currentUser);
                 }
                 if(this.logger){
-                    this.logger.log('WebSocket was closed');
-                    this.logger.log(`Clients: ${this.clients.size}`);
+                    this.logger.log(`WebSocket was closed. Clients: ${this.clients.size}`, 'info', application_name);
                 }
             });
         });
