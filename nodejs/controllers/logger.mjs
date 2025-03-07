@@ -15,3 +15,5 @@ export class Logger{
         await log.put(logTemplate);
     }
 }
+
+

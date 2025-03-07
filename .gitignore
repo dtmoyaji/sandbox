@@ -13,3 +13,4 @@ nodejs/applications/*
 data_restore
 nodejs/tmp
 .installed
+.pnpm-store

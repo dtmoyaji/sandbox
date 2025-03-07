@@ -1,9 +1,14 @@
 # Use the official Node.js image from the Docker Hub
 FROM node:20
 
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++
+
+    
 # Install dependencies
 RUN npm install -g pnpm
-# RUN yarn install
 
 CMD ["sh", "/app/start.sh"]
 
