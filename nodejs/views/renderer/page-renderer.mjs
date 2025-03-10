@@ -40,6 +40,7 @@ class PageRenderer {
         };
 
         let ejsParameters = {
+            application_name: req.application_name ? req.application_name : 'system',
             basePath: process.env.BASE_PATH ? process.env.BASE_PATH : '',
             path: nameParts,
             params: queryParams,

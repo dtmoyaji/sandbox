@@ -527,18 +527,42 @@ a {
 }
 
 .editRow{
-    display: table-row;
+    display: block;
 }
 
 .editLabel{
-    display: table-cell;
+    display: inline-block;
     text-align: right;
     padding-right: 1em;
-    width: 20%;
+    width: 25%;
+    vertical-align: top;
 }
 
 .editInput{
-    display: table-cell;
-    width: 80%;
+    display: inline-block;
+    width: 75%;
     padding-left: 1em;
+}
+
+textarea.editInput{
+    height: 5em;
+}
+
+.recordEditPane .inputControls {
+    position: absolute;
+    top: 5%;
+    left: 0;
+    right: 0;
+    bottom: 5%;
+    overflow: auto;
+    padding: 1em;
+}
+
+.recordEditPanel .bottom-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5%;
+    text-align: center;
 }

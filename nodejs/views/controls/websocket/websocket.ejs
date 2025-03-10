@@ -45,7 +45,7 @@
     var baseUrl = `${location.hostname}${location.port ? ':' + location.port : ''}`;
     console.log('baseUrl:', baseUrl);
     var websoc_protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    var websocket = new WebSocket(`${websoc_protocol}://${baseUrl}<%= basePath %>/ws?currentUser=${current_user}`);
+    var websocket = new WebSocket(`${websoc_protocol}://${baseUrl}<%= basePath %>/ws?currentUser=${current_user}&application_name=<%= application_name %>`);
     window.websocket = websocket;
 
     websocket.onopen = function () {
