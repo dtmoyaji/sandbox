@@ -1,4 +1,5 @@
-#! /bin/sh
+#!/bin/sh
+ls /app
 cd /app
 
 # rm -rf .installed

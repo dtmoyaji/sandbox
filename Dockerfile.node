@@ -6,10 +6,6 @@ RUN apt-get update && apt-get install -y \
     make \
     g++
 
-    
-# Install dependencies
-RUN npm install -g pnpm
-# RUN yarn install
 
-CMD ["sh", "/app/start.sh"]
+#CMD ["sh", "/app/start.sh"]
 
