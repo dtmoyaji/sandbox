@@ -41,7 +41,7 @@ class EjsRenderer {
             centerPanel: '',
             footer: '',
             websocket: '',
-            modifycss: ''
+            modifyCss: ''
         };
 
         // 各部品をレンダリング
@@ -50,14 +50,14 @@ class EjsRenderer {
         let footerHtml = await this.renderHtml('views/controls/footBar/footBar.ejs', ejsParameters);
         let centerPanelHtml = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
         let websocketHtml = await this.renderHtml('views/controls/websocket/websocket.ejs', ejsParameters);
-        let modifycssHtml = await this.renderHtml('views/page/modifyCss.ejs', ejsParameters);
+        let modifyCssHtml = await this.renderHtml('views/page/modifyCss.ejs', ejsParameters);
 
         ejsParameters.topBar = topBarHtml.body;
         ejsParameters.startButton = startButtonHtml.body;
         ejsParameters.footer = footerHtml.body;
         ejsParameters.centerPanel = centerPanelHtml.body;
         ejsParameters.websocket = websocketHtml.body;
-        ejsParameters.modifycss = modifycssHtml.body;
+        ejsParameters.modifyCss = modifyCssHtml.body;
 
         // 公開ページの場合はシステムのサイドパネルを表示しない
         if (req.application_protection !== 'public') {

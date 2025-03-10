@@ -2,7 +2,8 @@
 FROM node:20
 
 # Install dependencies
-RUN yarn install
+RUN npm install -g pnpm
+# RUN yarn install
 
 CMD ["sh", "/app/start.sh"]
 

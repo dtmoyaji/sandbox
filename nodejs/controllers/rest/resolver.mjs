@@ -49,7 +49,7 @@ class Resolver {
                 path = paths[0];
             }
             let resolveInfo = await this.getResolveInfo(path);
-            console.log('PATH: ', path);
+            //console.log('PATH: ', path);
             switch (path) {
                 case 'tableDefinition':
                     return this.tableDefinitionGet(resolveInfo, req, res);

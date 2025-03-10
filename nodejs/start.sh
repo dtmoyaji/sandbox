@@ -2,6 +2,7 @@
 cd /app
 
 if [ ! -f .installed ]; then
+    pnpm install
     node initialize.mjs
     touch .installed
 fi
