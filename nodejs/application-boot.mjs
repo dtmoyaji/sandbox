@@ -135,6 +135,7 @@ async function registerApplication(applicationDefFile) {
     let application_name = applicationInfo.application_name;
     let application = await applicationTable.get({ application_name: application_name });
     if (application.length === 0) { // 登録がないので新規登録
+        console.log('registering new application:', application_name);
         let applicationTmp = await applicationTable.getJsonTemplate();
         delete applicationTmp.application_id;
         applicationTmp.application_name = application_name;
@@ -142,6 +143,7 @@ async function registerApplication(applicationDefFile) {
         applicationTmp.application_description = applicationInfo.application_description;
         application = await applicationTable.put(applicationTmp);
     } else { // 登録があるので更新
+        console.log('update application:', application_name);
         application[0].application_protection = applicationInfo.application_protection;
         application[0].application_description = applicationInfo.application_description;
         application = await applicationTable.post(application[0]);

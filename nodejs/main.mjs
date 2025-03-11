@@ -16,6 +16,7 @@ import { createQueryController } from './controllers/rest/query-controller.mjs';
 import { Resolver } from './controllers/rest/resolver.mjs';
 import { RestUtil } from './controllers/rest/rest-util.mjs';
 import { ScriptExecutor } from './controllers/script/script-executer.mjs';
+import LineworksMessageSender from './controllers/sns/lineworks/lineworks_message_sender.mjs';
 import { WebSocket } from './controllers/websocket/websocket.mjs';
 import PageRenderer from './views/renderer/page-renderer.mjs';
 
@@ -62,6 +63,11 @@ const importCsvController = new ImportCsvController(modelManager, websocket);
 await importCsvController.initializeResolvers();
 const userApplication = new UserApplication(restUtil, modelManager);
 await userApplication.initializeResolvers();
+
+// SNS関連のコントローラを設定
+const lineworksMessageSender = new LineworksMessageSender(modelManager);
+lineworksMessageSender.setUserDomainId(1);
+await lineworksMessageSender.sendMessage(process.env.TEST_LINEWORKS_USER, 'SANDBOXを起動しました。');
 
 app.use('/app', userApplication.router);
 app.use('/api/script', scriptExecutor.router);

@@ -1,0 +1,82 @@
+{
+    "name": "lineworks_bot_setting",
+    "version": "0.0.1",
+    "description": "LINEWORKS botの接続設定",
+    "scope" : "protected",
+    "user_scope": "user_admin_readonly",
+    "fields": [
+        {
+            "name": "lineworks_bot_setting_id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "autoIncrement": true
+        },
+        {
+            "name": "user_domain_id",
+            "type": "INTEGER",
+            "notNull": true,
+            "foreignKey": {
+                "name": "lineworks_bot_user_domain_id_fk",
+                "table": "user_domain",
+                "field": "user_domain_id"
+            }
+        },
+        {
+            "name": "lineworks_bot_name",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "lineworks_client_id",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "lineworks_client_secret",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "lineworks_service_account_id",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "lineworks_private_key",
+            "type": "TEXT",
+            "notNull": true
+        },
+        {
+            "name": "lineworks_bot_id",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true,
+            "description": "LINE WORKS が提供するbotのID"
+        },
+        {
+            "name": "lineworks_scope",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "created_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "updated_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "deleted_at",
+            "type": "DATETIME",
+            "notNull": false
+        }
+    ]
+}
