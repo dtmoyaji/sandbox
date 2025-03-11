@@ -66,8 +66,6 @@ await userApplication.initializeResolvers();
 
 // SNS関連のコントローラを設定
 const lineworksMessageSender = new LineworksMessageSender(modelManager);
-lineworksMessageSender.setUserDomainId(1);
-await lineworksMessageSender.sendMessage(process.env.TEST_LINEWORKS_USER, 'SANDBOXを起動しました。');
 
 app.use('/app', userApplication.router);
 app.use('/api/script', scriptExecutor.router);
