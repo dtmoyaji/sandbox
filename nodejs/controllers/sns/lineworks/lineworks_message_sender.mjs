@@ -1,6 +1,7 @@
 
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { Logger } from '../../logger.mjs';
 import LineworksJWT from './lineworks_jwt.mjs';
 
 dotenv.config();
@@ -8,9 +9,11 @@ class LineworksMessageSender {
 
     lineworksJWT = undefined;
     user_domain_id = -1;
+    logger = undefined;
 
     constructor(modelManager) {
         this.lineworksJWT = new LineworksJWT(modelManager);
+        this.logger = new Logger(modelManager);
     }
 
     setUserDomainId(user_domain_id) {
@@ -46,8 +49,9 @@ class LineworksMessageSender {
         this.lineworksJWT.debugLog(headers);
         try {
             const response = await axios.post(apiUrl, data, { headers: headers });
-            console.log(response.status);
+            this.logger.log(`Send message to ${to}: ${message}`);
         } catch (error) {
+            this.logger.log(`Failed to send message to ${to}: ${message}`, 'error');
             console.error(error);
         }
     }
