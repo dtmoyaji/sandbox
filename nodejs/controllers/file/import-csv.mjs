@@ -1,3 +1,4 @@
+import chardet from 'chardet';
 import csv from 'csv-parser';
 import express from 'express';
 import fs from 'fs';
@@ -41,12 +42,18 @@ export class ImportCsvController {
             const user_domain_id = user_domains[0].user_domain_id;
 
             try {
+
                 // ファイルを読み込み
+                const encoding = chardet.detectFileSync(file.path);
+                console.log('Encoding:', encoding);
                 const results = await new Promise((resolve, reject) => {
                     const results = [];
                     fs.createReadStream(file.path)
-                        .pipe(iconv.decodeStream('shift_jis'))
-                        .pipe(csv())
+                        .pipe(iconv.decodeStream(encoding))
+                        .pipe(csv({
+                            mapHeaders: ({ header }) => header.trim(),
+                            mapValues: ({ value }) => value.trim()
+                        }))
                         .on('data', (data) => results.push(data))
                         .on('end', () => resolve(results))
                         .on('error', (error) => reject(error));

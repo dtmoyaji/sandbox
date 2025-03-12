@@ -6,7 +6,12 @@ services:
     volumes:
       - ./postgresql/db_data:/var/lib/postgresql/data
     restart: unless-stopped
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
   app:
     build:
       context: .
@@ -24,7 +29,8 @@ services:
       - 9229:9229 # for debugging
     command: sh -c "/app/start.sh"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 networks:
   isolated_network:
