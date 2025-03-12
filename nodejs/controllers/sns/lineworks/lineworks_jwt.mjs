@@ -1,6 +1,6 @@
+import axios from 'axios';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-import request from 'request';
 
 dotenv.config();
 
@@ -87,41 +87,35 @@ class LineworksJWT {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
-            form: {
+            data: new URLSearchParams({
                 "assertion": assertion,
                 "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
                 "client_id": lineworks_bot_setting.lineworks_client_id,
                 "client_secret": lineworks_bot_setting.lineworks_client_secret,
                 "scope": lineworks_bot_setting.lineworks_scope
-            }
+            })
         };
         this.debugLog("POST_OPTIONS:");
         this.debugLog(JSON.stringify(options));
         this.debugLog();
         return new Promise((resolve, reject) => {
-            request.post(options, (error, response, body) => {
-                this.debugLog("POST_RESPONSE:");
-                this.debugLog(JSON.stringify(response));
-                this.debugLog();
-                if (error) {
-                    reject(error);
-                } else {
-                    this.debugLog("POST_BODY:");
-                    this.debugLog(body);
+            axios.post(options.url, options.data, { headers: options.headers })
+                .then(response => {
+                    this.debugLog("POST_RESPONSE:");
+                    this.debugLog(JSON.stringify(response.data));
                     this.debugLog();
-                    try {
-                        const parsedBody = JSON.parse(body);
-                        if (parsedBody.access_token) {
-                            resolve(parsedBody.access_token);
-                        } else {
-                            reject(new Error('Access token not found in response'));
-                        }
-                    } catch (e) {
-                        reject(new Error('Failed to parse response body'));
+                    if (response.data.access_token) {
+                        resolve(response.data.access_token);
+                    } else {
+                        reject(new Error('Access token not found in response'));
                     }
-
-                }
-            });
+                })
+                .catch(error => {
+                    this.debugLog("POST_ERROR:");
+                    this.debugLog(error);
+                    this.debugLog();
+                    reject(error);
+                });
         });
     }
 }
