@@ -37,8 +37,8 @@ export async function bootApplications(manager) {
 
             for (let scriptFile of scriptFiles) {
                 console.log('booting script:', scriptFile);
-                let srciptFullPath = path.resolve(dirRealPath, 'scripts', scriptFile);
-                let scriptUrl = pathToFileURL(srciptFullPath).href;
+                let scriptFullPath = path.resolve(dirRealPath, 'scripts', scriptFile);
+                let scriptUrl = pathToFileURL(scriptFullPath).href;
                 let scriptDef = await import(scriptUrl);
                 let script = scriptDef.default;
                 let scriptTable = await modelManager.getModel('script');

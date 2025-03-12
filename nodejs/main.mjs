@@ -66,8 +66,8 @@ await userApplication.initializeResolvers();
 
 // SNS関連のコントローラを設定
 const lineworksMessageSender = new LineworksMessageSender(modelManager);
-lineworksMessageSender.setUserDomainId(1);
-lineworksMessageSender.sendMessage(process.env.TEST_LINEWORKS_USER, 'Hello, World!');
+//lineworksMessageSender.setUserDomainId(1);
+//lineworksMessageSender.sendMessage(process.env.TEST_LINEWORKS_USER, 'Hello, World!');
 
 app.use('/app', userApplication.router);
 app.use('/api/script', scriptExecutor.router);

@@ -15,31 +15,67 @@
     let listType = '<%= sidePanelTitle %>';
 
     document.addEventListener('DOMContentLoaded', async () => {
+        let listTag = document.getElementById('list');
         switch (listType) {
+            case 'application':
+                let applicationList = await fetch('<%= basePath %>/api/models/application');
+                applicationList = await applicationList.json();
+                applicationList = applicationList.data;
+                listTag.replaceWith(await createTableList(applicationList));
+                break;
             case 'table':
-                const tableList = await fetch('<%= basePath %>/api/models/all');
-                let listTag = document.getElementById('list');
-                listTag.replaceWith(await createTableList(await tableList.json()));
+                let tableList = await fetch('<%= basePath %>/api/models/all');
+                tableList = await tableList.json();
+                listTag.replaceWith(await createTableList(tableList));
+                break;
+            case 'script':
+                console.log('script is selected');
+                let scriptList = await fetch('<%= basePath %>/api/models/script');
+                scriptList = await scriptList.json();
+                scriptList = scriptList.data;
+                listTag.replaceWith(await createTableList(scriptList));
+                break;
+            case 'query':
+                console.log('query is selected');
+                let queryList = await fetch('<%= basePath %>/api/models/query_template');
+                queryList = await queryList.json();
+                queryList = queryList.data;
+                listTag.replaceWith(await createTableList(queryList));
+                break;
             default:
                 break;
         }
     });
 
     async function createTableList(json) {
+        //console.log(json);
         const list = document.createElement('ul');
         // idを設定
         list.id = 'list';
         json.forEach((element) => {
+            //console.log(element);
             const li = document.createElement('li');
             const a = document.createElement('a');
             switch (listType) {
+                case 'application':
+                    a.href = '<%= basePath %>/admin/application/' + element.application_name;
+                    a.textContent = element.application_name;
+                    break;
                 case 'table':
                     a.href = '<%= basePath %>/admin/table/' + element.table_name;
+                    a.textContent = element.table_name;
+                    break;
+                case 'script':
+                    a.href = '<%= basePath %>/admin/script/' + element.script_name;
+                    a.textContent = element.script_name;
+                    break;
+                case 'query':
+                    a.href = '<%= basePath %>/admin/query/' + element.name;
+                    a.textContent = element.name;
                     break;
                 default:
                     break;
             }
-            a.textContent = element.table_name;
             // マウスがリンクに乗った時にカーソルをポインタに変更する。
             a.onmouseover = () => {
                 a.style.cursor = 'pointer';
