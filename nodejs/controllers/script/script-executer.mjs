@@ -39,7 +39,9 @@ export class ScriptExecutor {
             }
 
             const bind_module = JSON.parse(scriptRecord[0].bind_module);
-            const scriptContent = scriptRecord[0].script;
+            let scriptContent = scriptRecord[0].script;
+            // \\nを改行に変換
+            scriptContent = scriptContent.replace(/\\n/g, '\n');
 
             // モジュールをインポート
             const require = createRequire(import.meta.url);
@@ -56,9 +58,10 @@ export class ScriptExecutor {
 
             // スクリプトを実行するためのコンテキストを作成
             const context = {
+                result: null,
                 parameters: parameters,
                 modules: modules,
-                result: null
+                modelManager: this.modelManager
             };
 
             // コンテキストを隔離された環境で実行
@@ -66,7 +69,7 @@ export class ScriptExecutor {
                 (async () => {
                     const { parameters, modules } = context;
                     ${scriptContent}
-                })()
+                })();
             `;
             const script = new Script(asyncScript);
             const vmContext = createContext({ context });

@@ -47,8 +47,8 @@ export async function bootApplications(manager) {
                 scriptTemplate.application_id = application_id;
                 scriptTemplate.script_name = script.script_name;
                 scriptTemplate.bind_module = JSON.stringify(script.bind_module);
-                // 改行をカットする
-                scriptTemplate.script = script.script.replace(/\r?\n/g, '');
+                // 改行を\\nに置換する
+                scriptTemplate.script = script.script.replace(/\r?\n/g, '\\n');
                 scriptTemplate.parameters = JSON.stringify(script.parameters);
                 scriptTemplate.description = script.description;
                 if (currentScript.length === 0) {
@@ -60,8 +60,81 @@ export async function bootApplications(manager) {
                 }
             }
         }
+
+        // data_restoreディレクトリが存在する場合はデータを復元
+        if (fs.existsSync(dirRealPath + '/data_restore')) {
+            let restoreFiles = fs.readdirSync(dirRealPath + '/data_restore');
+            for (let restorefile of restoreFiles) {
+                console.log('restoring data:', restorefile);
+                let restoreFilePath = fs.realpathSync(dirRealPath + '/data_restore/' + restorefile);
+                await restoreApplicationData(manager, restoreFilePath);
+            }
+        }
     }
     console.log('applications booted');
+}
+
+// アプリケーションのデータをリストアする
+export async function restoreApplicationData(manager, filePath) {
+    // ファイルが存在しない場合は処理を終了
+    if (!fs.existsSync(filePath)) {
+        console.log('application data not found');
+        return;
+    }
+    // ファイルがJSONの場合
+    if (filePath.endsWith('.json')) {
+        await restoreApplicationJsonData(manager, filePath);
+    } else if (filePath.endsWith('.csv')) {
+        await resotreApplicationCsvData(manager, filePath);
+    }
+}
+
+// アプリケーションのデータをリストアする(JSON)
+// ファイル名はテーブル名と同一で、ノード内のキーにフィールド名を記載する想定。
+export async function restoreApplicationJsonData(manager, filePath) {
+    let data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    let tableName = path.basename(filePath).replace('.json', '');
+    let table = await manager.getModel(tableName);
+    for (let row of data) {
+        let newRow = await table.getJsonTemplate();
+        for (let key in row) {
+            newRow[key] = row[key];
+        }
+        await table.put(newRow);
+    }
+}
+
+// アプリケーションのデータをリストアする(CSV)
+// ファイル名はテーブル名と同一で、先頭行にフィールド名を記載する想定。
+export async function resotreApplicationCsvData(manager, filePath) {
+    let data = fs.readFileSync(filePath, 'utf8');
+    let rows = data.split('\n');
+    let rowHeader = rows[0].split(',');
+    // trim header
+    rowHeader = rowHeader.map((header) => {
+        return header.trim();
+    });
+    let tableName = path.basename(filePath).replace('.csv', '');
+    let table = await manager.getModel(tableName);
+    let rowCount = await table.getCount({});
+    console.log(table.table_name, rowCount);
+    if (rowCount == 0) {
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i] === '') {
+                continue;
+            }
+            let row = rows[i].split(',');
+            // trim row
+            row = row.map((value) => {
+                return value.trim();
+            });
+            let newRow = await table.getJsonTemplate();
+            for (let j = 0; j < rowHeader.length; j++) {
+                newRow[rowHeader[j]] = row[j];
+            }
+            await table.put(newRow);
+        }
+    }
 }
 
 /**
@@ -87,6 +160,7 @@ export async function restoreData(manager) {
         // データが存在しない場合のみ復元
         if (table) {
             let rowCount = await table.getCount({});
+            console.log(table.table_name, rowCount);
             if (rowCount === '0') {
                 let data = JSON.parse(fs.readFileSync(dirRealPath, 'utf8'));
                 for (let row of data) {
@@ -147,6 +221,8 @@ async function registerApplication(applicationDefFile) {
         application[0].application_protection = applicationInfo.application_protection;
         application[0].application_description = applicationInfo.application_description;
         application = await applicationTable.post(application[0]);
+        application = await applicationTable.get({ application_name: application_name });
+        application = application[0];
     }
     return application.application_id;
 }
