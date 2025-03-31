@@ -16,7 +16,7 @@ import { createQueryController } from './controllers/rest/query-controller.mjs';
 import { Resolver } from './controllers/rest/resolver.mjs';
 import { RestUtil } from './controllers/rest/rest-util.mjs';
 import { ScriptExecutor } from './controllers/script/script-executer.mjs';
-import LineworksMessageSender from './controllers/sns/lineworks/lineworks_message_sender.mjs';
+import { LineworksMessageSender } from './controllers/sns/lineworks/lineworks_message_sender.mjs';
 import { WebSocket } from './controllers/websocket/websocket.mjs';
 import PageRenderer from './views/renderer/page-renderer.mjs';
 

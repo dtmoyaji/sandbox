@@ -5,7 +5,7 @@ import { Logger } from '../../logger.mjs';
 import LineworksJWT from './lineworks_jwt.mjs';
 
 dotenv.config();
-class LineworksMessageSender {
+export class LineworksMessageSender {
 
     lineworksJWT = undefined;
     user_domain_id = -1;
@@ -56,5 +56,3 @@ class LineworksMessageSender {
         }
     }
 }
-
-export default LineworksMessageSender;

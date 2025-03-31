@@ -61,13 +61,14 @@ export class ScriptExecutor {
                 result: null,
                 parameters: parameters,
                 modules: modules,
-                modelManager: this.modelManager
+                modelManager: this.modelManager,
+                LF: `\n`
             };
 
             // コンテキストを隔離された環境で実行
             const asyncScript = `
                 (async () => {
-                    const { parameters, modules } = context;
+                    const { parameters, modules, LF } = context;
                     ${scriptContent}
                 })();
             `;
