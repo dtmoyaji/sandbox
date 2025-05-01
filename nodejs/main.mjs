@@ -308,7 +308,8 @@ class Application {
                 {
                     title: 'Login',
                     basePath: config.basePath,
-                    redirectUrl: req.query.redirect || `${config.basePath}/admin`
+                    redirectUrl: req.query.redirect || `${config.basePath}/admin`,
+                    error: req.query.error || null
                 },
                 (err, str) => {
                     if (err) {
@@ -322,41 +323,107 @@ class Application {
 
         app.post('/login', async (req, res) => {
             try {
+                console.log('ログイン処理開始:', req.body.username);
                 const user = req.body.username;
                 const password = req.body.password;
                 const userTable = await modelManager.getModel('user');
                 const registeredUser = await userTable.get({ user_name: user });
+                console.log('ユーザー検索結果:', registeredUser.length > 0 ? 'ユーザー見つかりました' : 'ユーザー見つかりません');
 
                 // リダイレクトURL設定
-                const redirectUrl = req.body.redirectUrl === undefined ?
-                    `${config.basePath}/admin` : `${config.basePath}${req.body.redirectUrl}`;
+                let redirectUrl = req.body.redirectUrl;
+                // undefined, null, 空文字の場合はデフォルトのURLを使用
+                if (!redirectUrl) {
+                    redirectUrl = '/admin';
+                }
+                
+                // 先頭に / がない場合は追加
+                if (!redirectUrl.startsWith('/')) {
+                    redirectUrl = '/' + redirectUrl;
+                }
+                
+                // リダイレクト先URLを設定（basePath を適切に付与）
+                const fullRedirectUrl = `${config.basePath}${redirectUrl}`.replace(/\/\//g, '/');
+                console.log('リダイレクト先URL:', fullRedirectUrl);
 
                 if (registeredUser.length !== 0) {
                     const registeredPassword = registeredUser[0].user_password;
-                    if (await credential.verifyPassword(password, registeredPassword)) {
-                        const secretKey = registeredUser[0].secret_key;
+                    console.log('パスワード検証開始');
+                    const passwordMatch = await credential.verifyPassword(password, registeredPassword);
+                    console.log('パスワード検証結果:', passwordMatch ? '一致' : '不一致');
+                    
+                    if (passwordMatch) {
+                        // secret_keyが存在しない場合は新しく生成する
+                        let secretKey = registeredUser[0].secret_key;
+                        console.log('既存のsecret_key:', secretKey ? '存在します' : '存在しません');
+                        
+                        if (!secretKey) {
+                            // 新しいsecret_keyを生成
+                            const secretKeyObj = await credential.generateSecretKey(registeredPassword);
+                            
+                            // オブジェクトからkeyプロパティを取得
+                            if (typeof secretKeyObj === 'object' && secretKeyObj !== null && secretKeyObj.key) {
+                                secretKey = secretKeyObj.key;
+                            } else {
+                                secretKey = secretKeyObj;
+                            }
+                            
+                            // 文字列に変換・長さ制限
+                            if (typeof secretKey !== 'string') {
+                                secretKey = String(secretKey);
+                            }
+                            secretKey = secretKey.substring(0, 255);
+                            
+                            // ユーザーレコードを更新
+                            await userTable.put({
+                                user_id: registeredUser[0].user_id,
+                                secret_key: secretKey
+                            });
+                            this.components.logger.info(`新しいsecret_keyを生成: ${user}`);
+                        } 
+                        // 既存のsecret_keyがオブジェクトの場合
+                        else if (typeof secretKey === 'object' && secretKey !== null) {
+                            // keyプロパティがあればそれを使用
+                            if (secretKey.key) {
+                                secretKey = secretKey.key;
+                            } else {
+                                secretKey = JSON.stringify(secretKey);
+                            }
+                            // 長さを制限
+                            secretKey = secretKey.substring(0, 255);
+                        }
+
                         const refreshToken = await credential.generateToken(
-                            { user, password: registeredPassword, type: 'refresh_token' },
+                            { userId: registeredUser[0].user_id, username: user, type: 'refresh_token' },
                             secretKey,
-                            config.jwtExpiresIn
+                            config.jwtExpiresIn || '90d'
                         );
                         const accessToken = await credential.generateToken(
-                            { user, password: registeredPassword, type: 'access_token' },
+                            { userId: registeredUser[0].user_id, username: user, type: 'access_token' },
                             secretKey,
-                            config.jwtExpiresIn
+                            config.jwtExpiresIn || '1d'
                         );
 
+                        console.log('リフレッシュトークン生成完了');
+                        
+                        // Cookieの設定
                         res.cookie('x-user', user, cookieOptions);
                         res.cookie('x-access-token', accessToken, cookieOptions);
                         res.cookie('x-refresh-token', refreshToken, cookieOptions);
+                        console.log('Cookieの設定完了、リダイレクトします:', fullRedirectUrl);
 
-                        return res.redirect(redirectUrl);
+                        // 通常のリダイレクトに戻す
+                        return res.redirect(fullRedirectUrl);
                     }
                 }
-                return res.status(401).send('Invalid user or password');
+                
+                // ここまで来たら認証失敗
+                console.log('ログイン失敗');
+                return res.redirect(`${config.basePath}/login?error=ユーザー名またはパスワードが正しくありません`);
             } catch (error) {
                 this.components.logger.error('ログイン処理エラー:', error);
-                res.status(500).send('Internal Server Error');
+                console.error('ログイン処理中のエラー詳細:', error.stack);
+                return res.redirect(`${config.basePath}/login?error=ログイン処理中にエラーが発生しました`);
             }
         });
 
