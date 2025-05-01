@@ -12,6 +12,11 @@
   <div class="auth-page">
     <div class="fixed-dialog">
       <h1>ログイン</h1>
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="error-message">
+          <%= error %>
+        </div>
+      <% } %>
       <form action="<%= basePath %>/login" method="POST">
         <input type="hidden" name="redirectUrl" value="<%= redirectUrl %>">
         <div class="form-group">

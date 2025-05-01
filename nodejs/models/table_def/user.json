@@ -33,9 +33,10 @@
         {
             "name": "user_password",
             "type": "STRING",
-            "length": 128,
+            "length": 72,
             "secret": true,
-            "notNull": true
+            "notNull": true,
+            "description": "bcryptによるハッシュ化されたパスワード (通常60文字)"
         },
         {
             "name": "user_language",
@@ -46,9 +47,30 @@
         {
             "name": "secret_key",
             "type": "STRING",
-            "length": 16,
+            "length": 255,
             "secret": true,
-            "notNull": true
+            "notNull": true,
+            "description": "JWTトークン生成用のシークレットキー"
+        },
+        {
+            "name": "reset_token",
+            "type": "STRING",
+            "length": 64,
+            "secret": true,
+            "nullable": true,
+            "description": "パスワードリセット用トークン"
+        },
+        {
+            "name": "reset_token_expiry",
+            "type": "DATETIME",
+            "nullable": true,
+            "description": "パスワードリセットトークンの有効期限"
+        },
+        {
+            "name": "roles",
+            "type": "JSON",
+            "nullable": true,
+            "description": "ユーザーの権限（例: ['admin', 'editor']）"
         },
         {
             "name": "admin_flag",

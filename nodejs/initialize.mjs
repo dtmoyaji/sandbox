@@ -51,11 +51,32 @@ if (user.length === 0) {
     let userTemplate = await userTable.getJsonTemplate();
 
     delete userTemplate.user_id;
-    userTemplate.user_email = process.env.ADMIN_MAIL;
-    userTemplate.user_password = await credential.hashPassword(process.env.ADMIN_PASSWORD);
-    userTemplate.user_name = process.env.ADMIN_USER;
-    userTemplate.user_display_name = process.env.ADMIN_DISPLAY_NAME;
-    userTemplate.secret_key = await credential.generateSecretKey(userTemplate.user_password);
+    userTemplate.user_email = process.env.ADMIN_MAIL || "admin@localhost";
+    userTemplate.user_password = await credential.hashPassword(process.env.ADMIN_PASSWORD || "admin");
+    userTemplate.user_name = process.env.ADMIN_USER || "admin";
+    userTemplate.user_display_name = process.env.ADMIN_DISPLAY_NAME || "システム管理者";
+    
+    // secret_keyを適切に生成
+    try {
+        let secretKeyValue = await credential.generateSecretKey(userTemplate.user_password);
+        // 生成された値がオブジェクトや配列の場合、JSON文字列に変換
+        if (typeof secretKeyValue === 'object') {
+            secretKeyValue = JSON.stringify(secretKeyValue);
+        }
+        // 文字列でない場合、文字列に変換
+        if (typeof secretKeyValue !== 'string') {
+            secretKeyValue = String(secretKeyValue);
+        }
+        // 長さ制限
+        userTemplate.secret_key = secretKeyValue.substring(0, 255);
+        
+        console.log(`Admin secret_key created (${userTemplate.secret_key.length} chars)`);
+    } catch (error) {
+        console.error("Error creating admin secret_key:", error);
+        // エラー時のフォールバック値
+        userTemplate.secret_key = "admin_default_secret_key_" + Date.now();
+    }
+    
     userTemplate.admin_flag = 1;
     userTemplate = await userTable.put(userTemplate);
 
@@ -82,24 +103,82 @@ if (user.length === 0) {
     applicationDomainLinkTemplate.user_domain_id = systemDomainId;
     await applicationDomainLinkTable.put(applicationDomainLinkTemplate);
 
-    userTemplate.access_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password, type: 'access_token' }, userTemplate.secret_key, '1d');
-    userTemplate.refresh_token = credential.generateToken({ user: userTemplate.user_name, password: userTemplate.user_password, type: 'refresh_token' }, userTemplate.secret_key, '90d');
-    fs.writeFileSync('token.txt', JSON.stringify(userTemplate, null, 2));
+    userTemplate.access_token = credential.generateToken(
+        { 
+            user: userTemplate.user_name, 
+            password: userTemplate.user_password, 
+            type: 'access_token' 
+        }, 
+        // secret_keyが文字列でない場合は.keyプロパティを使用
+        typeof userTemplate.secret_key === 'string' 
+            ? userTemplate.secret_key 
+            : userTemplate.secret_key.key || userTemplate.secret_key, 
+        '1d'
+    );
+    
+    userTemplate.refresh_token = credential.generateToken(
+        { 
+            user: userTemplate.user_name, 
+            password: userTemplate.user_password, 
+            type: 'refresh_token' 
+        }, 
+        // secret_keyが文字列でない場合は.keyプロパティを使用
+        typeof userTemplate.secret_key === 'string' 
+            ? userTemplate.secret_key 
+            : userTemplate.secret_key.key || userTemplate.secret_key, 
+        '90d'
+    );
+    
+    // token.txtに書き込む前にsecret_keyが文字列になっていることを確認
+    const tokenData = {...userTemplate};
+    if (typeof tokenData.secret_key === 'object' && tokenData.secret_key !== null) {
+        // オブジェクトの場合はkeyプロパティを使用
+        tokenData.secret_key = tokenData.secret_key.key || JSON.stringify(tokenData.secret_key);
+    }
+    
+    fs.writeFileSync('token.txt', JSON.stringify(tokenData, null, 2));
     console.log('********************************');
     console.log('token.txt created.');
     console.log('this file contains admin user info,');
     console.log('initial access_token and refresh_token.');
     console.log('********************************');
-    let result = await credential.verifyJWT(userTemplate.secret_key, userTemplate.access_token);
+    
+    // verifyJWTも同様に修正
+    const secretKeyForVerify = typeof userTemplate.secret_key === 'string' 
+        ? userTemplate.secret_key 
+        : userTemplate.secret_key.key || userTemplate.secret_key;
+    
+    let result = await credential.verifyJWT(secretKeyForVerify, userTemplate.access_token);
 
     // create lineworks bot controller domain
     userTemplate = await userTable.getJsonTemplate();
     delete userTemplate.user_id;
-    userTemplate.user_email = process.env.USER_ADMIN_MAIL;
-    userTemplate.user_password = await credential.hashPassword(process.env.USER_ADMIN_PASSWORD);
-    userTemplate.user_name = process.env.USER_ADMIN_USER;
-    userTemplate.user_display_name = process.env.USER_ADMIN_DISPLAY_NAME
-    userTemplate.secret_key = await credential.generateSecretKey(userTemplate.user_password);
+    userTemplate.user_email = process.env.USER_ADMIN_MAIL || "user_admin@localhost";
+    userTemplate.user_password = await credential.hashPassword(process.env.USER_ADMIN_PASSWORD || "user_admin");
+    userTemplate.user_name = process.env.USER_ADMIN_USER || "user_admin";
+    userTemplate.user_display_name = process.env.USER_ADMIN_DISPLAY_NAME || "ドメイン管理者";
+    
+    // secret_keyを適切に生成
+    try {
+        let secretKeyValue = await credential.generateSecretKey(userTemplate.user_password);
+        // 生成された値がオブジェクトや配列の場合、JSON文字列に変換
+        if (typeof secretKeyValue === 'object') {
+            secretKeyValue = JSON.stringify(secretKeyValue);
+        }
+        // 文字列でない場合、文字列に変換
+        if (typeof secretKeyValue !== 'string') {
+            secretKeyValue = String(secretKeyValue);
+        }
+        // 長さ制限
+        userTemplate.secret_key = secretKeyValue.substring(0, 255);
+        
+        console.log(`User admin secret_key created (${userTemplate.secret_key.length} chars)`);
+    } catch (error) {
+        console.error("Error creating user admin secret_key:", error);
+        // エラー時のフォールバック値
+        userTemplate.secret_key = "user_admin_default_secret_key_" + Date.now();
+    }
+    
     userTemplate.admin_flag = 1;
     userTemplate = await userTable.put(userTemplate);
 
@@ -116,7 +195,28 @@ if (user.length === 0) {
     userTemplate.user_password = await credential.hashPassword('general_user');
     userTemplate.user_name = 'general_user';
     userTemplate.user_display_name = 'General User';
-    userTemplate.secret_key = await credential.generateSecretKey(userTemplate.user_password);
+    
+    // secret_keyを適切に生成
+    try {
+        let secretKeyValue = await credential.generateSecretKey(userTemplate.user_password);
+        // 生成された値がオブジェクトや配列の場合、JSON文字列に変換
+        if (typeof secretKeyValue === 'object') {
+            secretKeyValue = JSON.stringify(secretKeyValue);
+        }
+        // 文字列でない場合、文字列に変換
+        if (typeof secretKeyValue !== 'string') {
+            secretKeyValue = String(secretKeyValue);
+        }
+        // 長さ制限
+        userTemplate.secret_key = secretKeyValue.substring(0, 255);
+        
+        console.log(`General user secret_key created (${userTemplate.secret_key.length} chars)`);
+    } catch (error) {
+        console.error("Error creating general user secret_key:", error);
+        // エラー時のフォールバック値
+        userTemplate.secret_key = "general_user_default_secret_key_" + Date.now();
+    }
+    
     userTemplate.admin_flag = 0;
     userTemplate = await userTable.put(userTemplate);
 
@@ -125,7 +225,6 @@ if (user.length === 0) {
     userDomainLink.user_id = userTemplate.user_id;
     userDomainLink.user_domain_id = userDomainId;
     await systemDomainLinkTable.put(userDomainLink);
-
 
     // query_templateのサンプル実装
     let queryTemplate = await modelManager.getModel('query_template');
