@@ -1,254 +1,399 @@
-import fs from 'fs';
-import path from 'path';
-import { pathToFileURL } from 'url';
+import { existsSync, readdirSync, realpathSync } from 'node:fs';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-let modelManager = undefined;
+/**
+ * モデルマネージャーのシングルトンインスタンス
+ * @type {Object|undefined}
+ */
+let modelManager;
 
+/**
+ * アプリケーションの起動処理を行う
+ * @param {Object} manager - モデルマネージャーのインスタンス
+ * @returns {Promise<void>}
+ */
 export async function bootApplications(manager) {
     modelManager = manager;
-    console.log('booting applications');
-    // applicationsディレクトリがない場合は処理を終了
-    if (!fs.existsSync('./applications')) {
-        console.log('applications not found');
+    console.log('アプリケーション起動開始');
+    
+    // applicationsディレクトリの存在確認
+    if (!existsSync('./applications')) {
+        console.log('applications ディレクトリが見つかりません');
         return;
     }
 
-    let appDirs = fs.readdirSync('./applications');
-    let application_id = 1;
-    for (let appDir of appDirs) {
-        console.log('booting application:', appDir);
-        let dirRealPath = fs.realpathSync('./applications/' + appDir);
-        // application.jsonが存在する場合はアプリケーションとして登録
-        if (fs.existsSync(dirRealPath + '/application.json')) {
-            application_id = await registerApplication(dirRealPath + '/application.json');
-            if (fs.existsSync(dirRealPath + '/models')) {
-                await installModel(application_id, dirRealPath + '/models');
-            }
-            registerApplicationDomainLink(application_id, 1);
-        }
-        // scriptsディレクトリが存在する場合はスクリプトとして登録
-        if (fs.existsSync(dirRealPath + '/scripts')) {
-            let scriptFiles = fs.readdirSync(dirRealPath + '/scripts');
-
-            // js ファイルをスクリプトとして登録
-            scriptFiles = scriptFiles.filter((file) => {
-                return file.endsWith('.mjs');
-            });
-
-            for (let scriptFile of scriptFiles) {
-                console.log('booting script:', scriptFile);
-                let scriptFullPath = path.resolve(dirRealPath, 'scripts', scriptFile);
-                let scriptUrl = pathToFileURL(scriptFullPath).href;
-                let scriptDef = await import(scriptUrl);
-                let script = scriptDef.default;
-                let scriptTable = await modelManager.getModel('script');
-                let currentScript = await scriptTable.get({ script_name: script.script_name });
-                let scriptTemplate = await scriptTable.getJsonTemplate();
-                scriptTemplate.application_id = application_id;
-                scriptTemplate.script_name = script.script_name;
-                scriptTemplate.bind_module = JSON.stringify(script.bind_module);
-                // 改行を\\nに置換する
-                scriptTemplate.script = script.script.replace(/\r?\n/g, '\\n');
-                scriptTemplate.parameters = JSON.stringify(script.parameters);
-                scriptTemplate.description = script.description;
-                if (currentScript.length === 0) {
-                    delete scriptTemplate.script_id;
-                    scriptTemplate = await scriptTable.put(scriptTemplate);
-                } else {
-                    scriptTemplate.script_id = currentScript[0].script_id;
-                    scriptTemplate = await scriptTable.post(scriptTemplate);
+    const appDirs = readdirSync('./applications');
+    
+    // 各アプリケーションディレクトリを並列処理
+    await Promise.all(appDirs.map(async (appDir) => {
+        try {
+            console.log(`アプリケーション起動: ${appDir}`);
+            const dirRealPath = realpathSync(`./applications/${appDir}`);
+            const appJsonPath = path.join(dirRealPath, 'application.json');
+            
+            // アプリケーション登録処理
+            let applicationId;
+            if (existsSync(appJsonPath)) {
+                applicationId = await registerApplication(appJsonPath);
+                
+                // モデルのインストール
+                if (existsSync(path.join(dirRealPath, 'models'))) {
+                    await installModel(applicationId, path.join(dirRealPath, 'models'));
                 }
+                
+                // ドメインリンク登録
+                await registerApplicationDomainLink(applicationId, 1);
             }
-        }
-
-        // data_restoreディレクトリが存在する場合はデータを復元
-        if (fs.existsSync(dirRealPath + '/data_restore')) {
-            let restoreFiles = fs.readdirSync(dirRealPath + '/data_restore');
-            for (let restorefile of restoreFiles) {
-                console.log('restoring data:', restorefile);
-                let restoreFilePath = fs.realpathSync(dirRealPath + '/data_restore/' + restorefile);
-                await restoreApplicationData(manager, restoreFilePath);
+            
+            // スクリプト登録処理
+            if (existsSync(path.join(dirRealPath, 'scripts'))) {
+                await registerScripts(applicationId, dirRealPath);
             }
+            
+            // データリストア処理
+            if (existsSync(path.join(dirRealPath, 'data_restore'))) {
+                await restoreApplicationDataFromDirectory(manager, path.join(dirRealPath, 'data_restore'));
+            }
+        } catch (error) {
+            console.error(`アプリケーション ${appDir} の起動中にエラーが発生しました:`, error);
         }
-    }
-    console.log('applications booted');
+    }));
+    
+    console.log('すべてのアプリケーションが起動しました');
 }
 
-// アプリケーションのデータをリストアする
+/**
+ * スクリプトの登録処理
+ * @param {number} applicationId - アプリケーションID
+ * @param {string} dirRealPath - アプリケーションディレクトリの実パス
+ * @returns {Promise<void>}
+ */
+async function registerScripts(applicationId, dirRealPath) {
+    const scriptsDir = path.join(dirRealPath, 'scripts');
+    const scriptFiles = readdirSync(scriptsDir).filter(file => file.endsWith('.mjs'));
+
+    await Promise.allSettled(scriptFiles.map(async (scriptFile) => {
+        try {
+            console.log(`スクリプト登録: ${scriptFile}`);
+            const scriptFullPath = path.resolve(dirRealPath, 'scripts', scriptFile);
+            const scriptUrl = pathToFileURL(scriptFullPath).href;
+            const { default: script } = await import(scriptUrl);
+
+            const scriptTable = await modelManager.getModel('script');
+            const currentScript = await scriptTable.get({ script_name: script.script_name });
+            const scriptTemplate = await scriptTable.getJsonTemplate();
+
+            // スクリプト情報をテンプレートに設定
+            Object.assign(scriptTemplate, {
+                application_id: applicationId,
+                script_name: script.script_name,
+                bind_module: JSON.stringify(script.bind_module),
+                script: script.script.replace(/\r?\n/g, '\\n'),
+                parameters: JSON.stringify(script.parameters),
+                description: script.description
+            });
+
+            // 既存スクリプトの更新または新規作成
+            if (currentScript.length === 0) {
+                delete scriptTemplate.script_id;
+                await scriptTable.put(scriptTemplate);
+            } else {
+                scriptTemplate.script_id = currentScript[0].script_id;
+                await scriptTable.post(scriptTemplate);
+            }
+        } catch (error) {
+            console.error(`スクリプト ${scriptFile} の登録中にエラーが発生しました:`, error);
+        }
+    }));
+}
+
+/**
+ * ディレクトリ内の全データファイルをリストア
+ * @param {Object} manager - モデルマネージャーのインスタンス
+ * @param {string} dirPath - データリストアディレクトリのパス
+ * @returns {Promise<void>}
+ */
+async function restoreApplicationDataFromDirectory(manager, dirPath) {
+    const restoreFiles = readdirSync(dirPath);
+    
+    await Promise.all(restoreFiles.map(async (restoreFile) => {
+        try {
+            console.log(`データリストア: ${restoreFile}`);
+            const restoreFilePath = realpathSync(path.join(dirPath, restoreFile));
+            await restoreApplicationData(manager, restoreFilePath);
+        } catch (error) {
+            console.error(`データ ${restoreFile} のリストア中にエラーが発生しました:`, error);
+        }
+    }));
+}
+
+/**
+ * アプリケーションのデータをリストアする
+ * @param {Object} manager - モデルマネージャーのインスタンス
+ * @param {string} filePath - リストア対象のファイルパス
+ * @returns {Promise<void>}
+ */
 export async function restoreApplicationData(manager, filePath) {
-    // ファイルが存在しない場合は処理を終了
-    if (!fs.existsSync(filePath)) {
-        console.log('application data not found');
+    if (!existsSync(filePath)) {
+        console.log('アプリケーションデータが見つかりません');
         return;
     }
-    // ファイルがJSONの場合
-    if (filePath.endsWith('.json')) {
-        await restoreApplicationJsonData(manager, filePath);
-    } else if (filePath.endsWith('.csv')) {
-        await resotreApplicationCsvData(manager, filePath);
-    }
-}
-
-// アプリケーションのデータをリストアする(JSON)
-// ファイル名はテーブル名と同一で、ノード内のキーにフィールド名を記載する想定。
-export async function restoreApplicationJsonData(manager, filePath) {
-    let data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    let tableName = path.basename(filePath).replace('.json', '');
-    let table = await manager.getModel(tableName);
-    for (let row of data) {
-        let newRow = await table.getJsonTemplate();
-        for (let key in row) {
-            newRow[key] = row[key];
+    
+    try {
+        if (filePath.endsWith('.json')) {
+            await restoreApplicationJsonData(manager, filePath);
+        } else if (filePath.endsWith('.csv')) {
+            await restoreApplicationCsvData(manager, filePath);
+        } else {
+            console.log(`サポートされていないファイル形式: ${path.extname(filePath)}`);
         }
-        await table.put(newRow);
+    } catch (error) {
+        console.error(`データリストア中にエラーが発生しました (${filePath}):`, error);
     }
 }
 
-// アプリケーションのデータをリストアする(CSV)
-// ファイル名はテーブル名と同一で、先頭行にフィールド名を記載する想定。
-export async function resotreApplicationCsvData(manager, filePath) {
-    let data = fs.readFileSync(filePath, 'utf8');
-    let rows = data.split('\n');
-    let rowHeader = rows[0].split(',');
-    // trim header
-    rowHeader = rowHeader.map((header) => {
-        return header.trim();
+/**
+ * JSONファイルからアプリケーションデータをリストアする
+ * @param {Object} manager - モデルマネージャーのインスタンス
+ * @param {string} filePath - JSONファイルのパス
+ * @returns {Promise<void>}
+ */
+export async function restoreApplicationJsonData(manager, filePath) {
+    const fileContent = await fs.readFile(filePath, 'utf8');
+    const data = JSON.parse(fileContent);
+    const tableName = path.basename(filePath, '.json');
+    const table = await manager.getModel(tableName);
+    
+    // バルクインサートの最適化のため、全テンプレートを先に取得
+    const template = await table.getJsonTemplate();
+    
+    // データを一括処理
+    const rows = data.map(row => {
+        const newRow = { ...template };
+        return Object.assign(newRow, row);
     });
-    let tableName = path.basename(filePath).replace('.csv', '');
-    let table = await manager.getModel(tableName);
-    let rowCount = await table.getCount({});
-    console.log(table.table_name, rowCount);
-    if (rowCount == 0) {
-        for (let i = 1; i < rows.length; i++) {
-            if (rows[i] === '') {
-                continue;
-            }
-            let row = rows[i].split(',');
-            // trim row
-            row = row.map((value) => {
-                return value.trim();
-            });
-            let newRow = await table.getJsonTemplate();
-            for (let j = 0; j < rowHeader.length; j++) {
-                newRow[rowHeader[j]] = row[j];
-            }
-            await table.put(newRow);
+    
+    // バルク挿入（table.putBulkがある場合）、または個別挿入
+    if (typeof table.putBulk === 'function') {
+        await table.putBulk(rows);
+    } else {
+        for (const row of rows) {
+            await table.put(row);
         }
     }
 }
 
 /**
- * データを復元する
- * @param {*} manager 
+ * CSVファイルからアプリケーションデータをリストアする
+ * @param {Object} manager - モデルマネージャーのインスタンス
+ * @param {string} filePath - CSVファイルのパス
+ * @returns {Promise<void>}
+ */
+export async function restoreApplicationCsvData(manager, filePath) {
+    const fileContent = await fs.readFile(filePath, 'utf8');
+    const rows = fileContent.split('\n');
+    const headers = rows[0].split(',').map(header => header.trim());
+    
+    const tableName = path.basename(filePath, '.csv');
+    const table = await manager.getModel(tableName);
+    const rowCount = await table.getCount({});
+    console.log(`${table.table_name}: ${rowCount}件のレコードが存在します`);
+    
+    // テーブルにデータがない場合のみインポート
+    if (rowCount == 0) {
+        const template = await table.getJsonTemplate();
+        const dataRows = [];
+        
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i].trim();
+            if (!row) continue;
+            
+            const values = row.split(',').map(value => value.trim());
+            const newRow = { ...template };
+            
+            headers.forEach((header, j) => {
+                newRow[header] = values[j];
+            });
+            
+            dataRows.push(newRow);
+        }
+        
+        // バルク挿入（table.putBulkがある場合）、または個別挿入
+        if (typeof table.putBulk === 'function') {
+            await table.putBulk(dataRows);
+        } else {
+            for (const row of dataRows) {
+                await table.put(row);
+            }
+        }
+    }
+}
+
+/**
+ * グローバルなデータ復元処理
+ * @param {Object} manager - モデルマネージャーのインスタンス
+ * @returns {Promise<void>}
  */
 export async function restoreData(manager) {
     modelManager = manager;
-    console.log('restoring data');
-    // data_restoreディレクトリがない場合は処理を終了
-    if (!fs.existsSync('./data_restore')) {
-        console.log('data_restore not found');
+    console.log('グローバルデータのリストア開始');
+    
+    if (!existsSync('./data_restore')) {
+        console.log('data_restore ディレクトリが見つかりません');
         return;
     }
 
-    let restoreFiles = fs.readdirSync('./data_restore');
-    for (let restorefile of restoreFiles) {
-        console.log('restoring data:', restorefile);
-        let dirRealPath = fs.realpathSync('./data_restore/' + restorefile);
-        // ファイル名とテーブル名が一致する場合はデータを復元
-        let tableName = restorefile.replace('.json', '');
-        let table = await modelManager.getModel(tableName);
-        // データが存在しない場合のみ復元
-        if (table) {
-            let rowCount = await table.getCount({});
-            console.log(table.table_name, rowCount);
-            if (rowCount === '0') {
-                let data = JSON.parse(fs.readFileSync(dirRealPath, 'utf8'));
-                for (let row of data) {
-                    let newRow = await table.getJsonTemplate();
-                    for (let key in row) {
-                        newRow[key] = row[key];
+    const restoreFiles = readdirSync('./data_restore');
+    
+    await Promise.all(restoreFiles.map(async (restoreFile) => {
+        try {
+            console.log(`グローバルデータリストア: ${restoreFile}`);
+            const filePath = realpathSync(`./data_restore/${restoreFile}`);
+            const tableName = path.basename(restoreFile, '.json');
+            const table = await modelManager.getModel(tableName);
+            
+            if (table) {
+                const rowCount = await table.getCount({});
+                console.log(`${table.table_name}: ${rowCount}件のレコードが存在します`);
+                
+                if (rowCount === '0') {
+                    const data = JSON.parse(await fs.readFile(filePath, 'utf8'));
+                    const template = await table.getJsonTemplate();
+                    
+                    // データを一括処理
+                    for (const row of data) {
+                        const newRow = { ...template };
+                        Object.assign(newRow, row);
+                        await table.put(newRow);
                     }
-                    await table.put(newRow);
                 }
             }
+        } catch (error) {
+            console.error(`グローバルデータ ${restoreFile} のリストア中にエラーが発生しました:`, error);
         }
-
-    }
-    console.log('data restored');
+    }));
+    
+    console.log('グローバルデータのリストアが完了しました');
 }
 
 /**
  * アプリケーションとドメインをリンクする
- * @param {*} application_id 
- * @param {*} user_domain_id 
+ * @param {number} applicationId - アプリケーションID
+ * @param {number} userDomainId - ユーザードメインID
+ * @returns {Promise<Object>} 登録済みのアプリケーションドメインリンク情報
  */
-async function registerApplicationDomainLink(application_id, user_domain_id) {
-    let adl = await modelManager.getModel('application_domain_link');
-    let application_domain_link = await modelManager.getModel('application_domain_link');
-    let applicationDomainTemplate = await application_domain_link.getJsonTemplate();
-    applicationDomainTemplate.application_id = application_id;
-    applicationDomainTemplate.user_domain_id = user_domain_id;
-    let adlData = await adl.get(applicationDomainTemplate);
-    if (adlData.length === 0) {
-        applicationDomainTemplate = await application_domain_link.put(applicationDomainTemplate);
+async function registerApplicationDomainLink(applicationId, userDomainId) {
+    const applicationDomainLink = await modelManager.getModel('application_domain_link');
+    const template = await applicationDomainLink.getJsonTemplate();
+    
+    // リンク情報を設定
+    template.application_id = applicationId;
+    template.user_domain_id = userDomainId;
+    
+    // 既存のリンク情報を確認
+    const existingLinks = await applicationDomainLink.get(template);
+    
+    // リンクが存在しない場合は作成、存在する場合はそのまま返す
+    if (existingLinks.length === 0) {
+        return await applicationDomainLink.put(template);
     } else {
-        applicationDomainTemplate = adl[0];
+        return existingLinks[0];
     }
-    return applicationDomainTemplate;
 }
 
 /**
- *  アプリケーションを登録する
- * @param {string} applicationDefFile - アプリケーション定義ファイル
- * @returns {number} application_id
+ * アプリケーションを登録する
+ * @param {string} applicationDefFile - アプリケーション定義ファイルのパス
+ * @returns {Promise<number>} 登録されたアプリケーションID
  */
 async function registerApplication(applicationDefFile) {
-    let applicationInfo = JSON.parse(fs.readFileSync(applicationDefFile, 'utf8'));
-    let applicationTable = await modelManager.getModel('application');
-    // upsert application
-    let application_name = applicationInfo.application_name;
-    let application = await applicationTable.get({ application_name: application_name });
-    if (application.length === 0) { // 登録がないので新規登録
-        console.log('registering new application:', application_name);
-        let applicationTmp = await applicationTable.getJsonTemplate();
-        delete applicationTmp.application_id;
-        applicationTmp.application_name = application_name;
-        applicationTmp.application_protection = applicationInfo.application_protection;
-        applicationTmp.application_description = applicationInfo.application_description;
-        application = await applicationTable.put(applicationTmp);
-    } else { // 登録があるので更新
-        console.log('update application:', application_name);
-        application[0].application_protection = applicationInfo.application_protection;
-        application[0].application_description = applicationInfo.application_description;
-        application = await applicationTable.post(application[0]);
-        application = await applicationTable.get({ application_name: application_name });
-        application = application[0];
+    const fileContent = await fs.readFile(applicationDefFile, 'utf8');
+    const applicationInfo = JSON.parse(fileContent);
+    const applicationTable = await modelManager.getModel('application');
+    
+    // アプリケーション名でアプリケーションを検索
+    const applicationName = applicationInfo.application_name;
+    const existingApps = await applicationTable.get({ application_name: applicationName });
+    
+    let application;
+    
+    if (existingApps.length === 0) { 
+        // 登録がないので新規登録
+        console.log(`新規アプリケーション登録: ${applicationName}`);
+        const template = await applicationTable.getJsonTemplate();
+        
+        const newApp = {
+            ...template,
+            application_name: applicationName,
+            application_protection: applicationInfo.application_protection,
+            application_description: applicationInfo.application_description
+        };
+        
+        delete newApp.application_id;
+        application = await applicationTable.put(newApp);
+    } else { 
+        // 登録があるので更新
+        console.log(`アプリケーション更新: ${applicationName}`);
+        const appToUpdate = {
+            ...existingApps[0],
+            application_protection: applicationInfo.application_protection,
+            application_description: applicationInfo.application_description
+        };
+        
+        await applicationTable.post(appToUpdate);
+        const updatedApps = await applicationTable.get({ application_name: applicationName });
+        application = updatedApps[0];
     }
+    
     return application.application_id;
 }
 
-async function installModel(application_id, applicationModelPath) {
-    console.log('booting models');
-    let modelFiles = fs.readdirSync(applicationModelPath);
-    for (let modelFile of modelFiles) {
-        console.log('booting model:', modelFile);
-        let modelDef = fs.readFileSync(applicationModelPath + '/' + modelFile, 'utf8');
-        let model = JSON.parse(modelDef);
-        let application_table_def = await modelManager.getModel('application_table_def');
-        let currentTableDef = await application_table_def.get({ table_logical_name: model.name });
-        let table_def = await application_table_def.getJsonTemplate();
-        delete table_def.application_table_def_id;
-        table_def.application_id = application_id;
-        table_def.table_logical_name = model.name;
-        table_def.table_physical_name = model.name;
-        table_def.table_def = JSON.stringify(model);
-        table_def.description = model.description;
-        if (currentTableDef.length === 0) {
-            table_def = await application_table_def.put(table_def);
-        } else {
-            table_def.application_table_def_id = currentTableDef[0].application_table_def_id;
-            table_def = await application_table_def.post(table_def);
+/**
+ * アプリケーションのモデル定義をインストールする
+ * @param {number} applicationId - アプリケーションID
+ * @param {string} modelPath - モデル定義ファイルが存在するディレクトリパス
+ * @returns {Promise<void>}
+ */
+async function installModel(applicationId, modelPath) {
+    console.log('モデル定義のインストール開始');
+    const modelFiles = readdirSync(modelPath);
+    
+    await Promise.all(modelFiles.map(async (modelFile) => {
+        try {
+            console.log(`モデル登録: ${modelFile}`);
+            const modelDef = await fs.readFile(path.join(modelPath, modelFile), 'utf8');
+            const model = JSON.parse(modelDef);
+            const tableDefTable = await modelManager.getModel('application_table_def');
+            
+            // 既存のテーブル定義を検索
+            const currentTableDef = await tableDefTable.get({ table_logical_name: model.name });
+            const template = await tableDefTable.getJsonTemplate();
+            
+            // テーブル定義情報を設定
+            const tableDef = {
+                ...template,
+                application_id: applicationId,
+                table_logical_name: model.name,
+                table_physical_name: model.name,
+                table_def: JSON.stringify(model),
+                description: model.description
+            };
+            
+            delete tableDef.application_table_def_id;
+            
+            // 既存のテーブル定義がない場合は新規作成、ある場合は更新
+            if (currentTableDef.length === 0) {
+                await tableDefTable.put(tableDef);
+            } else {
+                tableDef.application_table_def_id = currentTableDef[0].application_table_def_id;
+                await tableDefTable.post(tableDef);
+            }
+        } catch (error) {
+            console.error(`モデル ${modelFile} のインストール中にエラーが発生しました:`, error);
         }
-    }
-
+    }));
+    
+    console.log('モデル定義のインストールが完了しました');
 }
