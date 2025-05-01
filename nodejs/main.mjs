@@ -1,7 +1,10 @@
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import ejs from 'ejs';
 import express from 'express';
+import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { bootApplications, restoreData } from './application-boot.mjs';
@@ -20,216 +23,391 @@ import { LineworksMessageSender } from './controllers/sns/lineworks/lineworks_me
 import { WebSocket } from './controllers/websocket/websocket.mjs';
 import PageRenderer from './views/renderer/page-renderer.mjs';
 
+// 設定の読み込み
 dotenv.config();
+const config = {
+    port: process.env.PORT || 3000,
+    basePath: process.env.BASE_PATH || '',
+    theme: process.env.THEME || 'default',
+    environment: process.env.NODE_ENV || 'development',
+    cookieSecure: process.env.NODE_ENV === 'production',
+    cookieMaxAge: 86400000, // 24時間
+    jwtExpiresIn: '1d'
+};
 
-const port = process.env.PORT;
-
-const modelManager = new ModelManager();
-await modelManager.reloadModels();
-
-const restUtil = new RestUtil(modelManager);
-const modelController = await createModelController(modelManager);
-const authController = createAuthController(modelManager);
-const queryController = createQueryController(modelManager);
-
-// __dirname を ES モジュールで使用できるように設定
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 組込みアプリケーションのブート
-await bootApplications(modelManager);
-await modelManager.reloadModels();
-await restoreData(modelManager);
-
-const app = express();
-const logger = new Logger(modelManager);
-const websocket = new WebSocket(app, logger);
-await websocket.bindWebSocket();
-
-const scriptExecutor = new ScriptExecutor(modelManager, websocket);
-const pageRenderer = new PageRenderer(restUtil, modelManager);
-
-// 静的ファイルを提供するためのミドルウェアを設定
-console.log(`basePath: ${process.env.BASE_PATH}`);
-app.use(`/theme`, express.static(path.join(__dirname, process.env.THEME)));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-// プロジェクトのリゾルバを設定
-const resolver = new Resolver(modelManager);
-await resolver.initializeResolvers();
-const importCsvController = new ImportCsvController(modelManager, websocket);
-await importCsvController.initializeResolvers();
-const userApplication = new UserApplication(restUtil, modelManager);
-await userApplication.initializeResolvers();
-
-// SNS関連のコントローラを設定
-const lineworksMessageSender = new LineworksMessageSender(modelManager);
-//lineworksMessageSender.setUserDomainId(1);
-//lineworksMessageSender.sendMessage(process.env.TEST_LINEWORKS_USER, 'Hello, World!');
-
-app.use('/app', userApplication.router);
-app.use('/api/script', scriptExecutor.router);
-app.use('/api/import', importCsvController.router);
-app.use('/api/models', resolver.router);
-app.use('/api/auth', authController);
-app.use('/api/query', queryController);
-app.use('/pageRenderer', pageRenderer.pageRouter);
-
-// リゾルバ
-app.get('/', (req, res) => {
-    let result = {
-        "system:": "sandbox",
-        "version:": "1.0.0"
-    }
-    res.send(result);
-});
-
-// APIはかならず変数を要求するので、*を使用してパスを取得
-app.get('/api/*', (req, res) => {
-    const path = req.params[0];
-    const nameParts = path.split('/');
-    const queryParams = req.query;
-    if (nameParts[0]) {
-        let result = {
-            "params": nameParts,
-            "query": queryParams
-        };
-        res.send(result);
-    } else {
-        res.status(404).send('Not Found');
-    }
-});
-
-app.post('/api/*', (req, res) => {
-    const path = req.params[0];
-    const nameParts = path.split('/');
-    const queryParams = req.query;
-    if (nameParts[0]) {
-        let result = {
-            "params": nameParts,
-            "query": queryParams
-        };
-        res.send(result);
-    } else {
-        res.status(404).send('Not Found');
-    }
-});
-
-app.put('/api/*', (req, res) => {
-    const path = req.params[0];
-    const nameParts = path.split('/');
-    const queryParams = req.query;
-    if (nameParts[0]) {
-        let result = {
-            "params": nameParts,
-            "query": queryParams
-        };
-        res.send(result);
-    } else {
-        res.status(404).send('Not Found');
-    }
-});
-
-app.delete('/api/*', (req, res) => {
-    const path = req.params[0];
-    const nameParts = path.split('/');
-    const queryParams = req.query;
-    if (nameParts[0]) {
-        let result = {
-            "params": nameParts,
-            "query": queryParams
-        };
-        res.send(result);
-    } else {
-        res.status(404).send('Not Found');
-    }
-});
-
-// GUIを提供する場合は変数が指定されないケースを想定する。
-app.get(['/admin', '/admin/*'], async (req, res) => {
-
-    // トークンの検証
-    let tokenCheck = await restUtil.verifyToken(req, res);
-    if(!tokenCheck.auth) {
-        res.redirect(`${process.env.BASE_PATH}/login`);
-        return;
+class Application {
+    constructor() {
+        // Expressアプリケーションのインスタンスを作成
+        this.app = express();
+        this.components = null;
     }
 
-    // ページをレンダリング
-    let renderResult = await pageRenderer.render(req, res);
-    if (renderResult.status === 200) {
-        res.send(renderResult.body);
-    } else {
-        res.status(500).send(renderResult.message);
-    }
+    /**
+     * アプリケーションの初期化を行う。
+     * 必要なコンポーネントやコントローラーを初期化し、システムを準備する。
+     */
+    async initialize() {
+        try {
+            // モデルマネージャーの初期化
+            const modelManager = new ModelManager();
+            await modelManager.reloadModels();
 
-});
+            // 各コントローラーの初期化
+            const restUtil = new RestUtil(modelManager);
+            const modelController = await createModelController(modelManager);
+            const authController = createAuthController(modelManager);
+            const queryController = createQueryController(modelManager);
 
-app.get('/login', (req, res) => {
-    ejs.renderFile('views/auth/login.ejs',
-        {
-            title: 'Login',
-            basePath: process.env.BASE_PATH,
-            redirectUrl: req.query.redirect || `${process.env.BASE_PATH}/admin`
-        },
-        (err, str) => {
-            if (err) {
-                res.status(500).send(err.message);
-            } else {
-                res.send(str);
-            }
-        });
-});
+            // アプリケーションのブート処理
+            await bootApplications(modelManager);
+            await modelManager.reloadModels();
+            await restoreData(modelManager);
 
-app.post('/login', async (req, res) => {
-    const user = req.body.username;
-    const password = req.body.password;
-    let userTable = await modelManager.getModel('user');
-    let registeredUser = await userTable.get({ user_name: user });
-    // ?redirect= が指定されている場合は、そのURLにリダイレクトする
-    let redirectUrl = req.body.redirectUrl === undefined ?
-        `${process.env.BASE_PATH}/admin`
-        : `${process.env.BASE_PATH}${req.body.redirectUrl}`;
-    
-    if (registeredUser.length !== 0) {
-        let registeredPassword = registeredUser[0].user_password;
-        if (await credential.verifyPassword(password, registeredPassword)) {
-            let secretKey = registeredUser[0].secret_key;
-            let refreshToken = await credential.generateToken({ user: user, password: registeredPassword, type: 'refresh_token' }, secretKey, '1d');
-            let accessToken = await credential.generateToken({ user: user, password: registeredPassword, type: 'access_token'}, secretKey, '1d');
-            res.cookie('x-user', user, { sameSite: 'Strict' });
-            res.cookie('x-access-token', accessToken, { sameSite: 'Strict' });
-            res.cookie('x-refresh-token', refreshToken, { sameSite: 'Strict' });
-            // adminページにリダイレクト
-            return res.redirect(redirectUrl);
+            // ロガーとWebSocketの初期化
+            const logger = new Logger(modelManager);
+            const websocket = new WebSocket(this.app, logger);
+            await websocket.bindWebSocket();
+
+            // その他のコンポーネント初期化
+            const scriptExecutor = new ScriptExecutor(modelManager, websocket);
+            const pageRenderer = new PageRenderer(restUtil, modelManager);
+
+            // 初期化したコンポーネントを保存
+            this.components = {
+                app: this.app,
+                modelManager,
+                restUtil,
+                modelController,
+                authController,
+                queryController,
+                logger,
+                websocket,
+                scriptExecutor,
+                pageRenderer
+            };
+
+            return this.components;
+        } catch (error) {
+            throw new Error(`システム初期化エラー: ${error.message}`);
         }
     }
-    return res.status(401).send('Invalid user or password');
-});
 
-app.get('/logout', (req, res) => {
-    ejs.renderFile('views/auth/logout.ejs',
-        { title: 'Logout', basePath: process.env.BASE_PATH },
-        (err, str) => {
-            if (err) {
-                res.status(500).send(err.message);
+    /**
+     * アプリケーションのミドルウェアを設定する。
+     * セキュリティ、CORS、リクエストロギングなどを含む。
+     */
+    setupMiddleware() {
+        const { app } = this;
+        const { restUtil, logger } = this.components;
+
+        // セキュリティ強化
+        app.use(helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'"],
+                    scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+                    styleSrc: ["'self'", "'unsafe-inline'"],
+                    imgSrc: ["'self'", "data:"],
+                }
+            }
+        }));
+
+        // レスポンス圧縮
+        app.use(compression());
+
+        // CORS設定
+        app.use(cors({
+            origin: process.env.CORS_ORIGIN || '*',
+            credentials: true
+        }));
+
+        // 静的ファイルの提供
+        app.use(`/theme`, express.static(path.join(__dirname, config.theme)));
+
+        // JSONとURLエンコードされたリクエストボディの解析
+        app.use(express.json({ limit: '10mb' }));
+        app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+        // クッキーパーサーの設定
+        app.use(cookieParser());
+
+        // リクエストロギング
+        app.use((req, res, next) => {
+            logger.info(`${req.method} ${req.originalUrl}`);
+            const start = Date.now();
+            res.on('finish', () => {
+                const duration = Date.now() - start;
+                logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
+            });
+            next();
+        });
+
+        // 認証ミドルウェア
+        const authMiddleware = async (req, res, next) => {
+            try {
+                const tokenCheck = await restUtil.verifyToken(req, res);
+                if (!tokenCheck.auth) {
+                    return res.redirect(`${config.basePath}/login`);
+                }
+                next();
+            } catch (error) {
+                logger.error('認証エラー:', error);
+                res.redirect(`${config.basePath}/login`);
+            }
+        };
+
+        return { authMiddleware };
+    }
+
+    /**
+     * アプリケーションのルートを設定する。
+     * 各エンドポイントやエラーハンドラを登録する。
+     */
+    async setupRoutes() {
+        const { app } = this;
+        const {
+            modelManager,
+            restUtil,
+            authController,
+            queryController,
+            scriptExecutor,
+            pageRenderer,
+            logger,
+            websocket
+        } = this.components;
+
+        // リゾルバの初期化
+        const resolver = new Resolver(modelManager);
+        await resolver.initializeResolvers();
+
+        const importCsvController = new ImportCsvController(modelManager, websocket);
+        await importCsvController.initializeResolvers();
+
+        const userApplication = new UserApplication(restUtil, modelManager);
+        await userApplication.initializeResolvers();
+
+        // SNS関連コントローラー
+        const lineworksMessageSender = new LineworksMessageSender(modelManager);
+
+        // ミドルウェア設定
+        const { authMiddleware } = this.setupMiddleware();
+
+        // 各ルートの設定
+        app.use('/app', userApplication.router);
+        app.use('/api/script', scriptExecutor.router);
+        app.use('/api/import', importCsvController.router);
+        app.use('/api/models', resolver.router);
+        app.use('/api/auth', authController);
+        app.use('/api/query', queryController);
+        app.use('/pageRenderer', pageRenderer.pageRouter);
+
+        // システム情報ルート
+        app.get('/', (req, res) => {
+            const result = {
+                system: "sandbox",
+                version: process.env.APP_VERSION || "1.0.0",
+                environment: config.environment
+            };
+            res.json(result);
+        });
+
+        // 汎用APIルート
+        app.all('/api/*', this.handleApiRequest);
+
+        // 管理画面ルート
+        app.get(['/admin', '/admin/*'], authMiddleware, this.renderAdminPage(pageRenderer));
+
+        // ログイン関連ルート
+        this.setupAuthRoutes(modelManager);
+
+        // 404ハンドラ
+        app.use((req, res) => {
+            logger.warn(`Route not found: ${req.originalUrl}`);
+            res.status(404).json({ error: 'Not Found', path: req.originalUrl });
+        });
+
+        // グローバルエラーハンドラ
+        app.use((err, req, res, next) => {
+            logger.error('未処理エラー:', err);
+            const response = {
+                error: 'Internal Server Error',
+                message: config.environment === 'development' ? err.message : undefined
+            };
+            res.status(500).json(response);
+        });
+    }
+
+    /**
+     * 汎用APIリクエストを処理する。
+     * @param {Object} req - リクエストオブジェクト。
+     * @param {Object} res - レスポンスオブジェクト。
+     */
+    handleApiRequest(req, res) {
+        try {
+            const path = req.params[0];
+            const nameParts = path.split('/');
+            const queryParams = req.query;
+
+            if (nameParts[0]) {
+                const result = {
+                    params: nameParts,
+                    query: queryParams,
+                    body: req.body,
+                    method: req.method
+                };
+                res.json(result);
             } else {
-                res.cookie('x-user', '', { sameSite: 'Strict' });
-                res.cookie('x-access-token', '', { sameSite: 'Strict' });
-                res.cookie('x-refresh-token', '', { sameSite: 'Strict' });
-                res.send(str);
+                res.status(404).json({ error: 'Not Found' });
+            }
+        } catch (error) {
+            console.error('API処理エラー:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
+
+    /**
+     * 管理画面をレンダリングする。
+     * @param {Object} pageRenderer - ページレンダラーインスタンス。
+     * @returns {Function} レンダリング関数。
+     */
+    renderAdminPage(pageRenderer) {
+        return async (req, res) => {
+            try {
+                const renderResult = await pageRenderer.render(req, res);
+                if (renderResult.status === 200) {
+                    res.cookie('x-user', req.cookies['x-user']);
+                    res.send(renderResult.body);
+                } else {
+                    res.status(renderResult.status || 500).send(renderResult.message || 'Internal Server Error');
+                }
+            } catch (error) {
+                this.components.logger.error('管理画面レンダリングエラー:', error);
+                res.status(500).send('Internal Server Error');
+            }
+        };
+    }
+
+    /**
+     * 認証関連のルートを設定する。
+     * @param {Object} modelManager - モデルマネージャーインスタンス。
+     */
+    setupAuthRoutes(modelManager) {
+        const { app } = this;
+        const cookieOptions = {
+            httpOnly: true,
+            secure: config.cookieSecure,
+            sameSite: 'Strict',
+            maxAge: config.cookieMaxAge
+        };
+
+        app.get('/login', (req, res) => {
+            ejs.renderFile('views/auth/login.ejs',
+                {
+                    title: 'Login',
+                    basePath: config.basePath,
+                    redirectUrl: req.query.redirect || `${config.basePath}/admin`
+                },
+                (err, str) => {
+                    if (err) {
+                        this.components.logger.error('ログインページエラー:', err);
+                        res.status(500).send(err.message);
+                    } else {
+                        res.send(str);
+                    }
+                });
+        });
+
+        app.post('/login', async (req, res) => {
+            try {
+                const user = req.body.username;
+                const password = req.body.password;
+                const userTable = await modelManager.getModel('user');
+                const registeredUser = await userTable.get({ user_name: user });
+
+                // リダイレクトURL設定
+                const redirectUrl = req.body.redirectUrl === undefined ?
+                    `${config.basePath}/admin` : `${config.basePath}${req.body.redirectUrl}`;
+
+                if (registeredUser.length !== 0) {
+                    const registeredPassword = registeredUser[0].user_password;
+                    if (await credential.verifyPassword(password, registeredPassword)) {
+                        const secretKey = registeredUser[0].secret_key;
+                        const refreshToken = await credential.generateToken(
+                            { user, password: registeredPassword, type: 'refresh_token' },
+                            secretKey,
+                            config.jwtExpiresIn
+                        );
+                        const accessToken = await credential.generateToken(
+                            { user, password: registeredPassword, type: 'access_token' },
+                            secretKey,
+                            config.jwtExpiresIn
+                        );
+
+                        res.cookie('x-user', user, cookieOptions);
+                        res.cookie('x-access-token', accessToken, cookieOptions);
+                        res.cookie('x-refresh-token', refreshToken, cookieOptions);
+
+                        return res.redirect(redirectUrl);
+                    }
+                }
+                return res.status(401).send('Invalid user or password');
+            } catch (error) {
+                this.components.logger.error('ログイン処理エラー:', error);
+                res.status(500).send('Internal Server Error');
             }
         });
-});
 
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}/login`);
-});
+        app.get('/logout', (req, res) => {
+            ejs.renderFile('views/auth/logout.ejs',
+                { title: 'Logout', basePath: config.basePath },
+                (err, str) => {
+                    if (err) {
+                        this.components.logger.error('ログアウトページエラー:', err);
+                        res.status(500).send(err.message);
+                    } else {
+                        // クッキーのクリア
+                        res.cookie('x-user', '', { ...cookieOptions, maxAge: 0 });
+                        res.cookie('x-access-token', '', { ...cookieOptions, maxAge: 0 });
+                        res.cookie('x-refresh-token', '', { ...cookieOptions, maxAge: 0 });
+                        res.send(str);
+                    }
+                });
+        });
+    }
 
-//let scheduler = new Scheduler();
-// 毎秒実行
-//let task = new Task('simpleClock', '* * * * * *', 'timerStub');
-//scheduler.addTask(task);
-//scheduler.start();
+    /**
+     * アプリケーションを起動する。
+     * 必要な初期化を行い、サーバーを開始する。
+     */
+    async start() {
+        try {
+            console.log(`環境: ${config.environment}`);
+            console.log(`BasePath: ${config.basePath}`);
+
+            // システム初期化
+            await this.initialize();
+
+            // ルート設定
+            await this.setupRoutes();
+
+            // サーバー起動
+            this.app.listen(config.port, () => {
+                console.log(`サーバーが起動しました: http://localhost:${config.port}${config.basePath}/login`);
+            });
+        } catch (error) {
+            console.error('サーバー起動エラー:', error);
+            console.error('エラーのスタックトレース:', error.stack);
+            process.exit(1);
+        }
+    }
+}
+
+// アプリケーション起動
+const application = new Application();
+application.start().catch(err => {
+    console.error('アプリケーション起動に失敗しました:', err);
+    process.exit(1);
+});
