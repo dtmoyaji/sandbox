@@ -7,17 +7,32 @@
   <div class="recordEditPanel" visible="false">
     <%- include('./recordEditPane.ejs') %>
     <div class="bottom-panel">
-      <button class="close-button" onclick="document.querySelector('.recordEditPanel').setAttribute('visible', 'false')">Close</button>
+      <button class="close-button" data-panel-type="recordEditPanel">Close</button>
     </div>
   </div>
   <div class="filterPanel" visible="false">
     <div class="bottom-panel">
-      <button class="close-button" onclick="document.querySelector('.filterPanel').setAttribute('visible', 'false')">Close</button>
+      <button class="close-button" data-panel-type="filterPanel">Close</button>
     </div>
   </div>
 </div>
 
 <script>
+  // パネル操作用のユーティリティ関数
+  function showPanel(panelSelector) {
+    const panel = document.querySelector(panelSelector);
+    if (panel) {
+      panel.setAttribute('visible', 'true');
+    }
+  }
+
+  function hidePanel(panelSelector) {
+    const panel = document.querySelector(panelSelector);
+    if (panel) {
+      panel.setAttribute('visible', 'false');
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', async function() {
 
     let request_param = '<%- JSON.stringify(params) %>';
@@ -67,8 +82,7 @@
       row.addEventListener('click', () => {
         let recordData = row.getAttribute('record');
         drawRecord(recordData);
-        let recordEditPanel = document.querySelector('.recordEditPanel');
-        recordEditPanel.setAttribute('visible', 'true');
+        showPanel('.recordEditPanel');
       });
     }
 
@@ -87,9 +101,9 @@
     // Closeボタンのイベントリスナーを追加
     document.querySelectorAll('.close-button').forEach(button => {
       button.addEventListener('click', function() {
-        const panel = this.closest('.recordEditPanel, .filterPanel');
-        if (panel) {
-          panel.setAttribute('visible', 'false');
+        const panelType = this.getAttribute('data-panel-type');
+        if (panelType) {
+          hidePanel(`.${panelType}`);
         }
       });
     });
@@ -129,8 +143,7 @@
     newButton.id = 'new-button';
     newButton.className = 'page-control-button';
     newButton.onclick = () => {
-      let recordEditPanel = document.querySelector('.recordEditPanel');
-      recordEditPanel.setAttribute('visible', 'true');
+      showPanel('.recordEditPanel');
     };
     controlBar.appendChild(newButton);
 
@@ -138,8 +151,7 @@
     filterButton.textContent = 'Filter';
     filterButton.id = 'filter-button';
     filterButton.onclick = () => {
-      let filterPanel = document.querySelector('.filterPanel');
-      filterPanel.setAttribute('visible', 'true');
+      showPanel('.filterPanel');
     };
     filterButton.className = 'page-control-button';
     controlBar.appendChild(filterButton);
