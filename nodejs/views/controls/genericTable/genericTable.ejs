@@ -84,6 +84,16 @@
 
     modifyCss();
 
+    // Closeボタンのイベントリスナーを追加
+    document.querySelectorAll('.close-button').forEach(button => {
+      button.addEventListener('click', function() {
+        const panel = this.closest('.recordEditPanel, .filterPanel');
+        if (panel) {
+          panel.setAttribute('visible', 'false');
+        }
+      });
+    });
+
   });
 
   async function generateControlBar(pagingInfo, tag_id, params) {

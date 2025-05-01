@@ -72,13 +72,15 @@
 
   function drawRecord(recordData) {
     console.log(recordData);
-    var record = JSON.parse(recordData);
+    var record = typeof recordData === 'string' ? JSON.parse(recordData) : recordData;
     var editRows = document.querySelectorAll('.editRow');
     for (var i = 0; i < editRows.length; i++) {
       var editRow = editRows[i];
       var input = editRow.getElementsByClassName('editInput')[0];
       var fieldName = input.getAttribute('name');
-      input.value = record[fieldName];
+      if (fieldName && record[fieldName] !== undefined) {
+        input.value = record[fieldName];
+      }
     }
   }
 </script>
