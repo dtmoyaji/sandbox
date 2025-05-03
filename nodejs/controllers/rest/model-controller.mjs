@@ -234,6 +234,72 @@ async function createModelController(manager) {
         }
     });
 
+    ModelController.get('/script/:scriptName', async (req, res) => {
+        try {
+            const verifyResult = await restUtil.verifyToken(req, res);
+            if (!verifyResult.auth) {
+                return res.status(401).send(verifyResult);
+            }
+
+            const scriptName = req.params.scriptName;
+            if (!scriptName) {
+                return res.status(400).send({ message: 'Script name is required' });
+            }
+
+            console.log(`スクリプト内容取得API - scriptName: ${scriptName}`);
+
+            const scriptModel = await modelManager.getModel('script');
+            if (!scriptModel) {
+                console.error('Script model not found');
+                return res.status(404).send({ message: 'Script model not found' });
+            }
+
+            // スクリプトレコードを取得
+            const scriptRecords = await scriptModel.get({ script_name: scriptName });
+            console.log(`スクリプトレコード取得結果 - レコード数: ${scriptRecords ? scriptRecords.length : 0}`);
+            
+            if (!scriptRecords || scriptRecords.length === 0) {
+                console.error(`Script not found: ${scriptName}`);
+                return res.status(404).send({ message: 'Script not found' });
+            }
+
+            const scriptRecord = scriptRecords[0];
+            console.log(`スクリプトレコード - ID: ${scriptRecord.script_id}, Name: ${scriptRecord.script_name}`);
+            
+            // スクリプト内容の確認
+            const hasScriptContent = scriptRecord.script && scriptRecord.script.trim().length > 0;
+            console.log(`スクリプト内容の有無: ${hasScriptContent ? 'あり' : 'なし'}`);
+            
+            // スクリプトテーブルから直接スクリプト内容を取得
+            const scriptContent = hasScriptContent 
+                ? scriptRecord.script 
+                : '// スクリプト内容がありません。このスクリプトは空です。';
+            
+            // レスポンスを返す
+            res.json({
+                success: true,
+                data: {
+                    script_id: scriptRecord.script_id,
+                    script_name: scriptName,
+                    script_content: scriptContent,
+                    description: scriptRecord.description || '',
+                    bind_module: scriptRecord.bind_module || '',
+                    parameters: scriptRecord.parameters || '',
+                    created_at: scriptRecord.created_at,
+                    updated_at: scriptRecord.updated_at,
+                    hasContent: hasScriptContent
+                }
+            });
+        } catch (err) {
+            console.error('Error fetching script content:', err);
+            res.status(500).send({ 
+                message: 'Internal server error', 
+                error: err.message,
+                stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+            });
+        }
+    });
+
     async function getUser(req, res) {
         try {
             const path = req.params[0];

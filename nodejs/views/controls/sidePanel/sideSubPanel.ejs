@@ -45,6 +45,22 @@
             default:
                 break;
         }
+        
+        // 検索機能を追加
+        const searchInput = document.getElementById('search');
+        searchInput.addEventListener('input', () => {
+            const searchText = searchInput.value.toLowerCase();
+            const items = document.querySelectorAll('#list li');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchText)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
     });
 
     async function createTableList(json) {
@@ -66,8 +82,23 @@
                     a.textContent = element.table_name;
                     break;
                 case 'script':
-                    a.href = '<%= basePath %>/admin/script/' + element.script_name;
+                    // スクリプトの場合はクリックイベントを追加して、centerPanelに表示する
                     a.textContent = element.script_name;
+                    a.href = 'javascript:void(0)'; // リンクのデフォルト動作をキャンセル
+                    a.addEventListener('click', async () => {
+                        try {
+                            // スクリプト表示用のイベントをディスパッチ
+                            const event = new CustomEvent('showInCenterPanel', {
+                                detail: {
+                                    type: 'script',
+                                    name: element.script_name
+                                }
+                            });
+                            window.dispatchEvent(event);
+                        } catch (error) {
+                            console.error('スクリプト表示エラー:', error);
+                        }
+                    });
                     break;
                 case 'query':
                     a.href = '<%= basePath %>/admin/query/' + element.name;

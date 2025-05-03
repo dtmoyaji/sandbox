@@ -1,7 +1,18 @@
+// filepath: c:\misc\scripts\sandbox\nodejs\views\renderer\ejs-renderer.mjs
+/**
+ * EjsRenderer - EJSテンプレートレンダリングと多言語対応を統合したレンダラークラス
+ * 
+ * このクラスは以下の機能を提供します：
+ * 1. L10nRendererを使用した効率的な多言語対応
+ * 2. EJSテンプレートのレンダリング機能
+ * 3. ページレイアウト全体のレンダリング機能
+ */
+
 import dotenv from 'dotenv';
 import ejs from 'ejs';
 import express from 'express';
 import { resolve } from 'path';
+import L10nRenderer from './l10n-renderer.mjs';
 
 dotenv.config();
 
@@ -9,14 +20,34 @@ class EjsRenderer {
     restUtil = undefined;
     modelManager = undefined;
     pageRouter = undefined;
-    translations = undefined; // 翻訳データ保持用
-    defaultLang = 'ja';      // デフォルト言語
+    l10nRenderer = undefined; // 翻訳機能のインスタンス
+    defaultLang = 'ja';
 
     constructor(restUtil, modelManager, translations = {}) {
         this.restUtil = restUtil;
         this.modelManager = modelManager;
-        this.translations = translations; // 初期化時に翻訳データを受け取る
         this.pageRouter = express.Router();
+        
+        // L10nRendererのインスタンスを作成
+        this.l10nRenderer = new L10nRenderer(modelManager, translations);
+
+        // ルーティング設定
+        this.setupRoutes();
+    }
+
+    /**
+     * Expressルーターを設定する
+     */
+    setupRoutes() {
+        this.pageRouter.get('/*', async (req, res) => {
+            try {
+                const renderResult = await this.render(req, res);
+                res.status(renderResult.status || 200).send(renderResult.body);
+            } catch (error) {
+                console.error('ページレンダリングエラー:', error);
+                res.status(500).send(`<h1>レンダリングエラー</h1><p>${error.message}</p>`);
+            }
+        });
     }
 
     /**
@@ -25,183 +56,183 @@ class EjsRenderer {
      * @returns {string} 言語コード（デフォルトは'ja'）
      */
     getUserLanguage(req) {
-        // ヘッダー、クッキー、またはユーザー設定から言語を取得する
-        // 現時点では単純にデフォルト言語を返す
-        return this.defaultLang;
+        return this.l10nRenderer.getUserLanguage(req);
     }
 
     /**
-     * キャッシュされた翻訳データから翻訳を取得する（高速）
+     * キャッシュされた翻訳データから翻訳を取得する（高速・同期的）
      * @param {string} src 翻訳前のテキスト
      * @param {string} lang 言語コード
      * @returns {string} 翻訳後のテキスト
      */
     getTranslation(src, lang = this.defaultLang) {
-        // 指定された言語の翻訳データが存在するか確認
-        if (this.translations && this.translations[lang] && this.translations[lang][src]) {
-            return this.translations[lang][src];
-        }
-        
-        // 指定言語の翻訳がない場合、デフォルト言語で試す
-        if (lang !== this.defaultLang && 
-            this.translations && 
-            this.translations[this.defaultLang] && 
-            this.translations[this.defaultLang][src]) {
-            return this.translations[this.defaultLang][src];
-        }
-        
-        // 翻訳が見つからない場合は元のテキストを返す
-        return src;
+        return this.l10nRenderer.getTranslation(src, lang);
     }
 
     /**
-     * 多言語テキストを取得する
-     * 翻訳キャッシュになければDBから取得を試みる
+     * 多言語テキストを取得する（非同期）
+     * キャッシュになければDBから取得
      * @param {string} src 翻訳前のテキスト
-     * @param {string} lang 言語コード（デフォルトは'ja'）
+     * @param {string} lang 言語コード
      * @returns {Promise<string>} 翻訳後のテキスト
      */
     async getL10n(src, lang = this.defaultLang) {
-        // まずキャッシュを確認
-        const cachedTranslation = this.getTranslation(src, lang);
-        if (cachedTranslation !== src) {
-            return cachedTranslation;
-        }
-        
-        // キャッシュにない場合はDBから取得
-        try {
-            const l10nTable = await this.modelManager.getModel('l10n');
-            const result = await l10nTable.get({ src: src, lang: lang });
-            if (result && result.length > 0) {
-                // 取得した翻訳をキャッシュに追加（将来の使用のため）
-                if (!this.translations[lang]) {
-                    this.translations[lang] = {};
-                }
-                this.translations[lang][src] = result[0].dst;
-                
-                return result[0].dst;
-            }
-            return src; // 翻訳が見つからない場合は元のテキストを返す
-        } catch (error) {
-            console.error('L10n error:', error);
-            return src; // エラーが発生した場合は元のテキストを返す
-        }
+        return await this.l10nRenderer.getL10n(src, lang);
     }
     
     /**
-     * 複数の翻訳テキストを一度に取得する
-     * キャッシュになければDBから一括取得を試みる
+     * 複数の翻訳テキストを一度に効率的に取得する
+     * パフォーマンス向上のため、一度のDBアクセスで複数の翻訳を取得
      * @param {string[]} srcTexts - 翻訳前のテキスト配列
      * @param {string} lang - 言語コード
      * @returns {Promise<Object>} - キーがsrc、値がdstの翻訳マップ
      */
     async getL10nBatch(srcTexts, lang = this.defaultLang) {
-        try {
-            const translations = {};
-            const missingTranslations = [];
-            
-            // まずキャッシュから取得できるものを集める
-            srcTexts.forEach(src => {
-                const cached = this.getTranslation(src, lang);
-                if (cached !== src) {
-                    // キャッシュにあった
-                    translations[src] = cached;
-                } else {
-                    // キャッシュになかった
-                    translations[src] = src; // デフォルト値を設定
-                    missingTranslations.push(src); // DBから取得すべきリスト
-                }
-            });
-            
-            // キャッシュになかったものがある場合、DBから取得
-            if (missingTranslations.length > 0) {
-                const l10nTable = await this.modelManager.getModel('l10n');
-                // 個別に取得
-                for (const src of missingTranslations) {
-                    const result = await l10nTable.get({ src: src, lang: lang });
-                    if (result && result.length > 0) {
-                        translations[src] = result[0].dst;
-                        
-                        // キャッシュに追加
-                        if (!this.translations[lang]) {
-                            this.translations[lang] = {};
-                        }
-                        this.translations[lang][src] = result[0].dst;
-                    }
-                }
-            }
-            
-            return translations;
-        } catch (error) {
-            console.error('L10n batch error:', error);
-            // エラー時はオリジナルのテキストをそのまま返す
-            const translations = {};
-            srcTexts.forEach(src => {
-                translations[src] = src;
-            });
-            return translations;
-        }
+        return await this.l10nRenderer.getL10nBatch(srcTexts, lang);
     }
 
     /**
      * ページをレンダリングする
-     * @param {*} req
-     * @param {*} res
+     * @param {*} req - リクエストオブジェクト
+     * @param {*} res - レスポンスオブジェクト
+     * @param {string} [pageEjs='views/page/page.ejs'] - 使用するEJSテンプレートのパス
      * @returns {Promise<object>} レンダリング結果
      */
     async render(req, res, pageEjs = 'views/page/page.ejs') {
-        let path = req.params[0] || ''; // パスがない場合は空文字列を使用
-        const nameParts = path.split('/');
-        const queryParams = {
-            path: nameParts,
-            query: req.query
-        };
+        try {
+            let path = req.params[0] || ''; // パスがない場合は空文字列を使用
+            const nameParts = path.split('/');
+            const queryParams = {
+                path: nameParts,
+                query: req.query
+            };
 
-        let ejsParameters = {
-            application_name: req.application_name ? req.application_name : 'system',
-            basePath: process.env.BASE_PATH ? process.env.BASE_PATH : '',
-            path: nameParts,
-            params: queryParams,
-            pageTitle: 'Page Title',
-            startButton: '',
-            topBar: '',
-            sidebarPanel: '',
-            centerPanel: '',
-            footer: '',
-            websocket: '',
-            modifyCss: ''
-        };
+            console.log('ページのレンダリングを開始します:', path);
 
-        // 各部品をレンダリング
-        let startButtonHtml = await this.renderHtml('views/controls/startButton/startButton.ejs', ejsParameters);
-        let topBarHtml = await this.renderHtml('views/controls/topBar/topBar.ejs', ejsParameters);
-        let footerHtml = await this.renderHtml('views/controls/footBar/footBar.ejs', ejsParameters);
-        let centerPanelHtml = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
-        let websocketHtml = await this.renderHtml('views/controls/websocket/websocket.ejs', ejsParameters);
-        let modifyCssHtml = await this.renderHtml('views/page/modifyCss.ejs', ejsParameters);
+            // テーブルパネル用の翻訳を事前取得（パフォーマンス向上）
+            const commonTranslations = await this.getL10nBatch([
+                'data',
+                'definition',
+                'REST',
+                'Data View',
+                'テーブル定義',
+                'application',
+                'table',
+                'クエリ',
+                'スクリプト'
+            ]);
 
-        ejsParameters.topBar = topBarHtml.body;
-        ejsParameters.startButton = startButtonHtml.body;
-        ejsParameters.footer = footerHtml.body;
-        ejsParameters.centerPanel = centerPanelHtml.body;
-        ejsParameters.websocket = websocketHtml.body;
-        ejsParameters.modifyCss = modifyCssHtml.body;
+            let ejsParameters = {
+                application_name: req.application_name ? req.application_name : 'system',
+                basePath: process.env.BASE_PATH ? process.env.BASE_PATH : '',
+                path: nameParts,
+                params: queryParams,
+                pageTitle: 'Page Title',
+                startButton: '',
+                topBar: '',
+                sidebarPanel: '',
+                centerPanel: '',
+                footer: '',
+                websocket: '',
+                modifyCss: '',
+                commonTranslations, // 翻訳データを追加
+                tableTranslations: commonTranslations // 後方互換性のため、tableTranslationsとしても提供
+            };
 
-        // 公開ページの場合はシステムのサイドパネルを表示しない
-        if (req.application_protection !== 'public') {
-            let sidePanelHtml = await this.renderSidePanel(req, res, ejsParameters);
-            ejsParameters.sidebarPanel = sidePanelHtml.body;
+            console.log('各コンポーネントのレンダリングを開始します');
+
+            // 各部品を個別にレンダリング
+            const [startButtonHtml, topBarHtml, footerHtml, sidePanelHtml, centerPanelHtml, websocketHtml, modifyCssHtml] = await Promise.all([
+                this.renderHtml('views/controls/startButton/startButton.ejs', ejsParameters),
+                this.renderHtml('views/controls/topBar/topBar.ejs', ejsParameters),
+                this.renderHtml('views/controls/footBar/footBar.ejs', ejsParameters),
+                req.application_protection !== 'public' ? this.renderSidePanel(req, res, ejsParameters) : { body: '' },
+                this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters),
+                this.renderHtml('views/controls/websocket/websocket.ejs', ejsParameters),
+                this.renderHtml('views/page/modifyCss.ejs', ejsParameters)
+            ]);
+
+            // 各部品のHTMLをパラメータに設定
+            ejsParameters.topBar = topBarHtml.body || '';
+            ejsParameters.startButton = startButtonHtml.body || '';
+            ejsParameters.footer = footerHtml.body || '';
+            ejsParameters.sidebarPanel = sidePanelHtml.body || '';
+            ejsParameters.centerPanel = centerPanelHtml.body || '';
+            ejsParameters.websocket = websocketHtml.body || '';
+            ejsParameters.modifyCss = modifyCssHtml.body || '';
+
+            // 最終的なページのレンダリング
+            console.log('最終ページのレンダリングを開始します');
+            const renderResult = await this.renderHtml(pageEjs, ejsParameters);
+            console.log('ページのレンダリングが完了しました');
+            return renderResult;
+        } catch (error) {
+            console.error('レンダリングエラー:', error);
+            throw error;
         }
+    }
 
-        let renderResult = await this.renderHtml(pageEjs, ejsParameters); // 絶対パスを指定
-        return renderResult;
+    /**
+     * センターパネルをレンダリングする
+     * @param {string} renderType レンダリングタイプ
+     * @param {string} renderTarget レンダリングターゲット
+     * @returns {Promise<string>} レンダリング結果（文字列として）
+     */
+    async renderCenterPanel(renderType, renderTarget) {
+        try {
+            console.log(`センターパネルのレンダリング: type=${renderType}, target=${renderTarget}`);
+            
+            // パラメータの設定
+            const queryParams = {
+                path: [renderType, renderTarget],
+                query: {}
+            };
+            
+            // テーブルパネル用の翻訳を事前取得（一括取得でDBアクセスを最適化）
+            const tableTranslations = await this.getL10nBatch([
+                'data',
+                'definition',
+                'REST',
+                'Data View',
+                'テーブル定義'
+            ]);
+            
+            // すべての必要なパラメータが含まれていることを確認
+            const ejsParameters = {
+                application_name: 'system',
+                basePath: process.env.BASE_PATH ? process.env.BASE_PATH : '',
+                path: [renderType, renderTarget],
+                params: queryParams,
+                tableTranslations: tableTranslations,
+                targetTable: renderTarget // 明示的にtargetTableパラメータを設定
+            };
+            
+            // センターパネルをレンダリング
+            const centerPanelResult = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
+            
+            // 結果が文字列であることを確認
+            if (typeof centerPanelResult === 'object' && centerPanelResult !== null) {
+                if (typeof centerPanelResult.body === 'string') {
+                    return centerPanelResult.body;
+                } else if (centerPanelResult.body) {
+                    return String(centerPanelResult.body);
+                }
+            }
+            
+            // 有効な結果が得られなかった場合のフォールバック
+            console.error('センターパネルのレンダリング結果が無効です:', centerPanelResult);
+            return '<div class="error-panel">センターパネルの表示中にエラーが発生しました</div>';
+        } catch (error) {
+            console.error('センターパネルレンダリングエラー:', error);
+            return `<div class="error-panel">センターパネルのレンダリングエラー: ${error.message}</div>`;
+        }
     }
 
     /**
      * サイドパネルをレンダリングする
-     * @param {*} req
-     * @param {*} res
-     * @param {*} ejsParameters
+     * @param {*} req リクエストオブジェクト
+     * @param {*} res レスポンスオブジェクト
+     * @param {*} ejsParameters EJSパラメータ
      * @returns {Promise<object>} レンダリング結果
      */
     async renderSidePanel(req, res, ejsParameters) {
@@ -215,10 +246,6 @@ class EjsRenderer {
 
         let verifyResult = await this.restUtil.verifyToken(req, res);
         if (!verifyResult.auth) {
-            let currentUrl = req.originalUrl;
-            let redirectUrl = '/login?redirect=' + currentUrl;
-            console.log('redirectUrl:', redirectUrl);
-            res.redirect(redirectUrl);
             return { status: 401, body: '' };
         }
 
@@ -230,68 +257,93 @@ class EjsRenderer {
         let userDomainTable = await this.modelManager.getModel('user_domain');
         let userDomain = await userDomainTable.get({ user_domain_id: userDomainId });
         if (userDomain.length === 0) {
-            return res.status(404).send('Not Found');
+            return { status: 404, body: '見つかりませんでした' };
         }
         let userDomainName = userDomain[0].domain_name;
 
-        let sidePanelRenderResult = {};
+        // サイドパネルの翻訳データを事前取得（一括取得でDBアクセスを最適化）
+        const sideMenuTranslations = await this.getL10nBatch([
+            'application',
+            'table',
+            'クエリ',
+            'スクリプト'
+        ]);
+
         let renderResult = { status: 200, body: '' };
 
         let paneParameter = {
             sidePanelTitle: userDomainName,
             appendButtonVisible: false,
             user: user,
-            basePath: ejsParameters.basePath
+            basePath: process.env.BASE_PATH ? process.env.BASE_PATH : '',
+            translations: sideMenuTranslations  // 翻訳データを直接渡す
         };
-        sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideMainPanel.ejs', paneParameter);
+        
+        const sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideMainPanel.ejs', paneParameter);
         if (sidePanelRenderResult.status > 200) {
             renderResult.status = sidePanelRenderResult.status;
-            renderResult.body += sidePanelRenderResult.message;
+            renderResult.body += sidePanelRenderResult.message || '';
         } else {
-            renderResult.body += sidePanelRenderResult.body;
+            renderResult.body += sidePanelRenderResult.body || '';
         }
 
         if (param2 !== '') {
-            let subMenuRenderResult = await this.renderSideSubPanel(user, param2, ejsParameters);
+            ejsParameters.basePath = process.env.BASE_PATH ? process.env.BASE_PATH : '';
+            const subMenuRenderResult = await this.renderSideSubPanel(user, param2, ejsParameters);
             if (subMenuRenderResult.status > 200) {
                 renderResult.status = subMenuRenderResult.status;
-                renderResult.body += subMenuRenderResult.message;
+                renderResult.body += subMenuRenderResult.message || '';
             } else {
-                renderResult.body += subMenuRenderResult.body;
+                renderResult.body += subMenuRenderResult.body || '';
             }
         }
 
         return renderResult;
     }
 
+    /**
+     * サブサイドパネルをレンダリングする
+     * @param {*} user ユーザー情報
+     * @param {*} path パス
+     * @param {*} ejsParameters EJSパラメータ
+     * @returns {Promise<object>} レンダリング結果
+     */
     async renderSideSubPanel(user, path, ejsParameters) {
-        let sidePanelRenderResult = { status: 200, body: '' };
-
         let list = [];
         switch (path) {
+            case 'application':
+                list = await this.getApplications(user.user_domain_id);
+                break;
             case 'table':
                 list = await this.getTables(user.user_domain_id);
                 break;
             case 'query':
+                // クエリリストの取得処理
                 break;
             case 'script':
+                // スクリプトリストの取得処理
                 break;
             default:
                 break;
         }
 
-        let paneParameter = { sidePanelTitle: path, appendButtonVisible: false, user: user, list: list };
-        sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideSubPanel.ejs', paneParameter);
-
-        if (sidePanelRenderResult.status > 200) {
-            sidePanelRenderResult.status = sidePanelRenderResult.status;
-            sidePanelRenderResult.body = sidePanelRenderResult.message;
-        } else {
-            sidePanelRenderResult.body = sidePanelRenderResult.body;
-        }
+        let paneParameter = { 
+            sidePanelTitle: path,
+            appendButtonVisible: false,
+            user: user,
+            list: list,
+            basePath: process.env.BASE_PATH ? process.env.BASE_PATH : ''
+        };
+        
+        const sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideSubPanel.ejs', paneParameter);
         return sidePanelRenderResult;
     }
 
+    /**
+     * テーブルリストを取得する
+     * @param {number} userDomainId ユーザードメインID
+     * @returns {Array} テーブルリスト
+     */
     async getTables(userDomainId) {
         let tableList = this.modelManager.models;
         if (userDomainId > 1) {
@@ -312,9 +364,46 @@ class EjsRenderer {
     }
 
     /**
+     * アプリケーションリストを取得する
+     * @param {number} userDomainId ユーザードメインID
+     * @returns {Promise<Array>} アプリケーションリスト
+     */
+    async getApplications(userDomainId) {
+        try {
+            const applicationTable = await this.modelManager.getModel('application');
+            let applicationList = await applicationTable.get({});
+            
+            // ユーザードメインIDでフィルタリング（必要に応じて）
+            if (userDomainId > 1) {
+                // アプリケーションとドメインの関連付けを取得
+                const appDomainLinkTable = await this.modelManager.getModel('application_domain_link');
+                const appDomainLinks = await appDomainLinkTable.get({ user_domain_id: userDomainId });
+                
+                // 関連するアプリケーションIDのリストを作成
+                const appIds = appDomainLinks.map(link => link.application_id);
+                
+                // フィルタリング
+                applicationList = applicationList.filter(app => appIds.includes(app.application_id));
+            }
+            
+            // アプリケーション名でソート
+            applicationList.sort((a, b) => {
+                if (a.application_name < b.application_name) return -1;
+                if (a.application_name > b.application_name) return 1;
+                return 0;
+            });
+            
+            return applicationList;
+        } catch (error) {
+            console.error('アプリケーションリスト取得エラー:', error);
+            return [];
+        }
+    }
+
+    /**
      * HTMLをレンダリングする
-     * @param {string} ejsPath
-     * @param {object} ejsParameters
+     * @param {string} ejsPath EJSテンプレートのパス
+     * @param {object} ejsParameters レンダリングパラメータ
      * @returns {Promise<object>} レンダリング結果
      */
     async renderHtml(ejsPath, ejsParameters) {
@@ -323,8 +412,7 @@ class EjsRenderer {
         // オブジェクトの複製を作成して元のパラメータを変更しない
         const params = { ...ejsParameters };
 
-        // getL10n関数をテンプレート内で安全に使えるようにする
-        // 重要: EJSテンプレート内のasyncブロックで使われると[object Promise]になるのを防ぐ
+        // 翻訳ヘルパー関数をテンプレートパラメータに追加
         params.getL10n = async (text, lang = this.defaultLang) => {
             // 既にキャッシュにある場合は同期的に返す
             const cachedTranslation = this.getTranslation(text, lang);
@@ -332,29 +420,19 @@ class EjsRenderer {
                 return cachedTranslation;
             }
             // キャッシュになければ非同期で取得
-            try {
-                const l10nTable = await this.modelManager.getModel('l10n');
-                const result = await l10nTable.get({ src: text, lang: lang });
-                if (result && result.length > 0) {
-                    // キャッシュに追加
-                    if (!this.translations[lang]) {
-                        this.translations[lang] = {};
-                    }
-                    this.translations[lang][text] = result[0].dst;
-                    return result[0].dst;
-                }
-                return text;
-            } catch (error) {
-                console.error('L10n error:', error);
-                return text;
-            }
+            return await this.getL10n(text, lang);
+        };
+
+        // 一括翻訳ヘルパー関数を追加
+        params.getL10nBatch = async (textArray, lang = this.defaultLang) => {
+            return await this.getL10nBatch(textArray, lang);
         };
 
         let renderResult = {};
 
         try {
             // 同期処理を優先してasync: falseにして処理
-            // これにより[object Promise]の問題を回避する
+            // これによりEJSテンプレート内で[object Promise]の問題を回避する
             let str;
             try {
                 console.log(`${ejsPath}のレンダリングを開始...`);
@@ -412,6 +490,32 @@ class EjsRenderer {
         }
 
         return renderResult;
+    }
+
+    /**
+     * Express用のルーターを取得する
+     * @returns {object} Expressルーター
+     */
+    getRouter() {
+        return this.pageRouter;
+    }
+
+    /**
+     * L10nミドルウェアを取得する
+     * @returns {Function} Expressミドルウェア
+     */
+    getL10nMiddleware() {
+        return this.l10nRenderer.getMiddleware();
+    }
+
+    /**
+     * 翻訳をプリロードする
+     * アプリケーション起動時に使用して翻訳キャッシュを初期化
+     * @param {string} [lang=null] 特定の言語のみロードする場合は指定
+     * @returns {Promise<number>} ロードされた翻訳の数
+     */
+    async preloadTranslations(lang = null) {
+        return await this.l10nRenderer.preloadTranslations(lang);
     }
 }
 

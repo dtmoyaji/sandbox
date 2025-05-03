@@ -8,14 +8,14 @@ export class UserApplication {
     modelManager = null;
     viewRoute = null;
     systemViewRoute = null;
-    ejsRenderer = null;
+    unifiedRenderer = null;
 
     constructor(restUtil, modelManager) {
         this.modelManager = modelManager;
         this.router = express.Router();
         this.viewRoute = path.resolve('./applications');
         this.systemViewRoute = path.resolve('./views');
-        this.ejsRenderer = new EjsRenderer(restUtil, modelManager);
+        this.unifiedRenderer = new EjsRenderer(restUtil, modelManager);
 
     }
 
@@ -40,7 +40,7 @@ export class UserApplication {
         let appViewRoute = path.resolve(this.viewRoute, applicationName);
         let appMain = path.resolve(appViewRoute, 'views', 'main.ejs');
 
-        let page = await this.ejsRenderer.render(req, res, appMain);
+        let page = await this.unifiedRenderer.render(req, res, appMain);
 
         if (!res.headersSent) {
             res.send(page.body);

@@ -37,6 +37,30 @@
                 }); %>
             <%
                     break;
+                case 'application':
+                    if (!targetTable) {
+                        throw new Error('アプリケーション名が指定されていません');
+                    }
+            %>
+                <%- include('./applicationPanel.ejs', { 
+                    targetApplication: targetTable, 
+                    params: params,
+                    basePath: typeof basePath !== 'undefined' ? basePath : ''
+                }); %>
+            <%
+                    break;
+                case 'script':
+                    if (!targetTable) {
+                        throw new Error('スクリプト名が指定されていません');
+                    }
+            %>
+                <%- include('./scriptPanel.ejs', { 
+                    targetScript: targetTable, 
+                    params: params,
+                    basePath: typeof basePath !== 'undefined' ? basePath : ''
+                }); %>
+            <%
+                    break;
                 default:
                     // 何も表示しない
                     break;

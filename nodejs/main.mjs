@@ -22,7 +22,6 @@ import { ScriptExecutor } from './controllers/script/script-executer.mjs';
 import { LineworksMessageSender } from './controllers/sns/lineworks/lineworks_message_sender.mjs';
 import { WebSocket } from './controllers/websocket/websocket.mjs';
 import EjsRenderer from './views/renderer/ejs-renderer.mjs';
-import PageRenderer from './views/renderer/page-renderer.mjs';
 
 // 設定の読み込み
 dotenv.config();
@@ -77,8 +76,7 @@ class Application {
 
             // その他のコンポーネント初期化
             const scriptExecutor = new ScriptExecutor(modelManager, websocket);
-            const pageRenderer = new PageRenderer(restUtil, modelManager, translations);
-            const ejsRenderer = new EjsRenderer(restUtil, modelManager, translations);
+            const unifiedRenderer = new EjsRenderer(restUtil, modelManager, translations);
 
             // 初期化したコンポーネントを保存
             this.components = {
@@ -91,8 +89,7 @@ class Application {
                 logger,
                 websocket,
                 scriptExecutor,
-                pageRenderer,
-                ejsRenderer,
+                unifiedRenderer,
                 translations
             };
 
@@ -163,7 +160,8 @@ class Application {
      */
     setupMiddleware() {
         const { app } = this;
-        const { restUtil, logger } = this.components;
+        const { restUtil, logger, modelManager } = this.components;
+        const { unifiedRenderer } = this.components;
 
         // セキュリティ強化 - より詳細なCSP設定
         app.use(helmet({
@@ -217,6 +215,14 @@ class Application {
         // クッキーパーサーの設定
         app.use(cookieParser());
 
+        // 翻訳ミドルウェアを適用（アプリケーション全体で利用可能）
+        if (unifiedRenderer && unifiedRenderer.l10nRenderer) {
+            console.log('翻訳ミドルウェアを適用します');
+            app.use(unifiedRenderer.l10nRenderer.getMiddleware());
+        } else {
+            console.warn('翻訳ミドルウェアが初期化されていません');
+        }
+
         // リクエストロギング
         app.use((req, res, next) => {
             logger.info(`${req.method} ${req.originalUrl}`);
@@ -257,7 +263,7 @@ class Application {
             authController,
             queryController,
             scriptExecutor,
-            pageRenderer,
+            unifiedRenderer,
             logger,
             websocket
         } = this.components;
@@ -285,7 +291,52 @@ class Application {
         app.use('/api/models', resolver.router);
         app.use('/api/auth', authController);
         app.use('/api/query', queryController);
-        app.use('/pageRenderer', pageRenderer.pageRouter);
+        app.use('/pageRenderer', unifiedRenderer.pageRouter);
+
+        // センターパネルレンダリングAPI
+        app.get('/api/renderer/centerPanel', async (req, res) => {
+            try {
+                const path = req.query.path;
+                if (!path) {
+                    return res.status(400).json({ error: 'path parameter is required' });
+                }
+                
+                const pathParts = path.split('/');
+                if (pathParts.length < 2) {
+                    return res.status(400).json({ error: 'Invalid path format. Expected: type/target' });
+                }
+                
+                const renderType = pathParts[0];
+                const renderTarget = pathParts[1];
+                
+                console.log(`センターパネルレンダリングAPI(GET): type=${renderType}, target=${renderTarget}`);
+                
+                const html = await unifiedRenderer.renderCenterPanel(renderType, renderTarget);
+                res.send(html);
+            } catch (error) {
+                console.error('センターパネルレンダリングエラー:', error);
+                res.status(500).send(`<div class="error-panel">レンダリングエラー: ${error.message}</div>`);
+            }
+        });
+
+        // センターパネルレンダリングAPI (POST)
+        app.post('/api/renderer/centerPanel', async (req, res) => {
+            try {
+                const { type, name } = req.body;
+                
+                if (!type || !name) {
+                    return res.status(400).json({ error: 'type and name parameters are required' });
+                }
+                
+                console.log(`センターパネルレンダリングAPI(POST): type=${type}, name=${name}`);
+                
+                const html = await unifiedRenderer.renderCenterPanel(type, name);
+                res.send(html);
+            } catch (error) {
+                console.error('センターパネルレンダリングエラー(POST):', error);
+                res.status(500).send(`<div class="error-panel">レンダリングエラー: ${error.message}</div>`);
+            }
+        });
 
         // システム情報ルート
         app.get('/', (req, res) => {
@@ -301,7 +352,7 @@ class Application {
         app.all('/api/*', this.handleApiRequest);
 
         // 管理画面ルート
-        app.get(['/admin', '/admin/*'], authMiddleware, this.renderAdminPage(pageRenderer));
+        app.get(['/admin', '/admin/*'], authMiddleware, this.renderAdminPage(unifiedRenderer));
 
         // ログイン関連ルート
         this.setupAuthRoutes(modelManager);
@@ -353,13 +404,13 @@ class Application {
 
     /**
      * 管理画面をレンダリングする。
-     * @param {Object} pageRenderer - ページレンダラーインスタンス。
+     * @param {Object} unifiedRenderer - ページレンダラーインスタンス。
      * @returns {Function} レンダリング関数。
      */
-    renderAdminPage(pageRenderer) {
+    renderAdminPage(unifiedRenderer) {
         return async (req, res) => {
             try {
-                const renderResult = await pageRenderer.render(req, res);
+                const renderResult = await unifiedRenderer.render(req, res);
                 if (renderResult.status === 200) {
                     res.cookie('x-user', req.cookies['x-user']);
                     res.send(renderResult.body);

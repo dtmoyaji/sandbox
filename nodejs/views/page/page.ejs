@@ -40,6 +40,65 @@
             bindCenterPanel('center');
             modifyCss();
         });
+
+        // スクリプト表示イベントのリスナーを追加
+        window.addEventListener('showInCenterPanel', async function (event) {
+            if (event.detail && event.detail.type === 'script') {
+                try {
+                    // スクリプト表示用のURLに変更して中央パネルを更新
+                    const basePath = '<%= basePath %>';
+                    const url = `${basePath}/admin/${event.detail.type}/${encodeURIComponent(event.detail.name)}`;
+                    
+                    // 履歴を更新（URLバーの表示を変更）
+                    history.pushState({}, '', url);
+                    
+                    // centerPanelを更新するリクエストを送信
+                    // スクリプト表示用のレンダラーAPIを呼び出し
+                    const response = await fetch(`${basePath}/api/renderer/centerPanel`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            type: event.detail.type,
+                            name: event.detail.name
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('centerPanelの更新に失敗しました');
+                    }
+                    
+                    const html = await response.text();
+                    document.getElementById('center').innerHTML = html;
+                    
+                    // スクリプトの初期化処理を呼び出し
+                    // scriptPanel.ejsのイベントリスナーを再設定
+                    const scriptTags = Array.from(document.getElementById('center').querySelectorAll('script'));
+                    for (const scriptTag of scriptTags) {
+                        if (scriptTag.textContent.trim() !== '') {
+                            const newScript = document.createElement('script');
+                            if (scriptTag.src) {
+                                newScript.src = scriptTag.src;
+                            } else {
+                                newScript.textContent = scriptTag.textContent;
+                            }
+                            scriptTag.parentNode.replaceChild(newScript, scriptTag);
+                        }
+                    }
+                    
+                    console.log(`スクリプト ${event.detail.name} を中央パネルに表示しました`);
+                } catch (error) {
+                    console.error('中央パネル更新エラー:', error);
+                    document.getElementById('center').innerHTML = `
+                        <div class="error-panel">
+                            <h3>エラー</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+        });
     </script>
     
 

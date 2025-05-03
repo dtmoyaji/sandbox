@@ -382,6 +382,81 @@ a {
     overflow: auto;
 }
 
+/* スクリプト表示用のスタイル */
+.script-panel {
+    padding: 1em;
+    height: 100%;
+    overflow: auto;
+}
+
+.script-panel h2 {
+    margin-bottom: 1em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid var(--header-background-hover-color);
+}
+
+.script-content {
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 1em;
+    overflow: auto;
+    max-height: calc(100% - 5em);
+}
+
+.script-content pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* スクリプト情報表示のスタイル */
+.script-info {
+    margin-top: 1em;
+    padding: 1em;
+    background-color: #f0f8ff;
+    border: 1px solid #d0e0f0;
+    border-radius: 5px;
+}
+
+.script-info h3 {
+    margin-bottom: 0.5em;
+    color: #3a5d7a;
+}
+
+/* エラーと警告メッセージのスタイル */
+.script-error {
+    margin-top: 1em;
+}
+
+.error-message {
+    padding: 1em;
+    background-color: #fff0f0;
+    border: 1px solid #ffcfcf;
+    border-radius: 5px;
+    color: #a02020;
+}
+
+.error-message h3 {
+    margin-bottom: 0.5em;
+    color: #d04040;
+}
+
+.warning-message {
+    padding: 1em;
+    background-color: #fffbe6;
+    border: 1px solid #fff2a0;
+    border-radius: 5px;
+    color: #856404;
+}
+
+.warning-message h3 {
+    margin-bottom: 0.5em;
+    color: #9a7a01;
+}
+
 #tableDefinition {
     width: 100%;
     height: 20em;

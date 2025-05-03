@@ -40,6 +40,12 @@ export class ScriptExecutor {
 
             const bind_module = JSON.parse(scriptRecord[0].bind_module);
             let scriptContent = scriptRecord[0].script;
+            
+            // スクリプト内容のチェックを追加
+            if (!scriptContent || scriptContent.trim() === '') {
+                throw new Error('スクリプト内容がありません。このスクリプトは空です。');
+            }
+            
             // \\nを改行に変換
             scriptContent = scriptContent.replace(/\\n/g, '\n');
 
