@@ -263,9 +263,12 @@ export class Table {
             if (filter) {
                 for (const [key, value] of Object.entries(filter)) {
                     if (Array.isArray(value)) {
+                        if (value.length === 0) {
+                            continue; // 空の配列はスキップ
+                        }
                         if (typeof value[0] === 'string' && value[0].includes('|')) {
                             for (let i = 0; i < value.length; i++) {
-                                if (value[i].includes('|')) {
+                                if (value[i] && value[i].includes('|')) {
                                     const values = value[i].split('|');
                                     if (values.length === 2) {
                                         query = query.where(key, values[0], values[1]);
@@ -273,7 +276,11 @@ export class Table {
                                 }
                             }
                         } else {
-                            query = query.whereIn(key, value);
+                            // 配列から undefined や null を除外
+                            const filteredValues = value.filter(item => item !== undefined && item !== null);
+                            if (filteredValues.length > 0) {
+                                query = query.whereIn(key, filteredValues);
+                            }
                         }
                     } else if (typeof value === 'string' && value.includes('|')) {
                         const values = value.split('|');
@@ -287,7 +294,10 @@ export class Table {
                             query = query.whereNull(key);
                             continue;
                         }
-                        const lowerValue = typeof value[0] === 'string' ? value[0].toLowerCase() : value;
+                        if (value === undefined) {
+                            continue; // undefined 値はスキップ
+                        }
+                        const lowerValue = typeof value === 'string' ? value.toLowerCase() : value;
                         if (lowerValue === 'is not null') {
                             query = query.whereNotNull(key);
                         } else if (lowerValue === 'is null') {
@@ -325,9 +335,12 @@ export class Table {
             if (filter) {
                 for (const [key, value] of Object.entries(filter)) {
                     if (Array.isArray(value)) {
+                        if (value.length === 0) {
+                            continue; // 空の配列はスキップ
+                        }
                         if (typeof value[0] === 'string' && value[0].includes('|')) {
                             for (let i = 0; i < value.length; i++) {
-                                if (value[i].includes('|')) {
+                                if (value[i] && value[i].includes('|')) {
                                     const values = value[i].split('|');
                                     if (values.length === 2) {
                                         query = query.where(key, values[0], values[1]);
@@ -335,7 +348,11 @@ export class Table {
                                 }
                             }
                         } else {
-                            query = query.whereIn(key, value);
+                            // 配列から undefined や null を除外
+                            const filteredValues = value.filter(item => item !== undefined && item !== null);
+                            if (filteredValues.length > 0) {
+                                query = query.whereIn(key, filteredValues);
+                            }
                         }
                     } else if (typeof value === 'string' && value.includes('|')) {
                         const values = value.split('|');
@@ -349,7 +366,10 @@ export class Table {
                             query = query.whereNull(key);
                             continue;
                         }
-                        const lowerValue = typeof value[0] === 'string' ? value[0].toLowerCase() : value;
+                        if (value === undefined) {
+                            continue; // undefined 値はスキップ
+                        }
+                        const lowerValue = typeof value === 'string' ? value.toLowerCase() : value;
                         if (lowerValue === 'is not null') {
                             query = query.whereNotNull(key);
                         } else if (lowerValue === 'is null') {

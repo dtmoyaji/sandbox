@@ -94,3 +94,62 @@ export function generateRandomToken(length = 32) {
     return crypto.randomBytes(length).toString('hex');
 }
 
+/**
+ * ユーザー認証を行う
+ * @param {string} username ユーザー名
+ * @param {string} password パスワード
+ * @param {object} userTable ユーザーテーブルモデル
+ * @param {object} logger ロガーオブジェクト
+ * @returns {Promise<object>} 認証結果と必要なデータ
+ */
+export async function authenticateUser(username, password, userTable, logger = console) {
+    try {
+        logger.info(`ユーザー認証開始: ${username}`);
+        
+        // ユーザー検索
+        const users = await userTable.get({ user_name: username });
+        if (users.length === 0) {
+            logger.warn(`ユーザーが見つかりません: ${username}`);
+            return { success: false, reason: 'user_not_found' };
+        }
+        
+        const user = users[0];
+        
+        // パスワード検証
+        const passwordMatch = await verifyPassword(password, user.user_password);
+        if (!passwordMatch) {
+            logger.warn(`パスワードが一致しません: ${username}`);
+            return { success: false, reason: 'invalid_password' };
+        }
+        
+        // シークレットキー処理
+        let secretKey = user.secret_key;
+        if (!secretKey) {
+            logger.info(`新しいシークレットキーを生成します: ${username}`);
+            const secretKeyObj = await generateSecretKey(user.user_password);
+            secretKey = typeof secretKeyObj === 'object' && secretKeyObj.key ? 
+                secretKeyObj.key : String(secretKeyObj).substring(0, 255);
+                
+            // ユーザーレコード更新
+            await userTable.put({
+                user_id: user.user_id,
+                secret_key: secretKey
+            });
+        } 
+        else if (typeof secretKey === 'object' && secretKey !== null) {
+            secretKey = secretKey.key ? secretKey.key : JSON.stringify(secretKey);
+            secretKey = secretKey.substring(0, 255);
+        }
+        
+        logger.info(`ユーザー認証成功: ${username}`);
+        return {
+            success: true,
+            user,
+            secretKey
+        };
+    } catch (error) {
+        logger.error(`認証処理エラー: ${error.message}`, error);
+        return { success: false, reason: 'auth_error', error };
+    }
+}
+

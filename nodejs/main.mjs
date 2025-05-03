@@ -21,6 +21,7 @@ import { RestUtil } from './controllers/rest/rest-util.mjs';
 import { ScriptExecutor } from './controllers/script/script-executer.mjs';
 import { LineworksMessageSender } from './controllers/sns/lineworks/lineworks_message_sender.mjs';
 import { WebSocket } from './controllers/websocket/websocket.mjs';
+import EjsRenderer from './views/renderer/ejs-renderer.mjs';
 import PageRenderer from './views/renderer/page-renderer.mjs';
 
 // 設定の読み込み
@@ -66,6 +67,9 @@ class Application {
             await modelManager.reloadModels();
             await restoreData(modelManager);
 
+            // 多言語対応データを事前に取得
+            const translations = await this.loadTranslations(modelManager);
+
             // ロガーとWebSocketの初期化
             const logger = new Logger(modelManager);
             const websocket = new WebSocket(this.app, logger);
@@ -73,7 +77,8 @@ class Application {
 
             // その他のコンポーネント初期化
             const scriptExecutor = new ScriptExecutor(modelManager, websocket);
-            const pageRenderer = new PageRenderer(restUtil, modelManager);
+            const pageRenderer = new PageRenderer(restUtil, modelManager, translations);
+            const ejsRenderer = new EjsRenderer(restUtil, modelManager, translations);
 
             // 初期化したコンポーネントを保存
             this.components = {
@@ -86,12 +91,69 @@ class Application {
                 logger,
                 websocket,
                 scriptExecutor,
-                pageRenderer
+                pageRenderer,
+                ejsRenderer,
+                translations
             };
 
             return this.components;
         } catch (error) {
             throw new Error(`システム初期化エラー: ${error.message}`);
+        }
+    }
+
+    /**
+     * 多言語対応データを取得する（キャッシュ機構付き）
+     * @param {ModelManager} modelManager モデルマネージャーインスタンス
+     * @returns {Promise<Object>} 言語ごとの翻訳データマップ
+     */
+    async loadTranslations(modelManager) {
+        try {
+            console.log('多言語データの読み込みを開始します...');
+            
+            // キャッシュの有効期限チェック
+            const cacheKey = 'translations_cache';
+            const cacheExpiry = 'translations_cache_expiry';
+            const cacheTTL = 3600000; // 1時間（ミリ秒）
+            
+            // キャッシュ確認
+            if (this.cache && this.cache[cacheKey] && 
+                this.cache[cacheExpiry] && Date.now() < this.cache[cacheExpiry]) {
+                console.log('キャッシュから多言語データを読み込みました');
+                return this.cache[cacheKey];
+            }
+            
+            // キャッシュがない場合はDBから取得
+            const l10nTable = await modelManager.getModel('l10n');
+            const allL10nData = await l10nTable.get({});
+            
+            // サポートする言語一覧を取得（l10nテーブルの全てのlangを取得）
+            const languages = [...new Set(allL10nData.map(item => item.lang))];
+            console.log(`サポートされている言語: ${languages.join(', ')}`);
+            
+            // 各言語のデータを取得
+            const translations = {};
+            for (const lang of languages) {
+                const langData = allL10nData.filter(item => item.lang === lang);
+                translations[lang] = {};
+                
+                // 言語ごとにキーと値のマップを作成
+                langData.forEach(item => {
+                    translations[lang][item.src] = item.dst;
+                });
+                
+                console.log(`${lang}: ${Object.keys(translations[lang]).length}件の翻訳データを読み込みました`);
+            }
+            
+            // キャッシュに保存
+            if (!this.cache) this.cache = {};
+            this.cache[cacheKey] = translations;
+            this.cache[cacheExpiry] = Date.now() + cacheTTL;
+            
+            return translations;
+        } catch (error) {
+            console.error('多言語データの読み込みに失敗しました:', error);
+            return this.cache && this.cache[cacheKey] ? this.cache[cacheKey] : {};
         }
     }
 
@@ -103,7 +165,7 @@ class Application {
         const { app } = this;
         const { restUtil, logger } = this.components;
 
-        // セキュリティ強化
+        // セキュリティ強化 - より詳細なCSP設定
         app.use(helmet({
             contentSecurityPolicy: {
                 directives: {
@@ -111,17 +173,38 @@ class Application {
                     scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
                     styleSrc: ["'self'", "'unsafe-inline'"],
                     imgSrc: ["'self'", "data:"],
+                    connectSrc: ["'self'"],
+                    fontSrc: ["'self'"],
+                    objectSrc: ["'none'"],
+                    frameAncestors: ["'self'"],
+                    formAction: ["'self'"],
+                    upgradeInsecureRequests: []
                 }
-            }
+            },
+            // XSSフィルタリングを有効化
+            xssFilter: true,
+            // HTTPSの使用を強制（本番環境のみ）
+            hsts: config.environment === 'production' ? {
+                maxAge: 31536000,
+                includeSubDomains: true,
+                preload: true
+            } : false
         }));
 
-        // レスポンス圧縮
-        app.use(compression());
+        // レスポンス圧縮 - 圧縮レベルとしきい値を設定
+        app.use(compression({
+            level: 6, // 1-9の間、高いほど圧縮率上がるが処理が重くなる
+            threshold: 1024 // 1KB以上のレスポンスのみ圧縮
+        }));
 
-        // CORS設定
+        // CORS設定 - より詳細な設定
         app.use(cors({
             origin: process.env.CORS_ORIGIN || '*',
-            credentials: true
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+            exposedHeaders: ['Content-Length', 'X-Request-Id'],
+            credentials: true,
+            maxAge: 86400 // プリフライトリクエストのキャッシュ時間（秒）
         }));
 
         // 静的ファイルの提供
@@ -393,12 +476,12 @@ class Application {
                             secretKey = secretKey.substring(0, 255);
                         }
 
-                        const refreshToken = await credential.generateToken(
+                        const refreshToken = credential.generateToken(
                             { userId: registeredUser[0].user_id, username: user, type: 'refresh_token' },
                             secretKey,
                             config.jwtExpiresIn || '90d'
                         );
-                        const accessToken = await credential.generateToken(
+                        const accessToken = credential.generateToken(
                             { userId: registeredUser[0].user_id, username: user, type: 'access_token' },
                             secretKey,
                             config.jwtExpiresIn || '1d'

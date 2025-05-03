@@ -254,6 +254,41 @@
 
   async function downloadData(targetTable, pagingInfo) {
     console.log('downloadData: ' + targetTable);
+    
+    try {
+      // APIからデータを取得
+      const response = await fetch(`<%= basePath %>/api/models/${targetTable}/download`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} ${response.statusText}`);
+      }
+
+      // レスポンスをBlobとして取得
+      const blob = await response.blob();
+      
+      // ダウンロードリンクを作成
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${targetTable}_${new Date().toISOString().slice(0, 10)}.csv`;
+      
+      // リンクをクリックしてダウンロード開始
+      document.body.appendChild(a);
+      a.click();
+      
+      // クリーンアップ
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading data:', error);
+      alert(`ダウンロード中にエラーが発生しました: ${error.message}`);
+    }
   }
 
   async function showOpenFileDialog() {

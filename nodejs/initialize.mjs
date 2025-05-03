@@ -8,6 +8,75 @@ import { Connection } from './models/connection.mjs';
 
 dotenv.config();
 
+/**
+ * 環境変数の存在をチェックして必要に応じてデフォルト値を設定
+ * @param {Object} config - 設定オブジェクト
+ * @param {Object} logger - ロガーオブジェクト
+ * @returns {Promise<Object>} 更新された設定オブジェクト
+ */
+export async function validateEnvironment(config, logger) {
+    // 必須環境変数のチェック
+    const requiredVars = ['JWT_SECRET'];
+    const missing = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missing.length > 0) {
+        logger.warn(`警告: 以下の環境変数が設定されていません: ${missing.join(', ')}`);
+        
+        // JWT_SECRETがない場合は自動生成（開発環境のみ）
+        if (missing.includes('JWT_SECRET') && config.environment !== 'production') {
+            const crypto = (await import('crypto')).default;
+            process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+            logger.warn('警告: JWT_SECRETを自動生成しました。本番環境では明示的に設定してください。');
+        }
+    }
+    
+    // 設定値の検証と警告
+    if (config.environment === 'production') {
+        // セキュリティ関連の警告
+        if (!config.cookieSecure) {
+            logger.warn('警告: 本番環境ではcookieSecureをtrueに設定することを強く推奨します');
+        }
+        
+        // データベース接続関連の警告
+        if (!process.env.DB_PASSWORD || process.env.DB_PASSWORD === 'postgres') {
+            logger.warn('警告: 本番環境ではデフォルトのデータベースパスワードを使用すべきではありません');
+        }
+    }
+    
+    // パスの正規化
+    if (config.basePath) {
+        // 先頭のスラッシュを確保
+        if (!config.basePath.startsWith('/')) {
+            config.basePath = '/' + config.basePath;
+        }
+        
+        // 末尾のスラッシュを削除
+        if (config.basePath.endsWith('/') && config.basePath !== '/') {
+            config.basePath = config.basePath.slice(0, -1);
+        }
+    }
+    
+    // ログレベルの設定
+    config.logLevel = process.env.LOG_LEVEL || (config.environment === 'production' ? 'info' : 'debug');
+    
+    // 追加の設定値を解析してconfigに追加
+    if (process.env.CORS_ORIGIN) {
+        try {
+            // カンマ区切りの文字列をパース
+            if (process.env.CORS_ORIGIN.includes(',')) {
+                config.corsOrigin = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
+            } else {
+                config.corsOrigin = process.env.CORS_ORIGIN;
+            }
+        } catch (err) {
+            logger.warn(`CORS_ORIGINの解析エラー: ${err.message}, '*'を使用します`);
+            config.corsOrigin = '*';
+        }
+    }
+    
+    return config;
+}
+
 let conn = new Connection();
 await conn.connect();
 

@@ -1,16 +1,55 @@
 <div id="centerPanel">
     <%
-        let path = params.path[0];
-        let targetTable = params.path[1];
-
-        switch (path) {
-            case 'table':
+        try {
+            // バリデーション - 必要なパラメータをチェック
+            if (!params || !params.path) {
+                throw new Error('パラメータが不足しています');
+            }
+            
+            let path = params.path[0];
+            let targetTable = params.path[1];
+            
+            // デバッグ情報
+            console.log(`centerPanel.ejsのレンダリング - path: ${path}, targetTable: ${targetTable}`);
+            
+            switch (path) {
+                case 'table':
+                    if (!targetTable) {
+                        throw new Error('テーブル名が指定されていません');
+                    }
+                    // テーブルパネルのパラメータ確認
+                    if (!tableTranslations) {
+                        console.warn('tableTranslationsが渡されていません。デフォルト値を使用します。');
+                        tableTranslations = {
+                            'data': 'データ',
+                            'definition': '定義',
+                            'REST': 'REST',
+                            'Data View': 'データビュー',
+                            'テーブル定義': 'テーブル定義'
+                        };
+                    }
             %>
-            <%- include('./tablePanel.ejs', { targetTable: targetTable, params: params }); %>
+                <%- include('./tablePanel.ejs', { 
+                    targetTable: targetTable, 
+                    params: params,
+                    tableTranslations: tableTranslations,
+                    basePath: typeof basePath !== 'undefined' ? basePath : ''
+                }); %>
             <%
-                break;
-            default:
-                break;
+                    break;
+                default:
+                    // 何も表示しない
+                    break;
+            }
+        } catch (err) {
+            // エラーハンドリング
+            console.error('centerPanel.ejsのレンダリングエラー:', err);
+    %>
+            <div class="error-panel">
+                <h3>レンダリングエラー</h3>
+                <p><%= err.message %></p>
+            </div>
+    <%
         }
     %>
 </div>

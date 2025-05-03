@@ -21,7 +21,13 @@
             </div>
 
             <div id="center" open="true">
-                <%- centerPanel %>
+                <% if (typeof centerPanel === 'object' && centerPanel !== null && centerPanel.toString) { %>
+                    <%- centerPanel.toString() %>
+                <% } else if (typeof centerPanel === 'string') { %>
+                    <%- centerPanel %>
+                <% } else { %>
+                    <div class="error-panel">センターパネルの表示中にエラーが発生しました</div>
+                <% } %>
             </div>
         </div>
         <div id="footer">

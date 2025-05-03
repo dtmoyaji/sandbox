@@ -3,22 +3,30 @@
         <h2 class="panel-caption">テーブル: <%= targetTable %>
         </h2>
         <ul class="tab-holder">
-            <li class="tab" id="data" selected="true">data</li>
-            <li class="tab" id="definition">definition</li>
-            <li class="tab" id="rest">REST</li>
+            <li class="tab" id="data" selected="true"><%- typeof tableTranslations === 'object' && tableTranslations['data'] ? tableTranslations['data'] : 'データ' %></li>
+            <li class="tab" id="definition"><%- typeof tableTranslations === 'object' && tableTranslations['definition'] ? tableTranslations['definition'] : '定義' %></li>
+            <li class="tab" id="rest"><%- typeof tableTranslations === 'object' && tableTranslations['REST'] ? tableTranslations['REST'] : 'REST' %></li>
         </ul>
     </div>
     <div class="panel-body">
         <div class="centerView-holder">
             <div class="centerView" id="dataView" style="display: block;">
-                <h3 id="dataViewCaption">Data View </h3>
-                <%
-                    let queryParameters = params;
-                %>
-                <%- include('../genericTable/genericTable.ejs', {targetTable: targetTable, params: queryParameters}); %>
+                <h3 id="dataViewCaption"><%- typeof tableTranslations === 'object' && tableTranslations['Data View'] ? tableTranslations['Data View'] : 'データビュー' %></h3>
+                <% try { %>
+                    <%- include('../genericTable/genericTable.ejs', {
+                        targetTable: targetTable,
+                        params: params,
+                        basePath: typeof basePath !== 'undefined' ? basePath : ''
+                    }); %>
+                <% } catch (err) { %>
+                    <div class="error-panel">
+                        <h3>テーブル表示エラー</h3>
+                        <p><%= err.message %></p>
+                    </div>
+                <% } %>
             </div>
             <div class="centerView" id="definitionView" style="display: none;">
-                <h3>テーブル定義</h3>
+                <h3><%- typeof tableTranslations === 'object' && tableTranslations['テーブル定義'] ? tableTranslations['テーブル定義'] : 'テーブル定義' %></h3>
                 <pre id="tableDefinition"></pre>
             </div>
             <div class="centerView" id="restView" style="display: none;">
@@ -31,12 +39,6 @@
 <script>
     // タブの切り替え
     document.addEventListener('DOMContentLoaded', async function () {
-
-        await getL10n('dataViewCaption');
-        await getL10n('data');
-        await getL10n('definition');
-        await getL10n('rest');
-
         const tabs = document.querySelectorAll('.tab');
         const views = document.querySelectorAll('.centerView');
 
@@ -57,14 +59,20 @@
 
     // 再描画
     document.addEventListener('DOMContentLoaded', async function () {
-        const targetTable = '<%= targetTable %>';
-
         try {
-            const response = await fetch(`<%= basePath %>/api/models/tableDefinition/${targetTable}`);
+            const targetTable = '<%= targetTable %>';
+            console.log('テーブル定義を取得します:', targetTable);
+
+            const response = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/tableDefinition/${targetTable}`);
+            if (!response.ok) {
+                throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
+            }
+            
             const tableDefinition = await response.text();
             document.getElementById('tableDefinition').innerHTML = JSON.stringify(JSON.parse(tableDefinition), null, 2);
         } catch (error) {
-            console.error('Error fetching table definition:', error);
+            console.error('テーブル定義の取得エラー:', error);
+            document.getElementById('tableDefinition').innerHTML = `エラー: ${error.message}`;
         }
     });
 </script>

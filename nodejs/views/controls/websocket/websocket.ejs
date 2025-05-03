@@ -1,15 +1,4 @@
 <script>
-    async function getL10n(tagId) {
-        var tag = document.getElementById(tagId);
-        if (tag) {
-            let dst = await fetch('/api/models/l10n?src=' + tag.innerText);
-            let dstJson = (await dst.json()).data;
-            if (dstJson.length > 0) {
-                tag.innerText = dstJson[0].dst;
-            }
-        }
-    }
-
     // UUIDを生成する関数
     function generateUUID() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
