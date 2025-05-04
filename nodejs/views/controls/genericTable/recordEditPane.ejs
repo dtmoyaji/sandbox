@@ -1,7 +1,19 @@
-<div id="recordEditPane" class="recordEditPane">
-  <div id="recordEditTitle"><%= targetTable %></div>
-  <div id="inputControls" class="inputControls"></div>
+<div id="record-edit-pane" class="record-edit-pane">
+    <div class="edit-pane-header">
+        <h3 id="edit-pane-title">レコード編集</h3>
+        <button class="close-button" id="edit-pane-close">&times;</button>
+    </div>
+    <div class="edit-pane-body">
+        <form id="record-edit-form">
+            <!-- フォームフィールドは動的に生成されます -->
+        </form>
+    </div>
+    <div class="edit-pane-footer">
+        <button type="button" id="save-record-btn" class="save-btn">保存</button>
+        <button type="button" id="cancel-edit-btn" class="cancel-btn">キャンセル</button>
+    </div>
 </div>
+
 <script>
   var targetTable = '<%= targetTable %>';
 
@@ -10,7 +22,7 @@
   });
 
   async function createEditControls() {
-    var inputControlls = document.getElementById('inputControls');
+    var inputControlls = document.getElementById('record-edit-form');
     console.log('createEditControls');
     var tableInfo = await fetch(`<%= basePath %>/api/models/tableDefinition/${targetTable}`);
     var tableInfoJson = await tableInfo.json();
@@ -18,23 +30,29 @@
     console.log(fields);
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
-      var editRow = document.createElement('div');
-      editRow.setAttribute('class', 'editRow');
+      var formGroup = document.createElement('div');
+      formGroup.setAttribute('class', 'form-group');
       var label = document.createElement('label');
       label.textContent = field.name;
       label.setAttribute('for', field.name);
-      label.setAttribute('class', 'editLabel');
+      label.setAttribute('class', 'form-label');
 
       var input = createInputTag(field);
       if (field.primaryKey === true || field.notNull === true) {
         label.textContent += ' (*)';
         input.setAttribute('required', 'true');
+      }
+      if (field.primaryKey === true) {
         input.setAttribute('primary', 'true');
+        // 主キーで自動採番の場合は読み取り専用に
+        if (field.autoIncrement) {
+          input.setAttribute('readonly', 'true');
+        }
       }
 
-      editRow.appendChild(label);
-      editRow.appendChild(input);
-      inputControlls.appendChild(editRow);
+      formGroup.appendChild(label);
+      formGroup.appendChild(input);
+      inputControlls.appendChild(formGroup);
     }
   }
 
@@ -44,11 +62,34 @@
       case 'TEXT':
         result = createTextInput(field);
         break;
+      case 'INTEGER':
+      case 'BIGINT':
+      case 'SMALLINT':
+        result = createNumberInput(field);
+        break;
+      case 'DECIMAL':
+      case 'NUMERIC':
+      case 'REAL':
+      case 'DOUBLE PRECISION':
+        result = createFloatInput(field);
+        break;
+      case 'BOOLEAN':
+        result = createBooleanInput(field);
+        break;
+      case 'DATE':
+        result = createDateInput(field);
+        break;
+      case 'TIME':
+        result = createTimeInput(field);
+        break;
+      case 'TIMESTAMP':
+      case 'TIMESTAMP WITH TIME ZONE':
+        result = createDateTimeInput(field);
+        break;
       default:
         result = createStringInput(field);
         break;
     }
-    console.log(result);
     return result;
   }
 
@@ -57,7 +98,10 @@
     var input = document.createElement('input');
     input.setAttribute('type', 'text');
     input.setAttribute('name', field.name);
-    input.setAttribute('class', 'editInput');
+    input.setAttribute('class', 'form-control');
+    if (field.maxLength) {
+      input.setAttribute('maxlength', field.maxLength);
+    }
     return input;
   }
 
@@ -65,22 +109,117 @@
   function createTextInput(field) {
     var input = document.createElement('textarea');
     input.setAttribute('name', field.name);
-    input.setAttribute('class', 'editInput');
+    input.setAttribute('class', 'form-control');
+    input.setAttribute('rows', '3');
+    return input;
+  }
 
+  // number field input
+  function createNumberInput(field) {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'number');
+    input.setAttribute('name', field.name);
+    input.setAttribute('class', 'form-control');
+    input.setAttribute('step', '1');
+    return input;
+  }
+
+  // float field input
+  function createFloatInput(field) {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'number');
+    input.setAttribute('name', field.name);
+    input.setAttribute('class', 'form-control');
+    input.setAttribute('step', '0.01');
+    return input;
+  }
+
+  // boolean field input
+  function createBooleanInput(field) {
+    var container = document.createElement('div');
+    container.setAttribute('class', 'checkbox-container');
+    
+    var input = document.createElement('input');
+    input.setAttribute('type', 'checkbox');
+    input.setAttribute('name', field.name);
+    input.setAttribute('id', `${field.name}_check`);
+    input.setAttribute('class', 'form-control-checkbox');
+    
+    container.appendChild(input);
+    return container;
+  }
+
+  // date field input
+  function createDateInput(field) {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'date');
+    input.setAttribute('name', field.name);
+    input.setAttribute('class', 'form-control');
+    return input;
+  }
+
+  // time field input
+  function createTimeInput(field) {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'time');
+    input.setAttribute('name', field.name);
+    input.setAttribute('class', 'form-control');
+    return input;
+  }
+
+  // datetime field input
+  function createDateTimeInput(field) {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'datetime-local');
+    input.setAttribute('name', field.name);
+    input.setAttribute('class', 'form-control');
     return input;
   }
 
   function drawRecord(recordData) {
-    console.log(recordData);
+    console.log('Drawing record data:', recordData);
     var record = typeof recordData === 'string' ? JSON.parse(recordData) : recordData;
-    var editRows = document.querySelectorAll('.editRow');
-    for (var i = 0; i < editRows.length; i++) {
-      var editRow = editRows[i];
-      var input = editRow.getElementsByClassName('editInput')[0];
+    var formGroups = document.querySelectorAll('.form-group');
+    
+    for (var i = 0; i < formGroups.length; i++) {
+      var formGroup = formGroups[i];
+      var input = formGroup.querySelector('input, textarea, select');
+      
+      if (!input) continue;
+      
       var fieldName = input.getAttribute('name');
-      if (fieldName && record[fieldName] !== undefined) {
+      if (!fieldName || record[fieldName] === undefined) continue;
+      
+      // 型に応じて値をセット
+      if (input.type === 'checkbox') {
+        input.checked = Boolean(record[fieldName]);
+      } else if (input.type === 'datetime-local' && record[fieldName]) {
+        // ISO8601形式の日時からローカルのdatetime-local形式に変換
+        try {
+          const date = new Date(record[fieldName]);
+          // ISO形式の文字列を取得して、"Z"（UTCを示す）を除去
+          let isoString = date.toISOString();
+          // datetime-local要素が必要とする形式（YYYY-MM-DDThh:mm）に変換
+          input.value = isoString.substring(0, isoString.indexOf('Z')).substring(0, 16);
+        } catch (e) {
+          console.error('日時変換エラー:', e);
+          input.value = '';
+        }
+      } else if (input.type === 'date' && record[fieldName]) {
+        // 日付のみの場合
+        try {
+          const date = new Date(record[fieldName]);
+          input.value = date.toISOString().split('T')[0];
+        } catch (e) {
+          console.error('日付変換エラー:', e);
+          input.value = '';
+        }
+      } else {
         input.value = record[fieldName];
       }
     }
   }
+  
+  // グローバルに関数を公開
+  window.drawRecord = drawRecord;
 </script>

@@ -16,35 +16,105 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
         let listTag = document.getElementById('list');
+
+        // リストを描画する関数を追加
+        async function renderList(type, apiEndpoint) {
+            console.log(`${type}リストを取得します: ${apiEndpoint}`);
+            try {
+                // キャッシュを防ぐためのタイムスタンプを追加
+                const timestamp = new Date().getTime();
+                const response = await fetch(`${apiEndpoint}?t=${timestamp}`);
+                
+                if (!response.ok) {
+                    throw new Error(`APIエラー: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log(`${type}データを取得しました:`, data);
+                
+                // データの形式に応じて調整（data配列が直接か、data.dataの中にあるか）
+                const items = data.data || data;
+                
+                if (items && items.length > 0) {
+                    const newList = await createTableList(items);
+                    const listContainer = document.getElementById('list');
+                    listContainer.innerHTML = '';
+                    listContainer.appendChild(newList);
+                } else {
+                    document.getElementById('list').innerHTML = '<li>項目が見つかりません</li>';
+                }
+            } catch (error) {
+                console.error(`${type}リストの取得エラー:`, error);
+                document.getElementById('list').innerHTML = `<li>エラー: ${error.message}</li>`;
+            }
+        }
+
+        // delegateClickEvents関数を追加
+        function delegateClickEvents() {
+            document.getElementById('list').addEventListener('click', async (e) => {
+                const target = e.target.closest('a');
+                if (!target) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const type = listType.toLowerCase();
+                const name = target.textContent;
+                
+                try {
+                    console.log(`${type}ページへジャンプします: ${name}`);
+                    const basePath = '<%= basePath %>';
+                    
+                    // タイプに応じてジャンプ先URLを構築
+                    let jumpUrl;
+                    switch (type) {
+                        case 'table':
+                            jumpUrl = `${basePath}/admin/table/${name}`;
+                            break;
+                        case 'application':
+                            jumpUrl = `${basePath}/admin/application/${name}`;
+                            break;
+                        case 'script':
+                            jumpUrl = `${basePath}/admin/script/${name}`;
+                            break;
+                        case 'query':
+                            jumpUrl = `${basePath}/admin/query/${name}`;
+                            break;
+                        default:
+                            jumpUrl = `${basePath}/admin/`;
+                            break;
+                    }
+                    
+                    // ページジャンプ
+                    window.location.href = jumpUrl;
+                    
+                } catch (error) {
+                    console.error(`${type}ページジャンプエラー:`, error);
+                }
+            });
+        }
+
         switch (listType) {
             case 'application':
-                let applicationList = await fetch('<%= basePath %>/api/models/application');
-                applicationList = await applicationList.json();
-                applicationList = applicationList.data;
-                listTag.replaceWith(await createTableList(applicationList));
+                renderList('application', '<%= basePath %>/api/models/application');
                 break;
             case 'table':
-                let tableList = await fetch('<%= basePath %>/api/models/all');
-                tableList = await tableList.json();
-                listTag.replaceWith(await createTableList(tableList));
+                renderList('table', '<%= basePath %>/api/models/table_def');
                 break;
             case 'script':
                 console.log('script is selected');
-                let scriptList = await fetch('<%= basePath %>/api/models/script');
-                scriptList = await scriptList.json();
-                scriptList = scriptList.data;
-                listTag.replaceWith(await createTableList(scriptList));
+                renderList('script', '<%= basePath %>/api/models/script');
                 break;
             case 'query':
                 console.log('query is selected');
-                let queryList = await fetch('<%= basePath %>/api/models/query_template');
-                queryList = await queryList.json();
-                queryList = queryList.data;
-                listTag.replaceWith(await createTableList(queryList));
+                renderList('query', '<%= basePath %>/api/models/query_template');
                 break;
             default:
                 break;
         }
+        
+        // イベント委譲を設定
+        delegateClickEvents();
         
         // 検索機能を追加
         const searchInput = document.getElementById('search');
@@ -64,53 +134,34 @@
     });
 
     async function createTableList(json) {
-        //console.log(json);
         const list = document.createElement('ul');
-        // idを設定
         list.id = 'list';
         json.forEach((element) => {
-            //console.log(element);
             const li = document.createElement('li');
             const a = document.createElement('a');
+            
             switch (listType) {
                 case 'application':
-                    a.href = '<%= basePath %>/admin/application/' + element.application_name;
                     a.textContent = element.application_name;
                     break;
                 case 'table':
-                    a.href = '<%= basePath %>/admin/table/' + element.table_name;
                     a.textContent = element.table_name;
                     break;
                 case 'script':
-                    // スクリプトの場合はクリックイベントを追加して、centerPanelに表示する
                     a.textContent = element.script_name;
-                    a.href = 'javascript:void(0)'; // リンクのデフォルト動作をキャンセル
-                    a.addEventListener('click', async () => {
-                        try {
-                            // スクリプト表示用のイベントをディスパッチ
-                            const event = new CustomEvent('showInCenterPanel', {
-                                detail: {
-                                    type: 'script',
-                                    name: element.script_name
-                                }
-                            });
-                            window.dispatchEvent(event);
-                        } catch (error) {
-                            console.error('スクリプト表示エラー:', error);
-                        }
-                    });
                     break;
                 case 'query':
-                    a.href = '<%= basePath %>/admin/query/' + element.name;
                     a.textContent = element.name;
                     break;
                 default:
                     break;
             }
-            // マウスがリンクに乗った時にカーソルをポインタに変更する。
+            
+            a.href = 'javascript:void(0)';
             a.onmouseover = () => {
                 a.style.cursor = 'pointer';
             };
+            
             li.appendChild(a);
             list.appendChild(li);
         });

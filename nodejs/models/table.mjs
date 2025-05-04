@@ -225,10 +225,10 @@ export class Table {
 
     /**
      * ページング情報を取得するメソッド
-     * @param {*} filter 
-     * @param {*} recordLimit 
-     * @param {*} page 
-     * @returns 
+     * @param {*} filter - データ検索フィルター
+     * @param {*} recordLimit - 1ページあたりの表示件数
+     * @param {*} page - 現在のページ番号
+     * @returns {Object} ページング情報
      */
     async getPagingInfo(filter, recordLimit, page) {
         if (recordLimit < 1) {
@@ -239,16 +239,22 @@ export class Table {
         }
         let count = await this.getCount(filter);
         let pages = Math.ceil(count / recordLimit);
+        if (pages < 1) pages = 1; // 最低1ページは表示
+        
         let offset = (page - 1) * recordLimit;
         if (page > pages) { // ページ数が最大ページ数を超える場合は最大ページ数に設定
             page = pages;
             offset = (page - 1) * recordLimit;
         }
         return {
-            count: count,
+            totalItems: count,
+            count: count, // 後方互換性のため残す
             pages: pages,
             currentPage: page,
             offset: offset,
+            recordsPerPage: recordLimit,
+            hasNext: page < pages,
+            hasPrevious: page > 1
         };
     }
 
@@ -260,8 +266,37 @@ export class Table {
     async getCount(filter) {
         try {
             let query = this.knex(this.table_name).where({ deleted_at: null }).count({ count: '*' });
-            if (filter) {
-                for (const [key, value] of Object.entries(filter)) {
+            // フィルターからキャッシュ回避用パラメータなどを除外
+            const cleanedFilter = this.cleanFilter(filter);
+            
+            if (cleanedFilter) {
+                // テキスト検索のための特殊処理
+                const textSearchValue = cleanedFilter.name || cleanedFilter.search;
+                if (textSearchValue) {
+                    // テキスト検索を適用するために、テーブル定義からテキスト型のカラムを取得
+                    const textColumns = this.getTextSearchColumns();
+                    
+                    if (textColumns.length > 0) {
+                        // フィルタから検索用パラメータを削除（個別に処理するため）
+                        delete cleanedFilter.name;
+                        delete cleanedFilter.search;
+                        
+                        // 複数カラムに対するOR条件で検索
+                        query = query.where(function() {
+                            const builder = this;
+                            textColumns.forEach((column, index) => {
+                                if (index === 0) {
+                                    builder.where(column, 'like', `%${textSearchValue}%`);
+                                } else {
+                                    builder.orWhere(column, 'like', `%${textSearchValue}%`);
+                                }
+                            });
+                        });
+                    }
+                }
+                
+                // 残りのフィルタを適用
+                for (const [key, value] of Object.entries(cleanedFilter)) {
                     if (Array.isArray(value)) {
                         if (value.length === 0) {
                             continue; // 空の配列はスキップ
@@ -309,7 +344,7 @@ export class Table {
                 }
             }
             let result = await query;
-            // console.log(`query: ${query.toString()}`);
+            // console.log(`query: ${query.toString()}`); // デバッグ用
             let recordCount = result[0].count;
             return recordCount;
         } catch (err) {
@@ -326,14 +361,43 @@ export class Table {
      * @returns {Promise<object[]>} - 取得したデータの配列
      */
     async get(filter, limit = -1, offset = 0) {
-
         try {
             let query = this.knex(this.table_name).where({ deleted_at: null });
             if (limit > 0) {
                 query = query.limit(limit).offset(offset);
             }
-            if (filter) {
-                for (const [key, value] of Object.entries(filter)) {
+            
+            // フィルターからキャッシュ回避用パラメータなどを除外
+            const cleanedFilter = this.cleanFilter(filter);
+            
+            if (cleanedFilter) {
+                // テキスト検索のための特殊処理
+                const textSearchValue = cleanedFilter.name || cleanedFilter.search;
+                if (textSearchValue) {
+                    // テキスト検索を適用するために、テーブル定義からテキスト型のカラムを取得
+                    const textColumns = this.getTextSearchColumns();
+                    
+                    if (textColumns.length > 0) {
+                        // フィルタから検索用パラメータを削除（個別に処理するため）
+                        delete cleanedFilter.name;
+                        delete cleanedFilter.search;
+                        
+                        // 複数カラムに対するOR条件で検索
+                        query = query.where(function() {
+                            const builder = this;
+                            textColumns.forEach((column, index) => {
+                                if (index === 0) {
+                                    builder.where(column, 'like', `%${textSearchValue}%`);
+                                } else {
+                                    builder.orWhere(column, 'like', `%${textSearchValue}%`);
+                                }
+                            });
+                        });
+                    }
+                }
+                
+                // 残りのフィルタを適用
+                for (const [key, value] of Object.entries(cleanedFilter)) {
                     if (Array.isArray(value)) {
                         if (value.length === 0) {
                             continue; // 空の配列はスキップ
@@ -380,16 +444,35 @@ export class Table {
                     }
                 }
             }
+            
+            // コンソールログにクエリを出力（デバッグ用）
+            console.log(`SQL query: ${query.toString()}`);
+            
             let result = await query;
-            //console.log(`query: ${query.toString()}`);
             return result;
         } catch (err) {
+            console.error('Get data error', err.stack);
             return [{
                 result: '500',
                 message: 'Get data error',
                 error: err.stack
             }];
         }
+    }
+    
+    /**
+     * テキスト検索に使用できるカラムのリストを取得する
+     * @returns {string[]} 検索可能なテキスト型カラムの配列
+     */
+    getTextSearchColumns() {
+        if (!this.tableDefinition || !this.tableDefinition.fields) {
+            return [];
+        }
+        
+        const textTypes = ['VARCHAR', 'STRING', 'TEXT'];
+        return this.tableDefinition.fields
+            .filter(field => textTypes.includes(field.type))
+            .map(field => field.name);
     }
 
     /**
@@ -515,5 +598,31 @@ export class Table {
             console.error('Execute raw query error', err.stack);
             throw err;
         }
+    }
+
+    /**
+     * キャッシュ回避やUI表示用の特殊なパラメータを除外するヘルパーメソッド
+     * @param {object} filter - 元のフィルターオブジェクト
+     * @returns {object} - 特殊パラメータを除外したフィルターオブジェクト
+     */
+    cleanFilter(filter) {
+        if (!filter) return filter;
+        
+        const cleanedFilter = {};
+        // キャッシュ回避や特殊用途のパラメータリスト
+        const excludedParams = [
+            't', '_', 'timestamp', 'cache', 
+            'page', 'limit',  // クライアント側から送信されるページネーションパラメータ
+            'page_size', 'current_page' // サーバー側で使用するページネーションパラメータ
+        ]; 
+        
+        for (const [key, value] of Object.entries(filter)) {
+            // 除外リストに含まれるパラメータは無視
+            if (!excludedParams.includes(key)) {
+                cleanedFilter[key] = value;
+            }
+        }
+        
+        return cleanedFilter;
     }
 }

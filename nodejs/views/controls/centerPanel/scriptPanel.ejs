@@ -1,4 +1,4 @@
-<div class="script-panel">
+<div class="center-panel script-panel">
     <div class="panel-head">
         <h2 class="panel-caption">スクリプト: <%= targetScript %></h2>
         <ul class="tab-holder">
@@ -20,8 +20,8 @@
                 <h3>スクリプトエディタ</h3>
                 <div id="scriptEditor">
                     <div class="editor-container">
-                        <textarea id="scriptCodeEditor" rows="20" style="width: 100%; font-family: monospace;"></textarea>
-                        <div class="button-container" style="margin-top: 10px;">
+                        <textarea id="scriptCodeEditor" rows="20"></textarea>
+                        <div class="button-container">
                             <button id="saveScriptBtn" class="btn btn-primary" style="margin-right: 10px;">保存</button>
                             <button id="resetScriptBtn" class="btn btn-secondary">リセット</button>
                         </div>
@@ -33,24 +33,24 @@
                 <div id="scriptExecute">
                     <div class="execute-container">
                         <h4>パラメータ</h4>
-                        <div id="paramHelp" style="margin-bottom: 10px; background-color: #f8f9fa; padding: 10px; border-radius: 5px; display: none;">
+                        <div id="paramHelp" style="display: none;">
                             <h5>パラメータヘルプ</h5>
                             <div id="paramHelpContent">
                                 パラメータ定義が読み込まれていません。
                             </div>
                         </div>
                         <div id="scriptParams">
-                            <textarea id="scriptParamsEditor" rows="10" style="width: 100%; font-family: monospace;">{
+                            <textarea id="scriptParamsEditor" rows="10">{
     // スクリプトに渡すパラメータをJSON形式で入力してください
 }</textarea>
                         </div>
-                        <div class="button-container" style="margin-top: 10px;">
+                        <div class="button-container">
                             <button id="executeScriptBtn" class="btn btn-primary">実行</button>
                             <button id="showParamHelpBtn" class="btn btn-secondary" style="margin-left: 10px;">パラメータヘルプ</button>
                         </div>
                         <h4>実行結果</h4>
                         <div id="scriptResult">
-                            <pre id="scriptResultDisplay" style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">結果はここに表示されます</pre>
+                            <pre id="scriptResultDisplay">結果はここに表示されます</pre>
                         </div>
                     </div>
                 </div>
@@ -132,9 +132,24 @@
                 
             } catch (error) {
                 console.error('スクリプトデータの取得エラー:', error);
-                document.getElementById('scriptOverview').innerHTML = `<p>エラー: ${error.message}</p>`;
-                document.getElementById('scriptEditor').innerHTML = `<p>エラー: ${error.message}</p>`;
-                document.getElementById('scriptLogs').innerHTML = `<p>エラー: ${error.message}</p>`;
+                document.getElementById('scriptOverview').innerHTML = `
+                    <div class="error-panel">
+                        <h3>エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('scriptEditor').innerHTML = `
+                    <div class="error-panel">
+                        <h3>エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('scriptLogs').innerHTML = `
+                    <div class="error-panel">
+                        <h3>エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
             }
         }
         
@@ -151,7 +166,7 @@
                     bindModuleStr = bindModule.map(m => `${m.name}: ${m.from}`).join('<br>');
                     
                     // 詳細表示用
-                    bindModuleDetail = '<table class="data-table" style="width: 100%; margin-top: 10px;">' +
+                    bindModuleDetail = '<table class="data-table">' +
                         '<thead><tr><th>モジュール名</th><th>インポート元</th><th>説明</th></tr></thead>' +
                         '<tbody>';
                     
@@ -179,7 +194,7 @@
                     parametersStr = Object.keys(parameters).join(', ');
                     
                     // 詳細表示用
-                    parametersDetail = '<table class="data-table" style="width: 100%; margin-top: 10px;">' +
+                    parametersDetail = '<table class="data-table mt-10">' +
                         '<thead><tr><th>パラメータ名</th><th>型</th><th>説明</th><th>必須</th><th>デフォルト値</th></tr></thead>' +
                         '<tbody>';
                     
@@ -305,7 +320,7 @@
                     
                     // パラメータヘルプを作成
                     let helpContent = '<div><p>このスクリプトは以下のパラメータを受け付けます：</p>';
-                    helpContent += '<table class="data-table" style="width: 100%;">' +
+                    helpContent += '<table class="data-table">' +
                         '<thead><tr><th>パラメータ名</th><th>型</th><th>説明</th><th>必須</th></tr></thead>' +
                         '<tbody>';
                     
@@ -321,8 +336,8 @@
                     helpContent += '</tbody></table>';
                     
                     // サンプルパラメータを表示
-                    helpContent += '<p style="margin-top: 10px;">サンプルパラメータ:</p>';
-                    helpContent += `<pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">${JSON.stringify(sampleParams, null, 2)}</pre>`;
+                    helpContent += '<p class="mt-10">サンプルパラメータ:</p>';
+                    helpContent += `<pre class="code-block">${JSON.stringify(sampleParams, null, 2)}</pre>`;
                     helpContent += '<button id="useParamSampleBtn" class="btn btn-sm btn-secondary">このサンプルを使用</button>';
                     helpContent += '</div>';
                     
@@ -475,7 +490,12 @@
                 updateLogsView();
             } catch (error) {
                 console.error('スクリプト実行エラー:', error);
-                document.getElementById('scriptResultDisplay').textContent = `エラー: ${error.message}`;
+                document.getElementById('scriptResultDisplay').innerHTML = `
+                    <div class="error-panel">
+                        <h3>実行エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
             }
         }
 
@@ -494,15 +514,15 @@
             }
 
             // 結果をHTMLに整形
-            let html = '<h4>検索結果:</h4><ul style="list-style-type: none; padding: 0;">';
+            let html = '<h4>検索結果:</h4><ul class="result-item-list">';
             for (const element of elements) {
-                html += '<li style="margin-bottom: 20px;">';
+                html += '<li class="result-item">';
                 html += `<strong>成分名:</strong> ${element.成分名 || '不明'}<br>`;
                 html += `<strong>説明:</strong> ${element.説明 || '説明なし'}<br>`;
                 html += `<strong>該当商品数:</strong> ${element.全商品数 || 0}<br>`;
 
                 if (element.商品 && element.商品.length > 0) {
-                    html += '<strong>商品:</strong><ul>';
+                    html += '<strong>商品:</strong><ul class="product-list">';
                     for (const product of element.商品) {
                         html += `<li>${product.商品名 || '商品名不明'}</li>`;
                     }

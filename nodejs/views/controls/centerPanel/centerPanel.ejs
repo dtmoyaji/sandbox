@@ -7,14 +7,14 @@
             }
             
             let path = params.path[0];
-            let targetTable = params.path[1];
+            let targetObject = params.path[1];
             
             // デバッグ情報
-            console.log(`centerPanel.ejsのレンダリング - path: ${path}, targetTable: ${targetTable}`);
+            console.log(`centerPanel.ejsのレンダリング - path: ${path}, targetObject: ${targetObject}`);
             
             switch (path) {
                 case 'table':
-                    if (!targetTable) {
+                    if (!targetObject) {
                         throw new Error('テーブル名が指定されていません');
                     }
                     // テーブルパネルのパラメータ確認
@@ -30,7 +30,7 @@
                     }
             %>
                 <%- include('./tablePanel.ejs', { 
-                    targetTable: targetTable, 
+                    targetTable: targetObject, 
                     params: params,
                     tableTranslations: tableTranslations,
                     basePath: typeof basePath !== 'undefined' ? basePath : ''
@@ -38,24 +38,36 @@
             <%
                     break;
                 case 'application':
-                    if (!targetTable) {
+                    if (!targetObject) {
                         throw new Error('アプリケーション名が指定されていません');
                     }
             %>
                 <%- include('./applicationPanel.ejs', { 
-                    targetApplication: targetTable, 
+                    targetApplication: targetObject, 
                     params: params,
                     basePath: typeof basePath !== 'undefined' ? basePath : ''
                 }); %>
             <%
                     break;
                 case 'script':
-                    if (!targetTable) {
+                    if (!targetObject) {
                         throw new Error('スクリプト名が指定されていません');
                     }
             %>
                 <%- include('./scriptPanel.ejs', { 
-                    targetScript: targetTable, 
+                    targetScript: targetObject, 
+                    params: params,
+                    basePath: typeof basePath !== 'undefined' ? basePath : ''
+                }); %>
+            <%
+                    break;
+                case 'query':
+                    if (!targetObject) {
+                        throw new Error('クエリ名が指定されていません');
+                    }
+            %>
+                <%- include('./queryPanel.ejs', { 
+                    targetQuery: targetObject, 
                     params: params,
                     basePath: typeof basePath !== 'undefined' ? basePath : ''
                 }); %>

@@ -1,308 +1,457 @@
-<div class="genericTable">
-  <div class="table-controller" id="table-controller-top"></div>
+<!-- シンプル化された genericTable -->
+<div class="genericTable" data-table="<%= targetTable %>" data-basepath="<%= basePath %>">
+  <div class="table-header">
+    <div class="table-toolbar">
+      <button id="add-record-btn" class="toolbar-button">新規作成</button>
+      <button id="refresh-btn" class="toolbar-button">更新</button>
+      <div class="search-container">
+        <input type="text" id="search-input" placeholder="検索..." class="search-input">
+        <button id="search-btn" class="search-button">検索</button>
+      </div>
+      <span id="record-count" class="record-count">0 件</span>
+    </div>
+  </div>
+  
   <div class="table-data">
-    <table class="table-body"></table>
+    <table id="data-table" class="data-table">
+      <thead id="table-head">
+        <tr>
+          <!-- テーブルヘッダーは動的に生成されます -->
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr>
+          <td colspan="100%">
+            <div class="loading-container">
+              <div class="spinner"></div>
+              <p>データを読み込んでいます...</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
-  <div class="table-controller" id="table-controller-bottom"></div>
-  <div class="recordEditPanel" visible="false">
-    <%- include('./recordEditPane.ejs') %>
-    <div class="bottom-panel">
-      <button class="close-button" data-panel-type="recordEditPanel">Close</button>
+  
+  <div class="table-footer">
+    <div class="pagination">
+      <button id="prev-page" class="page-btn">前へ</button>
+      <span id="page-info">1 / 1</span>
+      <button id="next-page" class="page-btn">次へ</button>
     </div>
   </div>
-  <div class="filterPanel" visible="false">
-    <div class="bottom-panel">
-      <button class="close-button" data-panel-type="filterPanel">Close</button>
-    </div>
-  </div>
+  
+  <!-- オーバーレイ -->
+  <div id="overlay" class="overlay"></div>
+  
+  <!-- レコード編集ペインをインポート -->
+  <%- include('./recordEditPane.ejs', { targetTable: targetTable, basePath: basePath }) %>
 </div>
 
 <script>
-  // パネル操作用のユーティリティ関数
-  function showPanel(panelSelector) {
-    const panel = document.querySelector(panelSelector);
-    if (panel) {
-      panel.setAttribute('visible', 'true');
-    }
-  }
-
-  function hidePanel(panelSelector) {
-    const panel = document.querySelector(panelSelector);
-    if (panel) {
-      panel.setAttribute('visible', 'false');
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', async function() {
-
-    let request_param = '<%- JSON.stringify(params) %>';
-    console.log(request_param);
-    let parameters = JSON.parse(request_param).query;
-
-    let getParams = '';
-    for (let key in parameters) {
-      getParams += `${key}=${parameters[key]}&`;
-    }
-    getParams = getParams.slice(0, -1);
-
-    let tableName = '<%= targetTable %>';
-    let params = JSON.parse(request_param).query;
-
-    let table = await fetch(`<%= basePath %>/api/models/${tableName}?${getParams}`);
-    let tableData = await table.json();
-    params['writeable'] = tableData.writeable;
-    let tableController = document.querySelector('.table-controller');
-    let tableBody = document.querySelector('.table-body');
-
-    let tableHeader = document.createElement('tr');
-
-    // th タグを作成
-    console.log(tableData.tableDefinition.fields);
-    let columnHeaders = tableData.tableDefinition.fields;
-    for (let idx in columnHeaders) {
-      let cell = document.createElement('th');
-      cell.textContent = columnHeaders[idx].name;
-      tableHeader.appendChild(cell);
-    }
-    tableBody.appendChild(tableHeader);
-
-    // td タグを作成
-    for (let i = 0; i < tableData.data.length; i++) {
-      let row = document.createElement('tr');
-      row.setAttribute('odd', odd = i % 2 === 0 ? 'true' : 'false');
-      let rowJson = {};
-      for (let key in tableData.data[i]) {
-        let cell = document.createElement('td');
-        cell.textContent = tableData.data[i][key];
-        rowJson[key] = tableData.data[i][key];
-        row.appendChild(cell);
-        row.setAttribute('record', JSON.stringify(rowJson));
-      }
-      tableBody.appendChild(row);
-      row.addEventListener('click', () => {
-        let recordData = row.getAttribute('record');
-        drawRecord(recordData);
-        showPanel('.recordEditPanel');
-      });
-    }
-
-    // コントロールバーを生成
-    let pagingInfo = tableData.pagingInfo;
-    let tableControllerTop = document.getElementById('table-controller-top');
-    let controlBarTop = await generateControlBar(pagingInfo, 'control-bar-top', params);
-    tableControllerTop.appendChild(controlBarTop);
-
-    let tableControllerBottom = document.getElementById('table-controller-bottom');
-    let controlBarBottom = await generateControlBar(pagingInfo, 'control-bar-bottom', params);
-    tableControllerBottom.appendChild(controlBarBottom);
-
-    modifyCss();
-
-    // Closeボタンのイベントリスナーを追加
-    document.querySelectorAll('.close-button').forEach(button => {
-      button.addEventListener('click', function() {
-        const panelType = this.getAttribute('data-panel-type');
-        if (panelType) {
-          hidePanel(`.${panelType}`);
-        }
-      });
-    });
-
-  });
-
-  async function generateControlBar(pagingInfo, tag_id, params) {
-    let currentURL = window.location.href;
-    console.log(currentURL);
-    console.log(params);
-
-    let nextParams = Object.assign({}, params);
-    nextParams.current_page = parseInt(pagingInfo.currentPage, 10) + 1;
-    if (nextParams.current_page > pagingInfo.pages) {
-      nextParams.current_page = pagingInfo.pages;
-    }
-
-    // urlにパラメータを追加
-    let nextURL = new URL(currentURL);
-    nextURL.search = new URLSearchParams(nextParams).toString();
-
-    let prevParams = Object.assign({}, params);
-    prevParams.current_page = parseInt(pagingInfo.currentPage, 10) - 1;
-    if (prevParams.current_page < 1) {
-      prevParams.current_page = 1;
-    }
-
-    // urlにパラメータを追加
-    let prevURL = new URL(currentURL);
-    prevURL.search = new URLSearchParams(prevParams).toString();
-
-    let controlBar = document.createElement('div');
-    controlBar.id = tag_id;
-
-    let newButton = document.createElement('button');
-    newButton.textContent = 'New';
-    newButton.id = 'new-button';
-    newButton.className = 'page-control-button';
-    newButton.onclick = () => {
-      showPanel('.recordEditPanel');
-    };
-    controlBar.appendChild(newButton);
-
-    let filterButton = document.createElement('button');
-    filterButton.textContent = 'Filter';
-    filterButton.id = 'filter-button';
-    filterButton.onclick = () => {
-      showPanel('.filterPanel');
-    };
-    filterButton.className = 'page-control-button';
-    controlBar.appendChild(filterButton);
-
-    let separator = document.createElement('span');
-    separator.textContent = ' | ';
-    controlBar.appendChild(separator);
-
-    if (params.writeable) { // テーブルが書き込み可能な場合
-      let uploadButton = document.createElement('button');
-      uploadButton.textContent = 'Upload';
-      uploadButton.id = 'upload-button';
-      uploadButton.className = 'page-control-button';
-      uploadButton.onclick = () => uploadData('<%= targetTable %>', pagingInfo);
-      controlBar.appendChild(uploadButton);
-    }
-
-    let downloadButton = document.createElement('button');
-    downloadButton.textContent = 'Download';
-    downloadButton.id = 'download-button';
-    downloadButton.className = 'page-control-button';
-    downloadButton.onclick = () => downloadData('<%= targetTable %>', pagingInfo);
-    controlBar.appendChild(downloadButton);
-
-    separator = document.createElement('span');
-    separator.textContent = ' | ';
-    controlBar.appendChild(separator);
-
-    let prevButton = document.createElement('button');
-    prevButton.id = 'page-prev';
-    prevButton.className = 'page-control-button';
-    prevButton.textContent = '<';
-    prevButton.onclick = () => window.location.href = prevURL.toString();
-    controlBar.appendChild(prevButton);
-
-    let currentPage = document.createElement('input');
-    currentPage.id = 'page-current';
-    currentPage.type = 'text';
-    currentPage.value = `${pagingInfo.currentPage}`;
-    currentPage.onchange = (event) => {
-      let jumpPage = currentPage.value;
-      if (isNaN(jumpPage)) {
-        return;
-      }
-      if (jumpPage < 1) {
-        jumpPage = 1;
-      } else if (jumpPage > pagingInfo.pages) {
-        jumpPage = pagingInfo.pages;
-      }
-      let jumpParams = Object.assign({}, params);
-      jumpParams.current_page = jumpPage;
-      let jumpURL = new URL(currentURL);
-      jumpURL.search = new URLSearchParams(jumpParams).toString();
-      window.location.href = jumpURL.toString();
-
-    };
-    controlBar.appendChild(currentPage);
-
-    let totalPage = document.createElement('span');
-    totalPage.textContent = ` / ${pagingInfo.pages}`;
-    controlBar.appendChild(totalPage);
-
-    let nextButton = document.createElement('button');
-    nextButton.textContent = '>';
-    nextButton.id = 'page-next';
-    nextButton.className = 'page-control-button';
-    nextButton.onclick = () => window.location.href = nextURL.toString();
-    controlBar.appendChild(nextButton);
-
-    return controlBar;
-  }
-
-  async function uploadData(targetTable, pagingInfo) {
-    console.log('uploadData: ' + targetTable);
-    // ファイル選択ダイアログを表示
-    let file = await showOpenFileDialog();
-    // サーバーにファイルをアップロード
-    let formData = new FormData();
-    formData.append('file', file);
-    formData.append('targetTable', targetTable);
-    formData.append('currentUser', getCurrentUser());
-
-    try {
-      let currentUser = getCurrentUser();
-      // アップロードは非同期で行う
-      let response = fetch('<%= basePath %>/api/import/csv', {
-        method: 'POST',
-        body: formData
-      });
-      //alert('アップロードを開始しました');
-    } catch (error) {
-      // ブラウザのダイアログにエラーメッセージを表示
-      alert('Error uploading file: ' + error.message);
-      console.error(error);
-    }
-
-    console.log(file);
-
-  }
-
-  async function downloadData(targetTable, pagingInfo) {
-    console.log('downloadData: ' + targetTable);
+(function() {
+  // 基本設定と状態管理
+  const state = {
+    tableName: '<%= targetTable %>',
+    basePath: '<%= basePath %>',
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+    data: [],
+    columns: [],
+    searchQuery: '',
+    isLoading: true,
+    editingRecord: null
+  };
+  
+  // DOM要素の参照
+  let domRefs = {};
+  
+  // 初期化
+  document.addEventListener('DOMContentLoaded', init);
+  
+  // 初期化関数
+  function init() {
+    // DOM要素の参照を取得
+    cacheElements();
     
-    try {
-      // APIからデータを取得
-      const response = await fetch(`<%= basePath %>/api/models/${targetTable}/download`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
+    // イベントリスナーを設定
+    setupEventListeners();
+    
+    // データを取得
+    loadTableData();
+  }
+  
+  // DOM要素をキャッシュ
+  function cacheElements() {
+    domRefs = {
+      tableHead: document.getElementById('table-head'),
+      tableBody: document.getElementById('table-body'),
+      addButton: document.getElementById('add-record-btn'),
+      refreshButton: document.getElementById('refresh-btn'),
+      searchInput: document.getElementById('search-input'),
+      searchButton: document.getElementById('search-btn'),
+      recordCount: document.getElementById('record-count'),
+      prevPage: document.getElementById('prev-page'),
+      nextPage: document.getElementById('next-page'),
+      pageInfo: document.getElementById('page-info'),
+      overlay: document.getElementById('overlay'),
+      editPane: document.getElementById('record-edit-pane'),
+      editPaneTitle: document.getElementById('edit-pane-title'),
+      saveRecordBtn: document.getElementById('save-record-btn'),
+      cancelEditBtn: document.getElementById('cancel-edit-btn'),
+      closeEditBtn: document.getElementById('edit-pane-close')
+    };
+  }
+  
+  // イベントリスナーの設定
+  function setupEventListeners() {
+    // テーブル操作
+    domRefs.addButton.addEventListener('click', () => openEditPane());
+    domRefs.refreshButton.addEventListener('click', () => loadTableData());
+    
+    // 検索
+    domRefs.searchButton.addEventListener('click', handleSearch);
+    domRefs.searchInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') handleSearch();
+    });
+    
+    // ページネーション
+    domRefs.prevPage.addEventListener('click', () => navigatePage(-1));
+    domRefs.nextPage.addEventListener('click', () => navigatePage(1));
+    
+    // 編集ペインコントロール
+    domRefs.closeEditBtn.addEventListener('click', closeEditPane);
+    domRefs.cancelEditBtn.addEventListener('click', closeEditPane);
+    domRefs.saveRecordBtn.addEventListener('click', saveRecord);
+    
+    // オーバーレイクリックで閉じる
+    domRefs.overlay.addEventListener('click', closeEditPane);
+  }
+  
+  // 検索処理
+  function handleSearch() {
+    const query = domRefs.searchInput.value.trim();
+    state.searchQuery = query;
+    state.currentPage = 1; // 検索時は1ページ目に戻る
+    
+    // ここで検索キーワードをクエリパラメータ名を修正
+    // モデルコントローラが'search'パラメータを明示的に処理していない可能性があるため、
+    // リクエストURLにフィルタとして追加する
+    loadTableData();
+  }
+  
+  // データ読み込み
+  function loadTableData() {
+    setLoading(true);
+    
+    // テーブル名が未定義または空の場合の対策
+    if (!state.tableName || state.tableName === 'undefined') {
+      console.warn('テーブル名が指定されていません。デフォルトテーブルに設定します。');
+      // DOMからテーブル名を取得（フォールバック）
+      const tableElement = document.querySelector('.genericTable');
+      if (tableElement && tableElement.dataset.table) {
+        state.tableName = tableElement.dataset.table;
+      } else {
+        // デフォルトテーブル名
+        state.tableName = 'application';
+      }
+      console.log(`デフォルトテーブル名を設定しました: ${state.tableName}`);
+    }
+    
+    // 基本URLの構築
+    let url = `${state.basePath}/api/models/${state.tableName}?current_page=${state.currentPage}&page_size=${state.pageSize}`;
+    
+    // 検索クエリがある場合は、サーバーが処理できるようにフィルタパラメータとして追加
+    if (state.searchQuery) {
+      // 列ごとの検索クエリを作成（状況に応じてカスタマイズ）
+      url += `&name=${encodeURIComponent(state.searchQuery)}`;
+    }
+    
+    console.log(`データを取得します: ${url}`);
+    
+    // データ取得
+    fetch(url)
+      .then(response => {
+        if (!response.ok) throw new Error('データの取得に失敗しました');
+        return response.json();
+      })
+      .then(result => {
+        console.log('取得したデータ:', result);
+        
+        // APIレスポンスから必要なデータを抽出
+        state.data = result.data || [];
+        
+        // tableDefinition.fieldsからカラム情報を取得
+        if (result.tableDefinition && result.tableDefinition.fields) {
+          state.columns = result.tableDefinition.fields.map(field => ({
+            name: field.name,
+            label: field.label || field.name
+          }));
+        } else {
+          state.columns = [];
         }
+        
+        // ページネーション情報を更新
+        if (result.pagingInfo) {
+          state.currentPage = result.pagingInfo.currentPage;
+          state.totalPages = result.pagingInfo.pages;
+          state.totalRecords = result.pagingInfo.totalItems;
+        }
+        
+        // UIを更新
+        updateUI();
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showErrorMessage('データの読み込み中にエラーが発生しました: ' + error.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
+  
+  // UI更新
+  function updateUI() {
+    // テーブルヘッダーを更新
+    updateTableHeader();
+    
+    // テーブルボディを更新
+    updateTableBody();
+    
+    // ページ情報を更新
+    updatePagination();
+    
+    // レコード数表示を更新
+    domRefs.recordCount.textContent = `${state.totalRecords || 0} 件`;
+  }
+  
+  // テーブルヘッダーの更新
+  function updateTableHeader() {
+    if (!state.columns.length) return;
+    
+    const headerRow = document.createElement('tr');
+    
+    // カラムヘッダーを追加
+    state.columns.forEach(column => {
+      const th = document.createElement('th');
+      th.textContent = column.label || column.name;
+      headerRow.appendChild(th);
+    });
+    
+    // アクション列を追加
+    const actionTh = document.createElement('th');
+    actionTh.textContent = 'アクション';
+    headerRow.appendChild(actionTh);
+    
+    // テーブルヘッダーを更新
+    domRefs.tableHead.innerHTML = '';
+    domRefs.tableHead.appendChild(headerRow);
+  }
+  
+  // テーブルボディの更新
+  function updateTableBody() {
+    domRefs.tableBody.innerHTML = '';
+    
+    if (!state.data.length) {
+      const emptyRow = document.createElement('tr');
+      const emptyCell = document.createElement('td');
+      emptyCell.colSpan = (state.columns.length || 1) + 1; // +1 for actions column
+      emptyCell.textContent = 'データがありません';
+      emptyCell.className = 'empty-table-cell';
+      emptyRow.appendChild(emptyCell);
+      domRefs.tableBody.appendChild(emptyRow);
+      return;
+    }
+    
+    // 各行のデータを追加
+    state.data.forEach(record => {
+      const row = document.createElement('tr');
+      row.className = 'data-row';
+      row.dataset.id = record.id;
+      
+      // 各列のデータを追加
+      state.columns.forEach(column => {
+        const cell = document.createElement('td');
+        cell.textContent = record[column.name] || '';
+        cell.className = 'clickable-cell';
+        // セルにクリックイベントを追加
+        cell.addEventListener('click', () => {
+          openEditPane(record);
+        });
+        row.appendChild(cell);
       });
       
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-
-      // レスポンスをBlobとして取得
-      const blob = await response.blob();
+      // アクションボタンを追加
+      const actionCell = document.createElement('td');
       
-      // ダウンロードリンクを作成
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `${targetTable}_${new Date().toISOString().slice(0, 10)}.csv`;
+      const editBtn = document.createElement('button');
+      editBtn.className = 'action-btn edit-btn';
+      editBtn.textContent = '編集';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // イベントの伝播を停止
+        openEditPane(record);
+      });
       
-      // リンクをクリックしてダウンロード開始
-      document.body.appendChild(a);
-      a.click();
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'action-btn delete-btn';
+      deleteBtn.textContent = '削除';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // イベントの伝播を停止
+        confirmDelete(record);
+      });
       
-      // クリーンアップ
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Error downloading data:', error);
-      alert(`ダウンロード中にエラーが発生しました: ${error.message}`);
-    }
-  }
-
-  async function showOpenFileDialog() {
-    return new Promise((resolve, reject) => {
-      let input = document.createElement('input');
-      input.type = 'file';
-      input.onchange = () => {
-        if (input.files.length > 0) {
-          resolve(input.files[0]);
-        } else {
-          reject('No file selected');
-        }
-      };
-      input.click();
+      actionCell.appendChild(editBtn);
+      actionCell.appendChild(deleteBtn);
+      row.appendChild(actionCell);
+      
+      domRefs.tableBody.appendChild(row);
     });
   }
+  
+  // ページネーションの更新
+  function updatePagination() {
+    domRefs.pageInfo.textContent = `${state.currentPage} / ${state.totalPages}`;
+    
+    // 前ページボタンの状態
+    domRefs.prevPage.disabled = state.currentPage <= 1;
+    domRefs.prevPage.classList.toggle('btn-disabled', state.currentPage <= 1);
+    
+    // 次ページボタンの状態
+    domRefs.nextPage.disabled = state.currentPage >= state.totalPages;
+    domRefs.nextPage.classList.toggle('btn-disabled', state.currentPage >= state.totalPages);
+  }
+  
+  // ページ移動
+  function navigatePage(direction) {
+    const newPage = state.currentPage + direction;
+    
+    if (newPage < 1 || newPage > state.totalPages) return;
+    
+    state.currentPage = newPage;
+    loadTableData();
+  }
+  
+  // 編集ペインを開く
+  function openEditPane(record = null) {
+    console.log('レコード編集ペインを開きます:', record);
+    state.editingRecord = record ? { ...record } : {};
+    
+    // ペインタイトルを設定
+    domRefs.editPaneTitle.textContent = record ? 'レコード編集' : '新規レコード作成';
+    
+    // レコードデータをフォームに設定
+    if (record && typeof window.drawRecord === 'function') {
+      window.drawRecord(record);
+    }
+    
+    // オーバーレイとペインを表示（直接スタイルも設定）
+    domRefs.overlay.classList.add('visible');
+    domRefs.editPane.classList.add('visible');
+    
+    console.log('ペインとオーバーレイの表示状態:', {
+      overlayClass: domRefs.overlay.className,
+      paneClass: domRefs.editPane.className
+    });
+  }
+  
+  // 編集ペインを閉じる
+  function closeEditPane() {
+    domRefs.overlay.classList.remove('visible');
+    domRefs.editPane.classList.remove('visible');
+    state.editingRecord = null;
+    
+    // フォームのリセット
+    const form = document.getElementById('record-edit-form');
+    if (form) form.reset();
+  }
+  
+  // レコード保存
+  function saveRecord() {
+    // フォームからデータを収集
+    const form = document.getElementById('record-edit-form');
+    const formData = new FormData(form);
+    const record = {};
+    
+    for (const [key, value] of formData.entries()) {
+      record[key] = value;
+    }
+    
+    // IDがあれば更新、なければ作成
+    const isUpdate = !!state.editingRecord.id;
+    if (isUpdate) {
+      record.id = state.editingRecord.id;
+    }
+    
+    const url = `${state.basePath}/api/models/${state.tableName}${isUpdate ? `/${state.editingRecord.id}` : ''}`;
+    const method = isUpdate ? 'PUT' : 'POST';
+    
+    // API呼び出し
+    fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(record)
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('保存に失敗しました');
+        return response.json();
+      })
+      .then(() => {
+        // 成功したらペインを閉じてテーブルを更新
+        closeEditPane();
+        loadTableData();
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showErrorMessage('保存中にエラーが発生しました: ' + error.message);
+      });
+  }
+  
+  // 削除確認
+  function confirmDelete(record) {
+    if (!confirm('このレコードを削除してもよろしいですか？')) return;
+    
+    const url = `${state.basePath}/api/models/${state.tableName}/${record.id}`;
+    
+    fetch(url, {
+      method: 'DELETE'
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('削除に失敗しました');
+        return response.json();
+      })
+      .then(() => {
+        // テーブルを更新
+        loadTableData();
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showErrorMessage('削除中にエラーが発生しました: ' + error.message);
+      });
+  }
+  
+  // ローディング状態の設定
+  function setLoading(isLoading) {
+    state.isLoading = isLoading;
+    
+    if (isLoading) {
+      domRefs.tableBody.innerHTML = `
+        <tr>
+          <td colspan="${(state.columns.length || 1) + 1}">
+            <div class="loading-container">
+              <div class="spinner"></div>
+              <p>データを読み込んでいます...</p>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+  }
+  
+  // エラーメッセージの表示
+  function showErrorMessage(message) {
+    alert(message);
+  }
+})();
 </script>

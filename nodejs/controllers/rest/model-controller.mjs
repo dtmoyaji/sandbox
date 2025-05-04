@@ -56,8 +56,11 @@ async function createModelController(manager) {
      * モデルのリストを取得するAPI
      * GET /models/[model_name]?[query_params]
      * フィルタ条件の値はparam1=value|value&param2=value|valueの形式で指定
+     * ページング機能:
+     * - page_size: 1ページあたりの表示件数（デフォルト20）
+     * - current_page: 現在のページ番号（デフォルト1）
      * @param {string} model_name - モデル名
-     * @param {object} query_params - フィルター条件
+     * @param {object} query_params - フィルター条件とページング情報
      */
     ModelController.get('/*', async (req, res) => {
         try {
@@ -69,16 +72,26 @@ async function createModelController(manager) {
             if (modelName === 'user') {
                 return await getUser(req, res);
             }
+            
+            // ダウンロード要求の場合は別の処理へ
+            if (nameParts.length > 1 && nameParts[1] === 'download') {
+                return await downloadTableData(req, res, modelName);
+            }
+            
+            // テーブル定義のみを要求された場合
+            if (nameParts.length > 1 && nameParts[1] === 'definition') {
+                return await getTableDefinition(req, res, modelName);
+            }
 
             const model = await modelManager.getModel(modelName);
-            const model_user_domain_id = model.user_domain_id;
-
             if (!model) {
                 return res.status(404).send({ message: 'Model not found' });
             }
 
+            const model_user_domain_id = model.user_domain_id;
+
             let verifyResult = await restUtil.verifyToken(req, res);;
-            if (model.tableDefinition.scope !== Table.TABLE_SCOPE_PUBLIC) {
+            if (model.tableDefinition.scope !== Table.MODEL_SCOPE_PUBLIC) {
                 // アクセストークンの検証
                 if (!verifyResult.auth) {
                     return res.status(401).send(verifyResult);
@@ -88,7 +101,11 @@ async function createModelController(manager) {
             const queryParams = req.query;
             const filter = {};
             for (const [key, value] of Object.entries(queryParams)) {
-                filter[key] = value;
+                // キャッシュ対策用のtパラメータはフィルタに含めない
+                // ページネーション用パラメータもフィルタに含めない
+                if (key !== 't' && key !== 'page' && key !== 'limit' && key !== 'page_size' && key !== 'current_page') {
+                    filter[key] = value;
+                }
             }
 
             // アクセス権の確認
@@ -102,11 +119,20 @@ async function createModelController(manager) {
                 }
                 filter['user_domain_id'] = value;
             }
-            const result = await model.get(filter);
+            
+            // ページング情報を取得
+            const pageSize = parseInt(queryParams.page_size || 20, 10);
+            const currentPage = parseInt(queryParams.current_page || 1, 10);
+            
+            // ページング情報の計算
+            const pagingInfo = await model.getPagingInfo(filter, pageSize, currentPage);
+            
+            // データ取得（指定されたページのデータのみ）
+            const results = await model.get(filter, pagingInfo.recordsPerPage || pageSize, pagingInfo.offset);
 
             // modelのtableDefinitionのfieldsに、secret=trueを持つフィールドがある場合、そのフィールドをマスクする
-            if (model.tableDefinition.fields.some(field => field.secret)) {
-                result.forEach(record => {
+            if (model.tableDefinition && model.tableDefinition.fields && model.tableDefinition.fields.some(field => field.secret)) {
+                results.forEach(record => {
                     model.tableDefinition.fields.forEach(field => {
                         if (field.secret) {
                             record[field.name] = '********';
@@ -115,12 +141,123 @@ async function createModelController(manager) {
                 });
             }
 
-            res.json(result);
+            // モデルの定義情報を取得
+            const tableDefinition = model.tableDefinition;
+            
+            // レスポンスの構造化
+            const response = {
+                data: results,
+                tableDefinition: tableDefinition,
+                pagingInfo: {
+                    totalItems: pagingInfo.count,
+                    itemsPerPage: pageSize,
+                    currentPage: currentPage,
+                    pages: pagingInfo.pages,
+                    hasNext: currentPage < pagingInfo.pages,
+                    hasPrevious: currentPage > 1
+                },
+                writeable: model.isWriteable || false
+            };
+
+            res.json(response);
         } catch (err) {
             console.error('Error fetching model data:', err);
-            res.status(500).send({ message: 'Internal server error' });
+            res.status(500).send({ 
+                message: 'Internal server error',
+                error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            });
         }
     });
+
+    /**
+     * テーブルデータをCSVとしてダウンロードするAPI
+     */
+    async function downloadTableData(req, res, modelName) {
+        try {
+            const model = await modelManager.getModel(modelName);
+            if (!model) {
+                return res.status(404).send({ message: 'Model not found' });
+            }
+            
+            let verifyResult = await restUtil.verifyToken(req, res);
+            if (model.tableDefinition.scope !== Table.MODEL_SCOPE_PUBLIC) {
+                if (!verifyResult.auth) {
+                    return res.status(401).send(verifyResult);
+                }
+            }
+            
+            // データ取得（全件）
+            const results = await model.get();
+            
+            // CSV変換用のヘッダー行
+            const headers = model.tableDefinition.fields
+                .filter(field => !field.secret)
+                .map(field => field.name);
+            
+            // データ行（secretフィールドは除外）
+            const rows = results.map(record => {
+                return headers.map(header => {
+                    const field = model.tableDefinition.fields.find(f => f.name === header);
+                    if (field && field.secret) {
+                        return '********';
+                    }
+                    // CSV形式に適した形にエスケープ処理
+                    const value = record[header];
+                    if (value === null || value === undefined) return '';
+                    
+                    // 日付型の処理
+                    if (value instanceof Date) {
+                        return value.toISOString();
+                    }
+                    
+                    // 文字列でカンマを含む場合はダブルクォートで囲む
+                    const stringValue = String(value);
+                    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                        return `"${stringValue.replace(/"/g, '""')}"`;
+                    }
+                    return stringValue;
+                }).join(',');
+            });
+            
+            // ヘッダー行とデータ行を結合してCSV文字列を作成
+            const csv = [headers.join(','), ...rows].join('\n');
+            
+            // CSVファイルを送信
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', `attachment; filename=${modelName}_${new Date().toISOString().slice(0, 10)}.csv`);
+            res.send(csv);
+            
+        } catch (err) {
+            console.error('Error downloading table data:', err);
+            res.status(500).send({ message: 'Internal server error' });
+        }
+    }
+
+    /**
+     * テーブル定義情報のみを取得するAPI
+     */
+    async function getTableDefinition(req, res, modelName) {
+        try {
+            const model = await modelManager.getModel(modelName);
+            if (!model) {
+                return res.status(404).send({ message: 'Model not found' });
+            }
+            
+            let verifyResult = await restUtil.verifyToken(req, res);
+            if (model.tableDefinition.scope !== Table.MODEL_SCOPE_PUBLIC) {
+                if (!verifyResult.auth) {
+                    return res.status(401).send(verifyResult);
+                }
+            }
+            
+            // テーブル定義情報を返す
+            res.json(model.tableDefinition);
+            
+        } catch (err) {
+            console.error('Error fetching table definition:', err);
+            res.status(500).send({ message: 'Internal server error' });
+        }
+    }
 
     ModelController.put('/*', async (req, res) => {
         try {
@@ -324,7 +461,10 @@ async function createModelController(manager) {
 
             const queryParams = req.query;
             for (const [key, value] of Object.entries(queryParams)) {
-                filter[key] = value;
+                // キャッシュ対策用のtパラメータはフィルタに含めない
+                if (key !== 't') {
+                    filter[key] = value;
+                }
             }
             const result = await model.get(filter);
 

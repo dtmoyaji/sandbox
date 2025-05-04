@@ -42,63 +42,296 @@
         });
 
         // スクリプト表示イベントのリスナーを追加
-        window.addEventListener('showInCenterPanel', async function (event) {
-            if (event.detail && event.detail.type === 'script') {
+        async function handleCenterPanelUpdate(event) {
+            console.log('showInCenterPanelイベントを受信:', event.detail);
+            
+            if (event.detail && (event.detail.type === 'script' || event.detail.type === 'query' || event.detail.type === 'application' || event.detail.type === 'table')) {
                 try {
-                    // スクリプト表示用のURLに変更して中央パネルを更新
+                    console.log(`${event.detail.type}パネル表示処理を開始:`, event.detail.name);
                     const basePath = '<%= basePath %>';
-                    const url = `${basePath}/admin/${event.detail.type}/${encodeURIComponent(event.detail.name)}`;
-                    
-                    // 履歴を更新（URLバーの表示を変更）
-                    history.pushState({}, '', url);
-                    
-                    // centerPanelを更新するリクエストを送信
-                    // スクリプト表示用のレンダラーAPIを呼び出し
+                    // キャッシュ回避用のタイムスタンプを追加
+                    const timestamp = new Date().getTime();
                     const response = await fetch(`${basePath}/api/renderer/centerPanel`, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache'
                         },
-                        body: JSON.stringify({
-                            type: event.detail.type,
-                            name: event.detail.name
+                        body: JSON.stringify({ 
+                            type: event.detail.type, 
+                            name: event.detail.name,
+                            timestamp
                         })
                     });
                     
                     if (!response.ok) {
-                        throw new Error('centerPanelの更新に失敗しました');
+                        throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
                     }
                     
                     const html = await response.text();
-                    document.getElementById('center').innerHTML = html;
+                    const centerPanel = document.getElementById('centerPanel');
                     
-                    // スクリプトの初期化処理を呼び出し
-                    // scriptPanel.ejsのイベントリスナーを再設定
-                    const scriptTags = Array.from(document.getElementById('center').querySelectorAll('script'));
-                    for (const scriptTag of scriptTags) {
-                        if (scriptTag.textContent.trim() !== '') {
-                            const newScript = document.createElement('script');
-                            if (scriptTag.src) {
-                                newScript.src = scriptTag.src;
-                            } else {
-                                newScript.textContent = scriptTag.textContent;
+                    if (centerPanel) {
+                        // まずパネルを表示
+                        centerPanel.innerHTML = html;
+                        
+                        // 適切な初期化関数を呼び出す前に少し遅延を入れる
+                        setTimeout(() => {
+                            try {
+                                // テーブルパネルの場合の特別な処理
+                                if (event.detail.type === 'table') {
+                                    console.log('テーブルパネルを初期化します');
+                                    
+                                    // テーブル表示用の初期化スクリプトを直接実行
+                                    const targetTable = event.detail.name;
+                                    console.log(`テーブル[${targetTable}]のデータロードを開始します`);
+                                    
+                                    // 既存の初期化関数がある場合はそれを呼び出す
+                                    if (typeof initializeTablePanel === 'function') {
+                                        initializeTablePanel();
+                                    } else {
+                                        console.log('initializeTablePanel関数が見つからないため、手動で初期化します');
+                                        // テーブルタブを選択
+                                        const dataTab = document.querySelector('.tab[id="data"]');
+                                        if (dataTab) {
+                                            dataTab.click();
+                                        }
+                                        
+                                        // テーブルデータが存在するか確認
+                                        const tableBody = document.querySelector('.table-body');
+                                        if (tableBody && tableBody.children.length <= 1) {
+                                            // 必要に応じてテーブルデータを読み込む特別なコード
+                                            loadTableData(targetTable);
+                                        }
+                                    }
+                                } else if (event.detail.type === 'application' && typeof initializeApplicationPanel === 'function') {
+                                    console.log('アプリケーションパネルを初期化します');
+                                    initializeApplicationPanel();
+                                } else if (event.detail.type === 'script' && typeof initializeScriptPanel === 'function') {
+                                    console.log('スクリプトパネルを初期化します');
+                                    initializeScriptPanel();
+                                } else {
+                                    console.log('特定のパネル初期化関数がないため、一般的な初期化を行います');
+                                    initializeTabs();
+                                }
+                            } catch (initError) {
+                                console.error('パネル初期化エラー:', initError);
                             }
-                            scriptTag.parentNode.replaceChild(newScript, scriptTag);
-                        }
+                        }, 100); // 100ミリ秒の遅延を設定
                     }
-                    
-                    console.log(`スクリプト ${event.detail.name} を中央パネルに表示しました`);
                 } catch (error) {
-                    console.error('中央パネル更新エラー:', error);
-                    document.getElementById('center').innerHTML = `
-                        <div class="error-panel">
-                            <h3>エラー</h3>
-                            <p>${error.message}</p>
-                        </div>
-                    `;
+                    console.error(`${event.detail.type}パネル表示エラー:`, error);
+                    if (document.getElementById('centerPanel')) {
+                        document.getElementById('centerPanel').innerHTML = `
+                            <div class="error-panel">
+                                <h3>表示エラー</h3>
+                                <p>${error.message}</p>
+                                <button onclick="window.location.reload()">再読み込み</button>
+                            </div>
+                        `;
+                    }
                 }
             }
-        });
+        }
+
+        // 既存のイベントリスナーを削除して新しいものを登録
+        window.removeEventListener('showInCenterPanel', handleCenterPanelUpdate);
+        window.addEventListener('showInCenterPanel', handleCenterPanelUpdate);
+
+        // タブの初期化処理を共通化
+        function initializeTabs() {
+            console.log('タブの初期化処理を実行します');
+            const tabs = document.querySelectorAll('.tab-holder .tab');
+            const views = document.querySelectorAll('.centerView');
+            
+            if (tabs.length > 0) {
+                console.log(`${tabs.length}個のタブを初期化します`);
+                
+                tabs.forEach((tab) => {
+                    tab.addEventListener('click', () => {
+                        console.log(`タブがクリックされました: ${tab.id}`);
+                        tabs.forEach((t) => {
+                            t.removeAttribute('selected');
+                        });
+                        tab.setAttribute('selected', 'true');
+
+                        // 対応するビューを表示
+                        const viewId = tab.id + 'View';
+                        views.forEach((view) => {
+                            if (view.id === viewId) {
+                                view.style.display = 'block';
+                            } else {
+                                view.style.display = 'none';
+                            }
+                        });
+                    });
+                });
+            } else {
+                console.warn('タブが見つかりませんでした');
+            }
+        }
+
+        // デバッグ関数 - レンダラーAPIの動作確認
+        async function testRendererApi(type, name) {
+            try {
+                console.log('レンダラーAPI動作テスト開始:', { type, name });
+                const basePath = '<%= basePath %>';
+                const response = await fetch(`${basePath}/api/renderer/centerPanel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type, name })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`APIエラー: ${response.status} ${response.statusText}`);
+                }
+                
+                const text = await response.text();
+                console.log(`レンダラーAPI結果: 成功 (HTML長: ${text.length}文字)`);
+                return text;
+            } catch (error) {
+                console.error('レンダラーAPIテストエラー:', error);
+                return null;
+            }
+        }
+
+        // サンプルクエリパネル表示用のフォールバック関数（エラー時）
+        function createFallbackQueryPanel(queryName) {
+            return `
+            <div class="query-panel">
+                <div class="panel-head">
+                    <h2 class="panel-caption">クエリ: ${queryName}</h2>
+                </div>
+                <div class="panel-body">
+                    <div class="error-panel">
+                        <h3>エラー</h3>
+                        <p>レンダラーAPIからの応答がありませんでした。</p>
+                        <p>以下の点を確認してください：</p>
+                        <ul>
+                            <li>サーバーが実行中であること</li>
+                            <li>クエリ名が正しいこと</li>
+                            <li>ブラウザのコンソールでエラーを確認すること</li>
+                        </ul>
+                        <button onclick="window.location.reload()">再読み込み</button>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        // テーブルデータを読み込む汎用関数
+        async function loadTableData(tableName) {
+            console.log(`loadTableData: ${tableName} のデータ読み込みを開始します`);
+            try {
+                // テーブル要素が存在するか確認
+                const tableElement = document.querySelector('.table-body');
+                if (!tableElement) {
+                    console.error('テーブル要素が見つかりません');
+                    return;
+                }
+                
+                // テーブル名が未定義または空の場合にデフォルトのテーブル名を使用
+                if (!tableName || tableName === 'undefined') {
+                    console.warn('テーブル名が指定されていません。デフォルトテーブルに設定します。');
+                    // データテーブルからテーブル名を取得（フォールバック）
+                    const tableDiv = document.querySelector('.genericTable');
+                    if (tableDiv && tableDiv.dataset.table) {
+                        tableName = tableDiv.dataset.table;
+                    } else {
+                        // デフォルトテーブル名
+                        tableName = 'application';
+                    }
+                    console.log(`デフォルトテーブル名を設定しました: ${tableName}`);
+                }
+                
+                // URLから現在のクエリパラメータを取得
+                const urlParams = new URLSearchParams(window.location.search);
+                const params = {};
+                for (const [key, value] of urlParams.entries()) {
+                    params[key] = value;
+                }
+                
+                // キャッシュを回避するためのタイムスタンプを追加
+                const timestamp = new Date().getTime();
+                const getParams = new URLSearchParams(params);
+                getParams.append('t', timestamp);
+                
+                const basePath = '<%= basePath %>';
+                console.log(`APIリクエスト: ${basePath}/api/models/${tableName}?${getParams}`);
+                
+                // APIからデータを取得
+                const response = await fetch(`${basePath}/api/models/${tableName}?${getParams}`, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
+                }
+                
+                const tableData = await response.json();
+                console.log('テーブルデータ受信:', tableData);
+                
+                // テーブルをクリア
+                while (tableElement.firstChild) {
+                    tableElement.removeChild(tableElement.firstChild);
+                }
+                
+                // テーブルヘッダーを作成
+                if (tableData.tableDefinition && tableData.tableDefinition.fields) {
+                    const tableHeader = document.createElement('tr');
+                    const columnHeaders = tableData.tableDefinition.fields;
+                    
+                    for (let idx in columnHeaders) {
+                        const cell = document.createElement('th');
+                        cell.textContent = columnHeaders[idx].name;
+                        tableHeader.appendChild(cell);
+                    }
+                    tableElement.appendChild(tableHeader);
+                    
+                    // テーブルデータ行を作成
+                    if (tableData.data && tableData.data.length > 0) {
+                        for (let i = 0; i < tableData.data.length; i++) {
+                            const row = document.createElement('tr');
+                            row.setAttribute('odd', i % 2 === 0 ? 'true' : 'false');
+                            const rowJson = {};
+                            
+                            for (const key in tableData.data[i]) {
+                                const cell = document.createElement('td');
+                                cell.textContent = tableData.data[i][key];
+                                rowJson[key] = tableData.data[i][key];
+                                row.appendChild(cell);
+                            }
+                            
+                            row.setAttribute('record', JSON.stringify(rowJson));
+                            tableElement.appendChild(row);
+                        }
+                    } else {
+                        // データがない場合の表示
+                        const noDataRow = document.createElement('tr');
+                        const noDataCell = document.createElement('td');
+                        noDataCell.colSpan = columnHeaders.length;
+                        noDataCell.innerHTML = '<div class="no-data-panel">表示するデータがありません</div>';
+                        noDataRow.appendChild(noDataCell);
+                        tableElement.appendChild(noDataRow);
+                    }
+                    
+                    console.log('テーブルデータを正常に表示しました');
+                    return true;
+                } else {
+                    throw new Error('テーブル定義が不正です');
+                }
+            } catch (error) {
+                console.error('テーブルデータの読み込みエラー:', error);
+                return false;
+            }
+        }
     </script>
     
 

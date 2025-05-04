@@ -188,13 +188,17 @@ class EjsRenderer {
                 query: {}
             };
             
-            // テーブルパネル用の翻訳を事前取得（一括取得でDBアクセスを最適化）
-            const tableTranslations = await this.getL10nBatch([
+            // 翻訳を事前取得（一括取得でDBアクセスを最適化）
+            const translations = await this.getL10nBatch([
                 'data',
                 'definition',
                 'REST',
                 'Data View',
-                'テーブル定義'
+                'テーブル定義',
+                'クエリ',
+                'SQL',
+                '実行',
+                '実行結果'
             ]);
             
             // すべての必要なパラメータが含まれていることを確認
@@ -203,24 +207,39 @@ class EjsRenderer {
                 basePath: process.env.BASE_PATH ? process.env.BASE_PATH : '',
                 path: [renderType, renderTarget],
                 params: queryParams,
-                tableTranslations: tableTranslations,
-                targetTable: renderTarget // 明示的にtargetTableパラメータを設定
+                tableTranslations: translations
             };
+
+            // レンダリングタイプに応じて適切なパラメータとテンプレートを設定
+            let templatePath = 'views/controls/centerPanel/centerPanel.ejs';
             
-            // センターパネルをレンダリング
-            const centerPanelResult = await this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters);
+            if (renderType === 'table') {
+                ejsParameters.targetTable = renderTarget;
+            } else if (renderType === 'script') {
+                ejsParameters.targetScript = renderTarget;
+                templatePath = 'views/controls/centerPanel/scriptPanel.ejs';
+            } else if (renderType === 'query') {
+                ejsParameters.targetQuery = renderTarget;
+                templatePath = 'views/controls/centerPanel/queryPanel.ejs';
+            } else if (renderType === 'application') {
+                ejsParameters.targetApplication = renderTarget;
+                templatePath = 'views/controls/centerPanel/applicationPanel.ejs';
+            }
+            
+            // 対応するパネルをレンダリング
+            const panelResult = await this.renderHtml(templatePath, ejsParameters);
             
             // 結果が文字列であることを確認
-            if (typeof centerPanelResult === 'object' && centerPanelResult !== null) {
-                if (typeof centerPanelResult.body === 'string') {
-                    return centerPanelResult.body;
-                } else if (centerPanelResult.body) {
-                    return String(centerPanelResult.body);
+            if (typeof panelResult === 'object' && panelResult !== null) {
+                if (typeof panelResult.body === 'string') {
+                    return panelResult.body;
+                } else if (panelResult.body) {
+                    return String(panelResult.body);
                 }
             }
             
             // 有効な結果が得られなかった場合のフォールバック
-            console.error('センターパネルのレンダリング結果が無効です:', centerPanelResult);
+            console.error('センターパネルのレンダリング結果が無効です:', panelResult);
             return '<div class="error-panel">センターパネルの表示中にエラーが発生しました</div>';
         } catch (error) {
             console.error('センターパネルレンダリングエラー:', error);

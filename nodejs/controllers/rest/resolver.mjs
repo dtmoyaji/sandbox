@@ -124,6 +124,31 @@ class Resolver {
         if(!verifyResult.auth) {
             return res.status(401).send(verifyResult);
         }
+        
+        // resolveInfoがなかったり、parametersがない場合の対応
+        if (!resolveInfo || !resolveInfo.parameters) {
+            // URLから直接モデル名を取得する
+            const paths = req.params[0].split('/');
+            const path = paths.length > 0 ? paths[0] : '';
+            
+            console.log('Resolving model from path:', path);
+            // table_defの場合は特別な処理
+            if (path === 'table_def') {
+                return this.handleTableDefRequest(req, res, verifyResult);
+            }
+            
+            // 通常のテーブルモデルとして処理を試みる
+            const modelName = path;
+            // 以降の処理のためにresolveInfoを構築
+            resolveInfo = {
+                path: path,
+                parameters: {
+                    model_name: path,
+                    type: 'table'
+                }
+            };
+        }
+        
         const modelName = resolveInfo.parameters.model_name;
 
         // ユーザーモデルの場合は、特別な処理を行う
@@ -279,6 +304,40 @@ class Resolver {
         }
     }
 
+    // テーブル定義リクエストを処理するメソッド
+    async handleTableDefRequest(req, res, verifyResult) {
+        console.log('Handling table_def request');
+        
+        try {
+            // システム認証チェック
+            if (!verifyResult.auth) {
+                return res.status(401).send({ message: 'Unauthorized access' });
+            }
+            
+            // 全てのテーブル定義を取得
+            const models = this.modelManager.models;
+            let result = [];
+            
+            // ユーザーがアクセス可能なモデルのみをフィルタリング
+            const filteredModels = await this.filterModelsByUser(models, verifyResult);
+            
+            // 必要な情報だけを抽出
+            for (const model of filteredModels) {
+                result.push({
+                    table_name: model.table_name,
+                    table_logical_name: model.tableDefinition.table_logical_name || model.table_name,
+                    description: model.tableDefinition.description || '',
+                    fields: model.tableDefinition.fields,
+                    application_id: model.tableDefinition.application_id
+                });
+            }
+            
+            return res.json({ data: result });
+        } catch (error) {
+            console.error('Error in handleTableDefRequest:', error);
+            return res.status(500).send({ message: 'Internal server error', error: error.message });
+        }
+    }
 
     // ユーザーがアクセス可能なモデルのみを返す
     async filterModelsByUser(data, verifyResult) {

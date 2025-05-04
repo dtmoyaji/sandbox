@@ -76,7 +76,7 @@
                         const a = document.createElement('a');
                         a.href = '<%= basePath %>/admin/application/' + app.application_name;
                         a.textContent = app.application_name;
-                        a.style.cursor = 'pointer';
+                        a.className = 'pointer-cursor';
                         li.appendChild(a);
                         ul.appendChild(li);
                     });
@@ -96,9 +96,9 @@
                         listItems.forEach(item => {
                             const text = item.textContent.toLowerCase();
                             if (text.includes(searchValue)) {
-                                item.style.display = '';
+                                item.classList.remove('view-hidden');
                             } else {
-                                item.style.display = 'none';
+                                item.classList.add('view-hidden');
                             }
                         });
                     });

@@ -1,6 +1,6 @@
-<div class="application-panel">
+<div class="center-panel application-panel">
     <div class="panel-head">
-        <h2 class="panel-caption">アプリケーション: <%= targetApplication %></h2>
+        <h2 class="panel-caption" >アプリケーション: <%= targetApplication %></h2>
         <ul class="tab-holder">
             <li class="tab" id="overview" selected="true">概要</li>
             <li class="tab" id="tables">テーブル</li>
@@ -32,10 +32,13 @@
 </div>
 
 <script>
-    // タブの切り替え
-    document.addEventListener('DOMContentLoaded', async function () {
-        const tabs = document.querySelectorAll('.tab');
-        const views = document.querySelectorAll('.centerView');
+    // この関数はページ読み込み時とパネル表示時に両方呼び出されるようにする
+    function initializeApplicationPanel() {
+        console.log('initializeApplicationPanel: アプリケーションパネルを初期化します');
+        
+        // タブの切り替え
+        const tabs = document.querySelectorAll('.application-panel .tab');
+        const views = document.querySelectorAll('.application-panel .centerView');
 
         tabs.forEach((tab) => {
             tab.addEventListener('click', () => {
@@ -51,9 +54,9 @@
             });
         });
 
-        // 初期データ読み込み
-        await loadApplicationData();
-    });
+        // アプリケーションデータ読み込み
+        loadApplicationData();
+    }
 
     // アプリケーションデータ読み込み
     async function loadApplicationData() {
@@ -61,8 +64,9 @@
             const applicationName = '<%= targetApplication %>';
             console.log('アプリケーション情報を取得します:', applicationName);
 
-            // アプリケーション情報取得
-            const appResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/application`);
+            // アプリケーション情報取得 - キャッシュを回避するためのタイムスタンプを追加
+            const timestamp = new Date().getTime();
+            const appResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/application?t=${timestamp}`);
             if (!appResponse.ok) {
                 throw new Error(`サーバーエラー: ${appResponse.status} ${appResponse.statusText}`);
             }
@@ -102,7 +106,7 @@
             document.getElementById('applicationOverview').innerHTML = overviewHtml;
 
             // テーブル一覧を取得
-            const tablesResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/application_table_def`);
+            const tablesResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/application_table_def?t=${timestamp}`);
             if (!tablesResponse.ok) {
                 throw new Error(`テーブル一覧の取得エラー: ${tablesResponse.status} ${tablesResponse.statusText}`);
             }
@@ -120,7 +124,7 @@
                 appTables.forEach(table => {
                     tablesHtml += `
                         <tr>
-                            <td><a href="<%= typeof basePath !== 'undefined' ? basePath : '' %>/admin/table/${table.table_logical_name}">${table.table_logical_name}</a></td>
+                            <td><a href="javascript:void(0)" onclick="showTable('${table.table_logical_name}')">${table.table_logical_name}</a></td>
                             <td>${table.description || ''}</td>
                         </tr>
                     `;
@@ -131,7 +135,7 @@
             }
 
             // スクリプト一覧を取得
-            const scriptsResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/script`);
+            const scriptsResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/script?t=${timestamp}`);
             if (!scriptsResponse.ok) {
                 throw new Error(`スクリプト一覧の取得エラー: ${scriptsResponse.status} ${scriptsResponse.statusText}`);
             }
@@ -147,7 +151,7 @@
                 appScripts.forEach(script => {
                     scriptsHtml += `
                         <tr>
-                            <td><a href="<%= typeof basePath !== 'undefined' ? basePath : '' %>/admin/script/${script.script_name}">${script.script_name}</a></td>
+                            <td><a href="javascript:void(0)" onclick="showScript('${script.script_name}')">${script.script_name}</a></td>
                             <td>${script.description || ''}</td>
                         </tr>
                     `;
@@ -164,4 +168,38 @@
             document.getElementById('applicationScripts').innerHTML = `<p>エラー: ${error.message}</p>`;
         }
     }
+    
+    // テーブル表示関数
+    function showTable(tableName) {
+        console.log(`テーブルを表示します: ${tableName}`);
+        const event = new CustomEvent('showInCenterPanel', {
+            detail: {
+                type: 'table',
+                name: tableName
+            }
+        });
+        window.dispatchEvent(event);
+    }
+    
+    // スクリプト表示関数
+    function showScript(scriptName) {
+        console.log(`スクリプトを表示します: ${scriptName}`);
+        const event = new CustomEvent('showInCenterPanel', {
+            detail: {
+                type: 'script',
+                name: scriptName
+            }
+        });
+        window.dispatchEvent(event);
+    }
+
+    // DOMContentLoadedイベントでの初期化は一度だけ行われる
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded: アプリケーションパネル初期化を開始します');
+        initializeApplicationPanel();
+    });
+    
+    // パネルが表示された直後にも初期化を行う（2回目以降の表示用）
+    console.log('スクリプトが実行されました: 即時にアプリケーションパネル初期化を行います');
+    initializeApplicationPanel();
 </script>
