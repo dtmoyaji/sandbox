@@ -1,0 +1,2 @@
+user_domain_id,user_id,imap_account,impap_host,imap_port,imap_tls,imap_password 
+1, 1, murakami@date-yakkyoku.com, imap.blue.shared-server.net, 993, true, XLw3pmjz

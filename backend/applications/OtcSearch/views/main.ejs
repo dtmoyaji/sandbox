@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%- pageTitle %></title>
+    <link rel="stylesheet" href="<%= basePath %>/theme/style.css">
+</head>
+
+<body>
+    <div id="top" style="color: white; padding: 0 1em;">
+        <h3 style="display: inline-block;">症状から見つけるくすりの成分</h3>
+    </div>
+    <div id="body" style="overflow: auto;">
+        <form id="searchForm" style="padding: 1em;">
+            <input type="text" name="search" placeholder="症状を入力してください" style="font-size: 1.5em;">
+            <button id="submit" type="button" style="padding: 0 0.5em; font-size:1em;">探す</button>
+        </form>
+
+        <div id="answer" style="padding: 1em;">
+        </div>
+
+        <div id="attention" style="padding: 1em; font-size: 9pt;">
+            <strong>注意：</strong><br>
+            当サイトの検索結果は、参考リンクの情報を元にAIが生成しているため、必ずしも正しい情報とは限りません。<br>
+            参考にする際は十分にご注意ください。<br>
+            また、市販の医薬品以外に、医療用医薬品の成分を抽出することがありますので、ご注意ください。<br>
+            <br>
+            <strong>免責事項：</strong><br>
+            当サイトは、SANDBOX-JS上に構築されたデモサイトです。<br>
+            このサイトを利用して生じたいかなる損害についても、一切の責任を負いかねますので、ご了承ください。
+        </div>
+    </div>
+    <div id="footer">
+        <%- footer %>
+    </div>
+</body>
+<script>
+    var search = undefined;
+
+    // searchにフォーカスが当たった時に、入力された文字列をクリアする
+    document.getElementsByName('search')[0].addEventListener('focus', function () {
+        document.getElementsByName('search')[0].value = '';
+    });
+
+    // textでEnterキーを押した時にsubmitボタンをクリックする
+    document.getElementsByName('search')[0].addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            // 規定処理をキャンセル
+            e.preventDefault();
+            // submitボタンをクリック
+            document.getElementById('submit').click();
+        }
+    });
+
+    // ボタンクリック時の処理
+    document.getElementById('submit').addEventListener('click', async function () {
+        search = document.getElementsByName('search')[0].value;
+        document.getElementById('answer').innerHTML = '検索中...';
+        if (search !== '') {
+            try {
+                let response = await fetch(`<%= basePath %>/api/script/exec`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        script_name: "searchOtcElement",
+                        parameters: {
+                            prompt: search,
+                            current_user: getCurrentUser()
+                        }
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                let result = await response.json();
+                console.log(result);
+                let text = JSON.stringify(result.response, null, 2);
+                // \\nを<br>に変換
+                text = text.replace(/\n/g, '<br>');
+                let html = generateTitle(result.response);
+                //html += text;
+                let answer = document.getElementById('answer');
+                answer.innerHTML = '';
+                document.getElementById('answer').appendChild(html);
+                document.getElementById('answer').appendChild(generateContent(result.response));
+                document.getElementById('answer').appendChild(generateAttention(result.response));
+                document.getElementById('answer').appendChild(generateReference(result.response));
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('answer').innerHTML = 'Error: ' + error.message;
+            }
+        }
+    });
+
+    function generateAttention(data) {
+        let attention = document.createElement('div');
+        attention.setAttribute('style', 'padding: 1em;');
+        if (data.text.注意事項 !== undefined) {
+            attention.innerText = data.text.注意事項;
+        } else {
+            attention.innerText = '特に注意事項はありません。';
+        }
+        return attention;
+    }
+
+    function generateReference(data) {
+        let links = data.links;
+        let reference = document.createElement('div');
+        let title = document.createElement('div');
+        title.innerText = '参考リンク';
+        reference.appendChild(title);
+        reference.setAttribute('style', 'padding: 1em;');
+        let ul = document.createElement('ul');
+        reference.appendChild(ul);
+        for (let link of links) {
+            let li = document.createElement('li');
+            ul.appendChild(li);
+
+            let a = document.createElement('a');
+            a.setAttribute('target', '_blank');
+            a.setAttribute('href', link.link);
+            a.innerText = link.title;
+            li.appendChild(a);
+        }
+        return reference;
+    }
+
+    function generateContent(data) {
+        var content = '';
+        let elements = data.text.成分;
+        let elementInfo = document.createElement('ul');
+        elementInfo.setAttribute('class', 'elementInfo');
+        if (elements && elements.length > 0) {
+            for (let element of elements) {
+                let li = document.createElement('li');
+
+                let elementName = document.createElement('div');
+                elementName.setAttribute('class', 'elementName');
+                let elementLink = document.createElement('a');
+                elementLink.innerText = element.成分名;
+                elementLink.setAttribute('href', `https://html.duckduckgo.com/html/?q=「${search}」ときの「${element.成分名}」を含む市販薬。`);
+                elementLink.setAttribute('target', '_blank');
+                elementName.appendChild(elementLink);
+                li.appendChild(elementName);
+
+                let elementNote = document.createElement('div');
+                elementNote.setAttribute('class', 'elementNote');
+                let description = document.createElement('p');
+                description.innerText = element.説明;
+                elementNote.appendChild(description);
+
+                console.log(element.商品);
+                if (element.商品.length > 0) {
+                    let item = document.createElement('div');
+                    item.innerText = '【' + element.商品[0].商品名 + '】 等';
+                    elementNote.appendChild(item);
+                }
+                li.appendChild(elementNote);
+
+                elementInfo.appendChild(li);
+            }
+        }
+        return elementInfo;
+    }
+
+    function generateTitle(data) {
+        let div = document.createElement('div');
+        if (data.text.概要 === undefined) {
+            div.innerText = '概要が見つかりませんでした。';
+        } else {
+            div.innerText = data.text.概要;
+        }
+        return div;
+    }
+</script>
+<%- websocket %>
+    <%- modifyCss %>
+        <style>
+            .elementInfo {
+                display: table;
+                margin: 1em;
+                width: 95%;
+                display: block;
+                border-style: solid;
+                border-width: 1px;
+                background-color: white;
+            }
+
+            .elementInfo li {
+                display: block;
+            }
+
+            .elementInfo li a {
+                font-weight: bold;
+            }
+
+            .elementName {
+                max-width: inherit;
+                width: 100%;
+            }
+
+            .elementInfo div {
+                display: inline-block;
+                border-style: none;
+                border-width: inherit;
+            }
+
+            .elementNote {
+                display: block;
+                padding: 1em;
+            }
+        </style>
+
+</html>

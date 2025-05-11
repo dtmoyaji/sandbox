@@ -1,0 +1,67 @@
+{
+    "name": "otc",
+    "version": "0.0.1",
+    "description": "厚労省のOTCデータを格納する",
+    "scope" : "protected",
+    "user_scope": "user_readonly",
+    "fields": [
+        {
+            "name": "otc_id",
+            "type": "INTEGER",
+            "primaryKey": true,
+            "autoIncrement": true
+        },
+        {
+            "name": "otc_name",
+            "type": "STRING",
+            "length": 255,
+            "notNull": true
+        },
+        {
+            "name": "jan_code",
+            "type": "STRING",
+            "length": 13,
+            "unique": true
+        },
+        {
+            "name": "otc_unit",
+            "type": "STRING",
+            "length": 255
+        },
+        {
+            "name": "otc_seller",
+            "type": "STRING",
+            "length": 255
+        },
+        {
+            "name": "otc_maker",
+            "type": "STRING",
+            "length": 255
+        },
+        {
+            "name": "otc_elements",
+            "type": "TEXT"
+        },
+        {
+            "name": "otc_category",
+            "type": "STRING",
+            "length": 255,
+            "notNull": false
+        },
+        {
+            "name": "created_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "updated_at",
+            "type": "DATETIME",
+            "default": "CURRENT_TIMESTAMP"
+        },
+        {
+            "name": "deleted_at",
+            "type": "DATETIME",
+            "notNull": false
+        }
+    ]
+}

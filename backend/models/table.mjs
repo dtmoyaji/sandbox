@@ -87,6 +87,9 @@ export class Table {
             case 'DATETIME':
                 column = table.timestamp(fieldName).defaultTo(this.knex.fn.now());
                 break;
+            case 'BOOLEAN':
+                column = table.boolean(fieldName);
+                break;
             case 'FLOAT':
                 column = table.float(fieldName);
                 break;
@@ -105,15 +108,21 @@ export class Table {
                 break;
             default:
                 throw new Error(`Unsupported column type: ${fieldDef.type}`);
-        }
-        if (fieldDef.primaryKey) column.primary();
+        }        if (fieldDef.primaryKey) column.primary();
         if (fieldDef.notNull) column.notNullable();
         if (fieldDef.defaultValue) column.defaultTo(this.knex.raw(fieldDef.defaultValue));
+        if (fieldDef.default !== undefined) {
+            if (fieldDef.type === 'BOOLEAN') {
+                column.defaultTo(fieldDef.default);
+            } else if (fieldDef.default === 'CURRENT_TIMESTAMP') {
+                column.defaultTo(this.knex.fn.now());
+            } else {
+                column.defaultTo(fieldDef.default);
+            }
+        }
         if (fieldDef.nullable) column.nullable();
         if (fieldDef.unique) column.unique();
-    }
-
-    /**
+    }    /**
      * JSON定義からテーブルを作成するメソッド
      * @param {object} jsonData - テーブル定義のJSONオブジェクト
      */
@@ -126,18 +135,42 @@ export class Table {
             if (!this.tableDefinition) {
                 throw new Error(`Table '${this.table_name}' definition not found`);
             }
-            if (!await this.exists()) {
-                await this.knex.schema.createTable(this.tableDefinition.name, (table) => {
-                    for (const fieldDef of this.tableDefinition.fields) {
-                        this.createColumn(table, fieldDef.name, fieldDef);
+            
+            const exists = await this.exists();
+            
+            if (!exists) {
+                try {
+                    await this.knex.schema.createTable(this.tableDefinition.name, (table) => {
+                        for (const fieldDef of this.tableDefinition.fields) {
+                            this.createColumn(table, fieldDef.name, fieldDef);
+                        }
+                    });
+                    console.log(`Table '${this.table_name}' created`);
+                } catch (createErr) {
+                    // テーブル作成中にエラーが発生した場合、関連オブジェクトを確認
+                    console.error(`Error creating table '${this.table_name}':`, createErr);
+                    
+                    // シーケンスの存在を確認
+                    const sequenceName = `${this.table_name}_${this.tableDefinition.fields.find(f => f.primaryKey)?.name}_seq`;
+                    const sequenceExists = await this.knex.raw(`
+                        SELECT 1 FROM pg_class WHERE relname = ? AND relkind = 'S'
+                    `, [sequenceName])
+                        .then(result => result.rows.length > 0)
+                        .catch(() => false);
+                    
+                    if (sequenceExists) {
+                        console.warn(`シーケンス '${sequenceName}' がすでに存在します。同名の古いテーブルの残骸かもしれません。`);
+                        console.warn(`手動クリーンアップのために 'drop-tables.mjs' スクリプトを実行することをお勧めします。`);
                     }
-                });
-                console.log(`Table '${this.table_name}' created`);
+                    
+                    throw createErr; // エラーを再スロー
+                }
             } else {
                 console.log(`Table '${this.table_name}' already exists`);
             }
         } catch (err) {
             console.error(`Error creating table '${this.table_name}':`, err);
+            throw err; // エラーを上位に伝播させる
         }
     }
 

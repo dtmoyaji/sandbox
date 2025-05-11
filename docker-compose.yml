@@ -17,13 +17,13 @@ services:
       context: .
       dockerfile: ./Dockerfile.node
     env_file:
-      - ./nodejs/.env
+      - ./backend/.env
     environment:
       - DB_HOST=db
       - DB_PORT=5432
     working_dir: /app
     volumes:
-      - ./nodejs:/app
+      - ./backend:/app
     ports:
       - ${APP_PORT:-3031}:3001
       - 9229:9229 # for debugging

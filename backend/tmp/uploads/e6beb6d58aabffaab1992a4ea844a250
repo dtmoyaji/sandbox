@@ -1,0 +1,2 @@
+user_domain_id, user_id, imap_setting_id, lineworks_setting_id, filter_name, filter_type, filter_value
+1, 1, 1, 1, 送り主が一致したらリマインド, from, murakami@date-yakkyoku.com

@@ -79,7 +79,21 @@ async function registerScripts(applicationId, dirRealPath) {
             console.log(`スクリプト登録: ${scriptFile}`);
             const scriptFullPath = path.resolve(dirRealPath, 'scripts', scriptFile);
             const scriptUrl = pathToFileURL(scriptFullPath).href;
-            const { default: script } = await import(scriptUrl);
+            
+            // スクリプトモジュールのインポート
+            let script;
+            try {
+                const importedModule = await import(scriptUrl);
+                script = importedModule.default;
+                
+                // スクリプトのメタデータが正しくエクスポートされているか確認
+                if (!script || !script.script_name) {
+                    throw new Error(`スクリプト ${scriptFile} にはscript_nameが含まれていません`);
+                }
+            } catch (importError) {
+                console.error(`スクリプト ${scriptFile} のインポート中にエラーが発生しました:`, importError);
+                return; // このスクリプトの処理をスキップ
+            }
 
             const scriptTable = await modelManager.getModel('script');
             const currentScript = await scriptTable.get({ script_name: script.script_name });

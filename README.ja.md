@@ -1,8 +1,29 @@
 # SANDBOX-JS
 
-テーブル定義を作成すると、CRUD と RESTful API を自動生成する、Headless Data Administation tool です。
+SANDBOX-JSは、テーブル定義に基づいてCRUDおよびRESTful APIを自動生成するHeadlessデータ管理ツールです。
 
-自動生成される RESTFul API には、Jwtを使ってアクセス可能です。
+自動生成されたRESTful APIはJWTを使用してアクセスできます。
+
+## プロジェクト構造
+
+プロジェクトは以下の主要ディレクトリに整理されています：
+
+- `frontend/` - Vue.jsとTypeScriptで構築されたフロントエンドアプリケーション
+  - `src/legacy-views/` - バックエンドから移行されたビュー（移行段階）
+- `backend/` - バックエンドアプリケーション (Node.js)
+  - `views/` - レガシービューテンプレート（フロントエンドへ移行中）
+- `postgresql/` - データベース関連のファイルと設定
+
+## 移行計画
+
+プロジェクトは現在、以下の移行目標を持つ過渡期にあります：
+
+1. **ビューの移行**: バックエンドからフロントエンドへのビューテンプレートの移動
+   - 状況: 進行中 - ビューを`frontend/src/legacy-views/`にコピー済み
+   - 今後: バックエンドの参照をフロントエンドコンポーネントを使用するように更新
+   
+2. **TypeScript移行**: JavaScriptファイルからTypeScriptへの変換
+   - 状況: 進行中
 
 ## プロジェクトの解決したいテーマ
 
