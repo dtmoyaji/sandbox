@@ -9,7 +9,7 @@ yarn.lock
 package-lock.json
 package-lock.json
 token.txt
-nodejs/applications/*
+backend/applications/*
 data_restore
 nodejs/tmp
 .installed

@@ -99,4 +99,4 @@ npm start
 
 ## ライセンス
 
-ISC
+MIT
