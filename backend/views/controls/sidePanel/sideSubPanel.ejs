@@ -12,10 +12,14 @@
 </div>
 
 <script>
-    let listType = '<%= sidePanelTitle %>';
-
+let listType = '<%= sidePanelTitle %>';
+    
     document.addEventListener('DOMContentLoaded', async () => {
-        let listTag = document.getElementById('list');
+        let listTag = document.getElementById('list');        const searchInput = document.getElementById('search');
+          // 検索フィールドのマージンを調整
+        if (searchInput) {
+            // マージン調整はCSSで行う
+        }
 
         // リストを描画する関数を追加
         async function renderList(type, apiEndpoint) {
@@ -34,12 +38,11 @@
                 
                 // データの形式に応じて調整（data配列が直接か、data.dataの中にあるか）
                 const items = data.data || data;
-                
-                if (items && items.length > 0) {
-                    const newList = await createTableList(items);
+                  if (items && items.length > 0) {
+                    const listItems = await createTableList(items);
                     const listContainer = document.getElementById('list');
                     listContainer.innerHTML = '';
-                    listContainer.appendChild(newList);
+                    listContainer.appendChild(listItems);
                 } else {
                     document.getElementById('list').innerHTML = '<li>項目が見つかりません</li>';
                 }
@@ -92,9 +95,7 @@
                     console.error(`${type}ページジャンプエラー:`, error);
                 }
             });
-        }
-
-        switch (listType) {
+        }        switch (listType) {
             case 'application':
                 renderList('application', '<%= basePath %>/api/models/application');
                 break;
@@ -115,9 +116,7 @@
         
         // イベント委譲を設定
         delegateClickEvents();
-        
         // 検索機能を追加
-        const searchInput = document.getElementById('search');
         searchInput.addEventListener('input', () => {
             const searchText = searchInput.value.toLowerCase();
             const items = document.querySelectorAll('#list li');
@@ -132,14 +131,13 @@
             });
         });
     });
-
-    async function createTableList(json) {
-        const list = document.createElement('ul');
-        list.id = 'list';
+    
+async function createTableList(json) {
+        // リスト要素自体を作成せず、直接li要素を返す
+        const fragment = document.createDocumentFragment();
         json.forEach((element) => {
             const li = document.createElement('li');
             const a = document.createElement('a');
-            
             switch (listType) {
                 case 'application':
                     a.textContent = element.application_name;
@@ -156,16 +154,14 @@
                 default:
                     break;
             }
-            
-            a.href = 'javascript:void(0)';
-            a.onmouseover = () => {
+              a.href = 'javascript:void(0)';            a.onmouseover = () => {
                 a.style.cursor = 'pointer';
             };
             
             li.appendChild(a);
-            list.appendChild(li);
+            fragment.appendChild(li);
         });
-        return list;
+        return fragment;
     }
 
 </script>

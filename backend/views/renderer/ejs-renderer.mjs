@@ -208,22 +208,29 @@ class EjsRenderer {
                 path: [renderType, renderTarget],
                 params: queryParams,
                 tableTranslations: translations
-            };
-
-            // レンダリングタイプに応じて適切なパラメータとテンプレートを設定
+            };            // レンダリングタイプに応じて適切なパラメータとテンプレートを設定
             let templatePath = 'views/controls/centerPanel/centerPanel.ejs';
             
             if (renderType === 'table') {
                 ejsParameters.targetTable = renderTarget;
             } else if (renderType === 'script') {
                 ejsParameters.targetScript = renderTarget;
-                templatePath = 'views/controls/centerPanel/scriptPanel.ejs';
+                // targetScriptがnullの場合は一覧表示、それ以外は個別表示
+                if (renderTarget !== null) {
+                    templatePath = 'views/controls/centerPanel/scriptPanel.ejs';
+                }
             } else if (renderType === 'query') {
                 ejsParameters.targetQuery = renderTarget;
-                templatePath = 'views/controls/centerPanel/queryPanel.ejs';
+                // targetQueryがnullの場合は一覧表示、それ以外は個別表示
+                if (renderTarget !== null) {
+                    templatePath = 'views/controls/centerPanel/queryPanel.ejs';
+                }
             } else if (renderType === 'application') {
                 ejsParameters.targetApplication = renderTarget;
-                templatePath = 'views/controls/centerPanel/applicationPanel.ejs';
+                // targetApplicationがnullの場合は一覧表示、それ以外は個別表示
+                if (renderTarget !== null) {
+                    templatePath = 'views/controls/centerPanel/applicationPanel.ejs';
+                }
             }
             
             // 対応するパネルをレンダリング

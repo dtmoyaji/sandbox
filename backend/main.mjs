@@ -317,16 +317,15 @@ class Application {
                 console.error('センターパネルレンダリングエラー:', error);
                 res.status(500).send(`<div class="error-panel">レンダリングエラー: ${error.message}</div>`);
             }
-        });
-
-        // センターパネルレンダリングAPI (POST)
+        });        // センターパネルレンダリングAPI (POST)
         app.post('/api/renderer/centerPanel', async (req, res) => {
             try {
                 const { type, name } = req.body;
                 
-                if (!type || !name) {
-                    return res.status(400).json({ error: 'type and name parameters are required' });
+                if (!type) {
+                    return res.status(400).json({ error: 'type parameter is required' });
                 }
+                // nameパラメータはnullでも許可する
                 
                 console.log(`センターパネルレンダリングAPI(POST): type=${type}, name=${name}`);
                 

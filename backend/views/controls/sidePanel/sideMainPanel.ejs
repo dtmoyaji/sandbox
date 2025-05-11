@@ -12,102 +12,15 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        // アプリケーションリンクがクリックされたときの処理
-        const appLink = document.getElementById('link_app');
-        if (appLink) {
-            appLink.addEventListener('click', async function(e) {
-                e.preventDefault(); // デフォルトのナビゲーションを防止
-                
-                // URLを更新（ブラウザの履歴に追加）
-                const url = this.getAttribute('href');
-                window.history.pushState({}, '', url);
-                
-                try {
-                    // アプリケーション一覧を取得
-                    const response = await fetch('<%= basePath %>/api/models/application');
-                    if (!response.ok) {
-                        throw new Error('アプリケーション一覧の取得に失敗しました');
-                    }
-                    
-                    const result = await response.json();
-                    const appList = result.data || [];
-                    
-                    // サイドサブパネルが既に存在する場合は削除
-                    const existingSubPanel = document.getElementById('sideSubPanel');
-                    if (existingSubPanel) {
-                        existingSubPanel.remove();
-                    }
-                    
-                    // サイドサブパネルを作成
-                    const subPanel = document.createElement('div');
-                    subPanel.className = 'sidebarPanel';
-                    subPanel.id = 'sideSubPanel';
-                    
-                    // サイドサブパネルのタイトル
-                    const titleDiv = document.createElement('div');
-                    titleDiv.className = 'sidePanelTitle';
-                    const titleLabel = document.createElement('label');
-                    titleLabel.textContent = 'application';
-                    titleDiv.appendChild(titleLabel);
-                    subPanel.appendChild(titleDiv);
-                    
-                    // サイドサブパネルのメニュー
-                    const menuDiv = document.createElement('div');
-                    menuDiv.className = 'sidePanelMenu';
-                    menuDiv.id = 'sidePanelSubMenu';
-                    menuDiv.setAttribute('open', 'true');
-                    
-                    // 検索入力フィールド
-                    const searchInput = document.createElement('input');
-                    searchInput.type = 'text';
-                    searchInput.id = 'search';
-                    searchInput.placeholder = '検索';
-                    menuDiv.appendChild(searchInput);
-                    
-                    // アプリケーションリスト
-                    const ul = document.createElement('ul');
-                    ul.id = 'list';
-                    
-                    // リストアイテムの作成
-                    appList.forEach(app => {
-                        const li = document.createElement('li');
-                        const a = document.createElement('a');
-                        a.href = '<%= basePath %>/admin/application/' + app.application_name;
-                        a.textContent = app.application_name;
-                        a.className = 'pointer-cursor';
-                        li.appendChild(a);
-                        ul.appendChild(li);
-                    });
-                    
-                    menuDiv.appendChild(ul);
-                    subPanel.appendChild(menuDiv);
-                    
-                    // サイドサブパネルをDOMに追加
-                    const mainPanel = document.getElementById('sideMainPanel');
-                    mainPanel.parentNode.insertBefore(subPanel, mainPanel.nextSibling);
-                    
-                    // 検索機能の実装
-                    searchInput.addEventListener('input', function() {
-                        const searchValue = this.value.toLowerCase();
-                        const listItems = ul.querySelectorAll('li');
-                        
-                        listItems.forEach(item => {
-                            const text = item.textContent.toLowerCase();
-                            if (text.includes(searchValue)) {
-                                item.classList.remove('view-hidden');
-                            } else {
-                                item.classList.add('view-hidden');
-                            }
-                        });
-                    });
-                    
-                } catch (error) {
-                    console.error('アプリケーション一覧の読み込み中にエラーが発生しました:', error);
-                    alert('アプリケーション一覧の読み込みに失敗しました');
-                }
+<script>    document.addEventListener('DOMContentLoaded', async () => {
+        // 各リンクに完全リロード方式のイベントハンドラを追加
+        const links = document.querySelectorAll('#sidePanelMainMenu a');
+        links.forEach(link => {
+            link.addEventListener('click', function(e) {
+                // 完全リロード方式の場合はe.preventDefault()を使わない
+                // URLへの直接遷移を許可
+                window.location.href = this.href;
             });
-        }
+        });
     });
 </script>

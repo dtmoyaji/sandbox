@@ -11,12 +11,8 @@
             
             // デバッグ情報
             console.log(`centerPanel.ejsのレンダリング - path: ${path}, targetObject: ${targetObject}`);
-            
-            switch (path) {
+              switch (path) {
                 case 'table':
-                    if (!targetObject) {
-                        throw new Error('テーブル名が指定されていません');
-                    }
                     // テーブルパネルのパラメータ確認
                     if (!tableTranslations) {
                         console.warn('tableTranslationsが渡されていません。デフォルト値を使用します。');
@@ -28,6 +24,18 @@
                             'テーブル定義': 'テーブル定義'
                         };
                     }
+                    
+                    if (!targetObject) {
+                        // テーブル一覧を表示
+            %>
+                <%- include('./tableListPanel.ejs', { 
+                    params: params,
+                    tableTranslations: tableTranslations,
+                    basePath: typeof basePath !== 'undefined' ? basePath : ''
+                }); %>
+            <%
+                    } else {
+                        // 特定のテーブルを表示
             %>
                 <%- include('./tablePanel.ejs', { 
                     targetTable: targetObject, 
@@ -36,11 +44,19 @@
                     basePath: typeof basePath !== 'undefined' ? basePath : ''
                 }); %>
             <%
+                    }
                     break;
                 case 'application':
                     if (!targetObject) {
-                        throw new Error('アプリケーション名が指定されていません');
-                    }
+                        // アプリケーション一覧を表示
+            %>
+                <%- include('./applicationListPanel.ejs', { 
+                    params: params,
+                    basePath: typeof basePath !== 'undefined' ? basePath : ''
+                }); %>
+            <%
+                    } else {
+                        // 特定のアプリケーションを表示
             %>
                 <%- include('./applicationPanel.ejs', { 
                     targetApplication: targetObject, 
@@ -48,11 +64,19 @@
                     basePath: typeof basePath !== 'undefined' ? basePath : ''
                 }); %>
             <%
+                    }
                     break;
                 case 'script':
                     if (!targetObject) {
-                        throw new Error('スクリプト名が指定されていません');
-                    }
+                        // スクリプト一覧を表示
+            %>
+                <%- include('./scriptListPanel.ejs', { 
+                    params: params,
+                    basePath: typeof basePath !== 'undefined' ? basePath : ''
+                }); %>
+            <%
+                    } else {
+                        // 特定のスクリプトを表示
             %>
                 <%- include('./scriptPanel.ejs', { 
                     targetScript: targetObject, 
@@ -60,18 +84,26 @@
                     basePath: typeof basePath !== 'undefined' ? basePath : ''
                 }); %>
             <%
+                    }
                     break;
                 case 'query':
                     if (!targetObject) {
-                        throw new Error('クエリ名が指定されていません');
-                    }
+                        // クエリ一覧を表示
             %>
-                <%- include('./queryPanel.ejs', { 
+                <%- include('./queryListPanel.ejs', { 
+                    params: params,
+                    basePath: typeof basePath !== 'undefined' ? basePath : ''
+                }); %>
+            <%
+                    } else {
+                        // 特定のクエリを表示
+            %>                <%- include('./queryPanel.ejs', { 
                     targetQuery: targetObject, 
                     params: params,
                     basePath: typeof basePath !== 'undefined' ? basePath : ''
                 }); %>
             <%
+                    }
                     break;
                 default:
                     // 何も表示しない
