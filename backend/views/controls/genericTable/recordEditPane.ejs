@@ -1,3 +1,37 @@
+<style>
+  .record-edit-pane .edit-pane-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .record-edit-pane .save-btn, 
+  .record-edit-pane .cancel-btn,
+  .record-edit-pane .delete-btn {
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    border: none;
+  }
+  
+  .record-edit-pane .save-btn {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .record-edit-pane .cancel-btn {
+    background-color: #6c757d;
+    color: white;
+  }
+  
+  .record-edit-pane .delete-btn {
+    background-color: #dc3545;
+    color: white;
+    margin-right: auto; /* 左寄せにするため */
+  }
+</style>
 <div id="record-edit-pane" class="record-edit-pane">
     <div class="edit-pane-header">
         <h3 id="edit-pane-title">レコード編集</h3>
@@ -9,6 +43,7 @@
         </form>
     </div>
     <div class="edit-pane-footer">
+        <button type="button" id="delete-record-btn" class="delete-btn">削除</button>
         <button type="button" id="save-record-btn" class="save-btn">保存</button>
         <button type="button" id="cancel-edit-btn" class="cancel-btn">キャンセル</button>
     </div>
@@ -219,7 +254,23 @@
       }
     }
   }
-  
-  // グローバルに関数を公開
+    // グローバルに関数を公開
   window.drawRecord = drawRecord;
+
+  // 削除確認ダイアログを表示する関数
+  function confirmDelete() {
+    return confirm('このレコードを削除してもよろしいですか？');
+  }
+
+  // 削除ボタンのクリックイベントリスナーを設定（グローバルに公開）
+  window.setupDeleteButton = function(deleteCallback) {
+    const deleteButton = document.getElementById('delete-record-btn');
+    if (deleteButton) {
+      deleteButton.addEventListener('click', function() {
+        if (confirmDelete()) {
+          deleteCallback();
+        }
+      });
+    }
+  };
 </script>

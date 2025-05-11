@@ -95,9 +95,7 @@
         async function loadQueryData() {
             try {
                 const queryName = '<%= targetQuery %>';
-                console.log('クエリ情報を取得します:', queryName);
-
-                // クエリ情報取得
+                console.log('クエリ情報を取得します:', queryName);            // クエリ情報取得
                 const apiUrl = `${typeof basePath !== 'undefined' ? basePath : ''}/api/models/query_template?name=${encodeURIComponent(queryName)}`;
                 const response = await fetch(apiUrl);
                 
@@ -145,13 +143,12 @@
                 `;
                 return;
             }
-            
-            // パラメータの表示用整形
+              // パラメータの表示用整形
             let parametersStr = 'なし';
             let parametersDetail = '';
             try {
                 // バインド変数の解析（パラメータとして扱う）
-                const bindVariables = extractBindVariables(queryData.sql || '');
+                const bindVariables = extractBindVariables(queryData.query || '');
                 
                 if (bindVariables.length > 0) {
                     parametersStr = bindVariables.join(', ');
@@ -205,8 +202,7 @@
             
             document.getElementById('queryOverview').innerHTML = overviewHtml;
         }
-        
-        // SQLビューの更新
+          // SQLビューの更新
         function updateSqlView() {
             if (!queryData) {
                 document.getElementById('querySql').innerHTML = `
@@ -218,7 +214,7 @@
                 return;
             }
             
-            const sqlContent = queryData.sql || '';
+            const sqlContent = queryData.query || '';
             const sqlHtml = `
                 <div class="sql-container">
                     <textarea id="sqlEditor" rows="15" style="width: 100%; font-family: monospace;" readonly>${sqlContent}</textarea>
@@ -227,9 +223,10 @@
             
             document.getElementById('querySql').innerHTML = sqlHtml;
         }
-        
-        // SQLからバインド変数を抽出する関数
+          // SQLからバインド変数を抽出する関数
         function extractBindVariables(sql) {
+            if (!sql) return [];
+            
             const bindVarPattern = /:([\w\d_]+)/g;
             const matches = sql.match(bindVarPattern) || [];
             
