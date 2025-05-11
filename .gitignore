@@ -14,5 +14,5 @@ data_restore
 nodejs/tmp
 .installed
 .pnpm-store
-tmp/*
 backend/tmp/*
+!/backend/tmp/README.md
