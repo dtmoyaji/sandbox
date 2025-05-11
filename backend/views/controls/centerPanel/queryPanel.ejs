@@ -6,7 +6,7 @@
             <li class="tab" id="overview" selected="true">概要</li>
             <li class="tab" id="sql">SQL</li>
             <li class="tab" id="execute">実行</li>
-            <li class="tab" id="result">実行結果</li>
+            <li class="tab" id="logs">ログ</li>
         </ul>
     </div>
     <div class="panel-body">
@@ -28,8 +28,7 @@
                         <p>読み込み中...</p>
                     </div>
                 </div>
-            </div>
-            <div class="centerView" id="executeView" style="display: none;">
+            </div>            <div class="centerView" id="executeView" style="display: none;">
                 <h3>クエリ実行</h3>
                 <div id="queryExecute">
                     <div class="execute-container">
@@ -39,17 +38,23 @@
     // クエリに渡すパラメータをJSON形式で入力してください
 }</textarea>
                         </div>
-                        <div class="button-container" style="margin-top: 10px;">
+                        <div class="button-container" style="margin-top: 10px; margin-bottom: 20px;">
                             <button id="executeQueryBtn" class="btn btn-primary">実行</button>
+                        </div>
+                        
+                        <h4>実行結果</h4>
+                        <div id="queryResultDisplay" style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
+                            実行結果はここに表示されます
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="centerView" id="resultView" style="display: none;">
-                <h3>実行結果</h3>
-                <div id="queryResult">
-                    <div id="queryResultDisplay" style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
-                        実行結果はここに表示されます
+            <div class="centerView" id="logsView" style="display: none;">
+                <h3>実行ログ</h3>
+                <div id="queryLogs">
+                    <div class="loading-container">
+                        <div class="spinner"></div>
+                        <p>読み込み中...</p>
                     </div>
                 </div>
             </div>
@@ -59,8 +64,7 @@
 
 <script>
     // ページ読み込み時に実行される処理を定義したIIFE
-    (function() {
-        // クエリデータを保持する変数（グローバルにならないようにスコープを限定）
+    (function() {        // クエリデータを保持する変数（グローバルにならないようにスコープを限定）
         let queryData = null;
         let queryResult = null;
         
@@ -81,6 +85,11 @@
                         view.style.display = 'none';
                     });
                     document.getElementById(tab.id + 'View').style.display = 'block';
+                    
+                    // ログタブが選択された場合、ログを更新
+                    if (tab.id === 'logs') {
+                        updateLogsView();
+                    }
                 });
             });
 
@@ -109,8 +118,7 @@
                 if (!data || !data.data || data.data.length === 0) {
                     throw new Error('クエリ情報が見つかりませんでした');
                 }
-                
-                queryData = data.data[0];
+                  queryData = data.data[0];
                 
                 // 各ビューを更新
                 updateOverviewView();
@@ -130,12 +138,17 @@
                         <p>${error.message}</p>
                     </div>
                 `;
+                document.getElementById('queryLogs').innerHTML = `
+                    <div class="error-panel">
+                        <h3>クエリログ取得エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
             }
         }
         
         // 概要ビューの更新
-        function updateOverviewView() {
-            if (!queryData) {
+        function updateOverviewView() {            if (!queryData) {
                 document.getElementById('queryOverview').innerHTML = `
                     <div class="no-data-panel">
                         <p>クエリ情報がありません</p>
@@ -143,7 +156,8 @@
                 `;
                 return;
             }
-              // パラメータの表示用整形
+            
+            // パラメータの表示用整形
             let parametersStr = 'なし';
             let parametersDetail = '';
             try {
@@ -201,8 +215,7 @@
             `;
             
             document.getElementById('queryOverview').innerHTML = overviewHtml;
-        }
-          // SQLビューの更新
+        }        // SQLビューの更新
         function updateSqlView() {
             if (!queryData) {
                 document.getElementById('querySql').innerHTML = `
@@ -222,8 +235,7 @@
             `;
             
             document.getElementById('querySql').innerHTML = sqlHtml;
-        }
-          // SQLからバインド変数を抽出する関数
+        }        // SQLからバインド変数を抽出する関数
         function extractBindVariables(sql) {
             if (!sql) return [];
             
@@ -244,8 +256,7 @@
                 let parameters;
                 try {
                     parameters = JSON.parse(params);
-                } catch (e) {
-                    alert('パラメータは有効なJSON形式で入力してください');
+                } catch (e) {                    alert('パラメータは有効なJSON形式で入力してください');
                     return;
                 }
                 
@@ -256,9 +267,6 @@
                         <p>実行中...</p>
                     </div>
                 `;
-                
-                // 結果タブに切り替え
-                document.querySelector('.tab[id="result"]').click();
                 
                 // APIリクエスト - クエリ実行
                 const execUrl = `${typeof basePath !== 'undefined' ? basePath : ''}/api/query/exec`;
@@ -277,12 +285,14 @@
                     const errorText = await response.text();
                     throw new Error(`クエリ実行に失敗しました: ${response.status} ${response.statusText} - ${errorText}`);
                 }
-                
-                // レスポンス取得
+                  // レスポンス取得
                 queryResult = await response.json();
                 
                 // 結果表示を更新
                 updateQueryResult();
+                
+                // ログビューを更新
+                updateLogsView();
                 
             } catch (error) {
                 console.error('クエリ実行エラー:', error);
@@ -340,12 +350,98 @@
                         ? (typeof cellValue === 'object' ? JSON.stringify(cellValue) : cellValue) 
                         : '';
                     html += `<td>${displayValue}</td>`;
-                });
-                html += '</tr>';
+                });                html += '</tr>';
             });
             html += '</tbody></table>';
             
             resultDisplay.innerHTML = html;
+        }
+        
+        // ログビューの更新
+        async function updateLogsView() {
+            try {
+                const queryName = '<%= targetQuery %>';
+                
+                // ここではダミーデータを表示していますが、実際のAPIが実装されたら置き換えてください
+                // 例えば、/api/query/logs?name=クエリ名 のようなエンドポイントからデータを取得
+                const now = new Date();
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                // ダミーのログデータ
+                const logs = [
+                    {
+                        execution_time: now.toLocaleString(),
+                        status: '成功',
+                        user: 'システム',
+                        duration: '0.35秒',
+                        message: '正常に完了しました'
+                    },
+                    {
+                        execution_time: yesterday.toLocaleString(),
+                        status: '成功',
+                        user: 'システム',
+                        duration: '0.42秒',
+                        message: '正常に完了しました'
+                    }
+                ];
+                
+                if (logs.length === 0) {
+                    document.getElementById('queryLogs').innerHTML = `
+                        <div class="no-data-panel">
+                            <p>実行ログはありません</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // ログをテーブル形式で表示
+                let html = `
+                    <div class="logs-container">
+                        <p>クエリ "${queryName}" の実行ログ</p>
+                        <table class="data-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>実行日時</th>
+                                    <th>ステータス</th>
+                                    <th>実行ユーザー</th>
+                                    <th>実行時間</th>
+                                    <th>メッセージ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                logs.forEach(log => {
+                    html += `
+                        <tr>
+                            <td>${log.execution_time}</td>
+                            <td>${log.status}</td>
+                            <td>${log.user}</td>
+                            <td>${log.duration}</td>
+                            <td>${log.message}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                        <p class="mt-10"><small>※ ログは最新の20件のみ表示されます</small></p>
+                    </div>
+                `;
+                
+                document.getElementById('queryLogs').innerHTML = html;
+                
+            } catch (error) {
+                console.error('ログ取得エラー:', error);
+                document.getElementById('queryLogs').innerHTML = `
+                    <div class="error-panel">
+                        <h3>ログ取得エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
         }
         
         // DOMContentLoadedイベントで初期化を実行
