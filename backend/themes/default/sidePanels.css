@@ -1,0 +1,272 @@
+/* サイドパネル共通スタイル */
+.sidebarPanel {
+    width: 100%;
+    background-color: var(--menu-item-background-color); /* メインの暗い背景色に合わせる */
+    border-right: none; /* 罫線を削除 */
+    position: absolute; /* 絶対位置指定に変更 */
+    overflow: auto;
+    padding: 5px; /* パディングを3pxから5pxに変更 */
+    box-sizing: border-box; /* パディングを含めたボックスサイズに */
+}
+
+/* メインパネルは上半分に配置 */
+#sideMainPanel {
+    top: 0;
+    height: 50%; /* 高さを50%に設定 */
+}
+
+/* サブパネルは下半分に配置 */
+#sideSubPanel {
+    top: 50%; /* 上から50%の位置に配置 */
+    bottom: 0; /* 下端まで伸ばす */
+    height: auto; /* 高さを自動計算に変更 */
+    border-top: none; /* 罫線を削除 */
+}
+
+/* サブパネルのリスト表示用スタイル */
+#sideSubPanel .sidePanelMenu {
+    padding: 0.5em;
+    width: 100%;
+}
+
+#sideSubPanel .sidePanelMenu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-height: calc(100% - 5em); /* 検索ボックスとタイトル分を差し引く */
+    overflow-y: auto;
+}
+
+#sideSubPanel .sidePanelMenu li {
+    padding: 0;
+    width: 100%; /* 幅を100%に設定して下地が見えないようにする */
+}
+
+#sideSubPanel .sidePanelMenu li a {
+    display: block;
+    padding: 4px 8px; /* 上下のパディングを4pxに減らす */
+    color: white;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1em; /* 行の高さを小さくする */
+    width: 100%; /* 幅を100%に設定 */
+    box-sizing: border-box; /* ボックスサイズの計算方法を変更 */
+}
+
+#sideSubPanel .sidePanelMenu li a:hover {
+    background-color: var(--menu-item-hover-background-color);
+    color: white;
+    width: 100%;
+}
+
+#sideSubPanel .no-data {
+    color: rgba(255, 255, 255, 0.6);
+    text-align: center;
+    padding: 20px 0;
+    font-style: italic;
+}
+
+#sideSubPanel #search {
+    width: 95%;
+    padding: 6px;
+    margin: 0 auto 10px auto;
+    display: block;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    height: 2em;
+    box-sizing: border-box;
+}
+
+#sideSubPanel #search::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* エラーパネルのスタイル */
+#sideSubPanel .error-panel {
+    background-color: rgba(255, 0, 0, 0.1);
+    border-left: 3px solid #f00;
+    padding: 10px;
+    margin: 10px 0;
+    color: #fff;
+    font-size: 0.9em;
+}
+
+/* サイドバー全体のコンテナ */
+#left[open="true"] {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--sidebar-width);
+    background-color: var(--menu-item-background-color);
+    color: var(--background-color);
+    overflow: hidden; /* 内部でスクロールさせるためにoverflow:hiddenに設定 */
+}
+
+.sidePanelTitle {
+    padding: 0.3em 0;
+    height: 2em;
+    background-color: #34495e; /* 背景色を指定の色に変更 */
+    border-radius: 0.3em;
+    margin-bottom: 0.5em;
+    display: flex;
+    align-items: center;
+    border: none; /* 罫線を追加で削除 */
+}
+
+.sidePanelTitle label {
+    display: inline-block;
+    width: 100%;
+    height: 1.2em;
+    vertical-align: middle;
+    padding: 0 1em;
+    line-height: 1.2em;
+}
+
+.sidePanelTitle a {
+    display: inline-block;
+    color: white;
+    text-decoration: none;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.sidePanelMenu {
+    position: absolute;
+    top: 3em; /* タイトル分のスペースを確保 */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.5em;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidePanelMenu ul {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    max-height: calc(100% - 3em);
+    list-style-type: none;
+}
+
+.sidePanelMenu li {
+    list-style-type: none;
+    padding: 0;
+    margin-bottom: 1px; /* マージンを小さくする */
+    line-height: 1em; /* 行の高さを小さくする */
+}
+
+.sidePanelMenu a {
+    color: white; /* 白色のテキストを維持 */
+    text-decoration: none;
+    display: block;
+    padding: 4px 8px; /* 上下のパディングを4pxに減らす */
+    border-radius: 3px;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+/* アクティブなメニュー項目のスタイル */
+.sidePanelMenu a.active {
+    background-color: var(--header-background-hover-color);
+    color: white;
+}
+
+.no-data {
+    padding: 10px;
+    color: var(--text-light);
+    text-align: center;
+    font-style: italic;
+}
+
+.sidePanelMenu a:hover {
+    background-color: var(--menu-item-hover-background-color); /* ホバー時の背景色を変更 */
+    color: white; /* ホバー時のテキスト色を白に */
+}
+
+/* メインパネルとサブパネルで一貫した外観 */
+#sideMainPanel .sidePanelMenu,
+#sideSubPanel .sidePanelMenu {
+    padding: 0.5em;
+    width: 100%;
+}
+
+#sideMainPanel .sidePanelMenu ul,
+#sideSubPanel .sidePanelMenu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-height: calc(100% - 5em);
+    overflow-y: auto;
+}
+
+#sideMainPanel .sidePanelMenu li,
+#sideSubPanel .sidePanelMenu li {
+    padding: 0;
+    margin-bottom: 1px; /* マージンを小さくする */
+    width: 100%; /* 幅を100%に設定して下地が見えないようにする */
+}
+
+#sideMainPanel .sidePanelMenu li a,
+#sideSubPanel .sidePanelMenu li a {
+    display: block;
+    padding: 4px 8px; /* 上下のパディングを4pxに減らす */
+    color: white;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1em; /* 行の高さを小さくする */
+    width: 100%; /* 幅を100%に設定 */
+    box-sizing: border-box; /* ボックスサイズの計算方法を変更 */
+}
+
+#sideMainPanel .sidePanelMenu li a:hover,
+#sideSubPanel .sidePanelMenu li a:hover {
+    background-color: var(--menu-item-hover-background-color);
+    color: white;
+    width: 100%;
+}
+
+/* 検索フィールドの統一スタイル */
+#search,
+#sideMainPanel #search,
+#sideSubPanel #search {
+    width: 95%;
+    padding: 6px;
+    margin: 0 auto 10px auto;
+    display: block;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    height: 2em;
+    box-sizing: border-box;
+}
+
+#search::placeholder,
+#sideMainPanel #search::placeholder,
+#sideSubPanel #search::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+#list li {
+    transition: background-color 0.2s;
+}
+
+#list li:hover {
+    background-color: #f0f0f0;
+}

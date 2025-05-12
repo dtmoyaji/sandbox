@@ -16,12 +16,21 @@
             </tbody>
         </table>
     </div>
+    <!-- ページングコントロールを追加 -->
+    <div class="pagination-controls">
+        <button id="prevPageBtn" disabled>&lt; 前へ</button>
+        <span id="pageInfo">ページ <span id="currentPage">1</span> / <span id="totalPages">1</span></span>
+        <button id="nextPageBtn" disabled>次へ &gt;</button>
+    </div>
 </div>
 
 <script>
     // テーブル一覧を取得する
     (function() {
         const basePath = '<%= basePath %>';
+        let allTables = []; // すべてのテーブルデータを保持
+        let currentPage = 1;
+        const itemsPerPage = 10; // 1ページあたり10行表示
         
         fetch(`${basePath}/api/models/table_def`)
             .then(response => {
@@ -34,33 +43,17 @@
                 const tableListBody = document.getElementById('tableListBody');
                 
                 // データ形式の確認と適切な取得
-                const tables = tableData.data || tableData;
+                allTables = tableData.data || tableData;
                 
-                if (tables && tables.length > 0) {
-                    tableListBody.innerHTML = '';
-                    
-                    tables.forEach(table => {
-                        const row = document.createElement('tr');
-                        row.dataset.tableName = table.table_logical_name || table.name;
-                        row.addEventListener('click', function() {
-                            // テーブル詳細ページへの遷移
-                            window.location.href = `${basePath}/admin/table/${table.table_logical_name || table.name}`;
-                        });
-                        
-                        // テーブル名
-                        const nameCell = document.createElement('td');
-                        nameCell.textContent = table.table_logical_name || table.name;
-                        row.appendChild(nameCell);
-                        
-                        // 説明
-                        const descCell = document.createElement('td');
-                        descCell.textContent = table.description || '説明なし';
-                        row.appendChild(descCell);
-                        
-                        tableListBody.appendChild(row);
-                    });
+                if (allTables && allTables.length > 0) {
+                    // ページング情報を更新
+                    updatePaginationInfo(allTables.length);
+                    // 最初のページを表示
+                    displayTablePage(currentPage);
                 } else {
                     tableListBody.innerHTML = '<tr><td colspan="2">テーブルが見つかりませんでした</td></tr>';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
                 }
             })
             .catch(error => {
@@ -72,6 +65,65 @@
                 console.debug('API URL:', `${basePath}/api/models/table_def`);
                 console.debug('ユーザーエージェント:', navigator.userAgent);
             });
+            
+        // 指定ページのテーブルデータを表示する関数
+        function displayTablePage(page) {
+            const tableListBody = document.getElementById('tableListBody');
+            tableListBody.innerHTML = '';
+            
+            const startIndex = (page - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, allTables.length);
+            
+            // 現在のページのデータを表示
+            for (let i = startIndex; i < endIndex; i++) {
+                const table = allTables[i];
+                
+                const row = document.createElement('tr');
+                row.dataset.tableName = table.table_logical_name || table.name;
+                row.addEventListener('click', function() {
+                    // テーブル詳細ページへの遷移
+                    window.location.href = `${basePath}/admin/table/${table.table_logical_name || table.name}`;
+                });
+                
+                // テーブル名
+                const nameCell = document.createElement('td');
+                nameCell.textContent = table.table_logical_name || table.name;
+                row.appendChild(nameCell);
+                
+                // 説明
+                const descCell = document.createElement('td');
+                descCell.textContent = table.description || '説明なし';
+                row.appendChild(descCell);
+                
+                tableListBody.appendChild(row);
+            }
+            
+            // ページボタンの状態を更新
+            document.getElementById('prevPageBtn').disabled = page <= 1;
+            document.getElementById('nextPageBtn').disabled = page >= Math.ceil(allTables.length / itemsPerPage);
+            document.getElementById('currentPage').textContent = page;
+        }
+        
+        // ページング情報を更新する関数
+        function updatePaginationInfo(totalItems) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            document.getElementById('totalPages').textContent = totalPages;
+            
+            // ページングボタンのイベントリスナー設定
+            document.getElementById('prevPageBtn').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayTablePage(currentPage);
+                }
+            });
+            
+            document.getElementById('nextPageBtn').addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayTablePage(currentPage);
+                }
+            });
+        }
     })();
 </script>
 
@@ -132,5 +184,40 @@
         text-align: center;
         padding: 20px;
         color: #e74c3c;
+    }
+    
+    /* ページングコントロールのスタイル */
+    .pagination-controls {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 15px;
+        padding: 10px;
+    }
+    
+    .pagination-controls button {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 15px;
+        margin: 0 5px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .pagination-controls button:hover:not([disabled]) {
+        background-color: #2980b9;
+    }
+    
+    .pagination-controls button:disabled {
+        background-color: #95a5a6;
+        cursor: not-allowed;
+    }
+    
+    #pageInfo {
+        margin: 0 15px;
+        font-size: 14px;
+        color: #34495e;
     }
 </style>

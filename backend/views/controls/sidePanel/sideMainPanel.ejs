@@ -4,15 +4,16 @@
     </div>
     <div class="sidePanelMenu" id="sidePanelMainMenu" open="true">
         <ul>
-            <li><a href="<%= basePath %>/admin/application" id="link_app"><%= translations['application'] %></a></li>
-            <li><a href="<%= basePath %>/admin/table" id="link_table"><%= translations['table'] %></a></li>
-            <li><a href="<%= basePath %>/admin/query"><%= translations['クエリ'] %></a></li>
-            <li><a href="<%= basePath %>/admin/script"><%= translations['スクリプト'] %></a></li>
+            <li><a href="<%= basePath %>/admin/application" id="link_app" <%= currentSection === 'application' ? 'class="active"' : '' %>><%= translations['application'] %></a></li>
+            <li><a href="<%= basePath %>/admin/table" id="link_table" <%= currentSection === 'table' ? 'class="active"' : '' %>><%= translations['table'] %></a></li>
+            <li><a href="<%= basePath %>/admin/query" id="link_query" <%= currentSection === 'query' ? 'class="active"' : '' %>><%= translations['クエリ'] %></a></li>
+            <li><a href="<%= basePath %>/admin/script" id="link_script" <%= currentSection === 'script' ? 'class="active"' : '' %>><%= translations['スクリプト'] %></a></li>
         </ul>
     </div>
 </div>
 
-<script>    document.addEventListener('DOMContentLoaded', async () => {
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
         // 各リンクに完全リロード方式のイベントハンドラを追加
         const links = document.querySelectorAll('#sidePanelMainMenu a');
         links.forEach(link => {

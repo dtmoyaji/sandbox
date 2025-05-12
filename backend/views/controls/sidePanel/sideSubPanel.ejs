@@ -1,167 +1,80 @@
 <div class="sidebarPanel" id="sideSubPanel">
     <div class="sidePanelTitle">
-        <label>
-            <%= sidePanelTitle %>
-        </label>
+        <label><%= sidePanelTitle %></label>
     </div>
     <div class="sidePanelMenu" id="sidePanelSubMenu" open="true">
-        <input type="text" id="search" placeholder="検索">
-        <ul id="list">
-        </ul>
+        <% if (list && list.length > 0) { %>
+            <input type="text" id="search" placeholder="検索..." />
+            <ul id="list">
+                <% for (let i = 0; i < list.length; i++) { 
+                    let item = list[i];
+                    let displayName = '';
+                    let itemId = '';
+                    
+                    // 表示するアイテム名とIDをデータタイプに応じて設定
+                    if (sidePanelTitle === 'table') {
+                        if (item.table_name) {
+                            displayName = item.table_name;
+                            itemId = item.table_name;
+                        } else if (item.tableDefinition && item.tableDefinition.table_name) {
+                            displayName = item.tableDefinition.table_name;
+                            itemId = item.tableDefinition.table_name;
+                        }
+                    } else if (sidePanelTitle === 'application') {
+                        displayName = item.application_name || 'アプリケーション';
+                        itemId = item.application_id || i;
+                    } else if (sidePanelTitle === 'query') {
+                        displayName = item.query_name || 'クエリ';
+                        itemId = item.query_id || item.query_name || i;
+                    } else if (sidePanelTitle === 'script') {
+                        displayName = item.script_name || 'スクリプト';
+                        itemId = item.script_id || item.script_name || i;
+                    } else {
+                        // フォールバック：オブジェクトのいずれかのプロパティを表示
+                        const keys = Object.keys(item);
+                        if (keys.length > 0) {
+                            displayName = item[keys[0]] || `項目 ${i + 1}`;
+                            itemId = item.id || item[keys[0]] || i;
+                        } else {
+                            displayName = `項目 ${i + 1}`;
+                            itemId = i;
+                        }
+                    }
+                    
+                    // ページジャンプ用のURLを構築
+                    const linkUrl = `${basePath}/admin/${sidePanelTitle.toLowerCase()}/${displayName}`;
+                %>
+                    <li>
+                        <a href="<%= linkUrl %>"><%= displayName %></a>
+                    </li>
+                <% } %>
+            </ul>
+        <% } else { %>
+            <div class="no-data">項目がありません。<br>表示するデータが見つかりませんでした。</div>
+        <% } %>
     </div>
 </div>
 
 <script>
-let listType = '<%= sidePanelTitle %>';
-    
-    document.addEventListener('DOMContentLoaded', async () => {
-        let listTag = document.getElementById('list');        const searchInput = document.getElementById('search');
-          // 検索フィールドのマージンを調整
-        if (searchInput) {
-            // マージン調整はCSSで行う
-        }
-
-        // リストを描画する関数を追加
-        async function renderList(type, apiEndpoint) {
-            console.log(`${type}リストを取得します: ${apiEndpoint}`);
-            try {
-                // キャッシュを防ぐためのタイムスタンプを追加
-                const timestamp = new Date().getTime();
-                const response = await fetch(`${apiEndpoint}?t=${timestamp}`);
-                
-                if (!response.ok) {
-                    throw new Error(`APIエラー: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log(`${type}データを取得しました:`, data);
-                
-                // データの形式に応じて調整（data配列が直接か、data.dataの中にあるか）
-                const items = data.data || data;
-                  if (items && items.length > 0) {
-                    const listItems = await createTableList(items);
-                    const listContainer = document.getElementById('list');
-                    listContainer.innerHTML = '';
-                    listContainer.appendChild(listItems);
-                } else {
-                    document.getElementById('list').innerHTML = '<li>項目が見つかりません</li>';
-                }
-            } catch (error) {
-                console.error(`${type}リストの取得エラー:`, error);
-                document.getElementById('list').innerHTML = `<li>エラー: ${error.message}</li>`;
-            }
-        }
-
-        // delegateClickEvents関数を追加
-        function delegateClickEvents() {
-            document.getElementById('list').addEventListener('click', async (e) => {
-                const target = e.target.closest('a');
-                if (!target) return;
-                
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const type = listType.toLowerCase();
-                const name = target.textContent;
-                
-                try {
-                    console.log(`${type}ページへジャンプします: ${name}`);
-                    const basePath = '<%= basePath %>';
-                    
-                    // タイプに応じてジャンプ先URLを構築
-                    let jumpUrl;
-                    switch (type) {
-                        case 'table':
-                            jumpUrl = `${basePath}/admin/table/${name}`;
-                            break;
-                        case 'application':
-                            jumpUrl = `${basePath}/admin/application/${name}`;
-                            break;
-                        case 'script':
-                            jumpUrl = `${basePath}/admin/script/${name}`;
-                            break;
-                        case 'query':
-                            jumpUrl = `${basePath}/admin/query/${name}`;
-                            break;
-                        default:
-                            jumpUrl = `${basePath}/admin/`;
-                            break;
-                    }
-                    
-                    // ページジャンプ
-                    window.location.href = jumpUrl;
-                    
-                } catch (error) {
-                    console.error(`${type}ページジャンプエラー:`, error);
-                }
-            });
-        }        switch (listType) {
-            case 'application':
-                renderList('application', '<%= basePath %>/api/models/application');
-                break;
-            case 'table':
-                renderList('table', '<%= basePath %>/api/models/table_def');
-                break;
-            case 'script':
-                console.log('script is selected');
-                renderList('script', '<%= basePath %>/api/models/script');
-                break;
-            case 'query':
-                console.log('query is selected');
-                renderList('query', '<%= basePath %>/api/models/query_template');
-                break;
-            default:
-                break;
-        }
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('sideSubPanel loaded, list items: ' + document.querySelectorAll('#sideSubPanel #list li').length);
         
-        // イベント委譲を設定
-        delegateClickEvents();
-        // 検索機能を追加
-        searchInput.addEventListener('input', () => {
-            const searchText = searchInput.value.toLowerCase();
-            const items = document.querySelectorAll('#list li');
-            
-            items.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                if (text.includes(searchText)) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
+        // 検索機能
+        const searchInput = document.getElementById('search');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const filter = this.value.toLowerCase();
+                const listItems = document.querySelectorAll('#list li');
+                
+                listItems.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    if (text.includes(filter)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
             });
-        });
+        }
     });
-    
-async function createTableList(json) {
-        // リスト要素自体を作成せず、直接li要素を返す
-        const fragment = document.createDocumentFragment();
-        json.forEach((element) => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            switch (listType) {
-                case 'application':
-                    a.textContent = element.application_name;
-                    break;
-                case 'table':
-                    a.textContent = element.table_name;
-                    break;
-                case 'script':
-                    a.textContent = element.script_name;
-                    break;
-                case 'query':
-                    a.textContent = element.name;
-                    break;
-                default:
-                    break;
-            }
-              a.href = 'javascript:void(0)';            a.onmouseover = () => {
-                a.style.cursor = 'pointer';
-            };
-            
-            li.appendChild(a);
-            fragment.appendChild(li);
-        });
-        return fragment;
-    }
-
 </script>

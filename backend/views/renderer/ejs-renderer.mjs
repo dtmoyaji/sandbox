@@ -12,6 +12,7 @@ import dotenv from 'dotenv';
 import ejs from 'ejs';
 import express from 'express';
 import { resolve } from 'path';
+import EjsRendererSidebar from './ejs-renderer-sidebar.mjs';
 import L10nRenderer from './l10n-renderer.mjs';
 
 dotenv.config();
@@ -21,6 +22,7 @@ class EjsRenderer {
     modelManager = undefined;
     pageRouter = undefined;
     l10nRenderer = undefined; // 翻訳機能のインスタンス
+    sidebarRenderer = undefined; // サイドバー機能のインスタンス
     defaultLang = 'ja';
 
     constructor(restUtil, modelManager, translations = {}) {
@@ -30,6 +32,9 @@ class EjsRenderer {
         
         // L10nRendererのインスタンスを作成
         this.l10nRenderer = new L10nRenderer(modelManager, translations);
+        
+        // サイドバーレンダラーのインスタンスを作成
+        this.sidebarRenderer = new EjsRendererSidebar(restUtil, modelManager, this);
 
         // ルーティング設定
         this.setupRoutes();
@@ -146,7 +151,7 @@ class EjsRenderer {
                 this.renderHtml('views/controls/startButton/startButton.ejs', ejsParameters),
                 this.renderHtml('views/controls/topBar/topBar.ejs', ejsParameters),
                 this.renderHtml('views/controls/footBar/footBar.ejs', ejsParameters),
-                req.application_protection !== 'public' ? this.renderSidePanel(req, res, ejsParameters) : { body: '' },
+                req.application_protection !== 'public' ? this.sidebarRenderer.renderSidePanel(req, res, ejsParameters) : { body: '' },
                 this.renderHtml('views/controls/centerPanel/centerPanel.ejs', ejsParameters),
                 this.renderHtml('views/controls/websocket/websocket.ejs', ejsParameters),
                 this.renderHtml('views/page/modifyCss.ejs', ejsParameters)
@@ -251,178 +256,6 @@ class EjsRenderer {
         } catch (error) {
             console.error('センターパネルレンダリングエラー:', error);
             return `<div class="error-panel">センターパネルのレンダリングエラー: ${error.message}</div>`;
-        }
-    }
-
-    /**
-     * サイドパネルをレンダリングする
-     * @param {*} req リクエストオブジェクト
-     * @param {*} res レスポンスオブジェクト
-     * @param {*} ejsParameters EJSパラメータ
-     * @returns {Promise<object>} レンダリング結果
-     */
-    async renderSidePanel(req, res, ejsParameters) {
-        // パラメータの取得
-        let pathNode = [];
-        if (req.path.length > 0) {
-            pathNode = req.path.split('/');
-        }
-        let param1 = pathNode[1] || '';
-        let param2 = pathNode[2] || '';
-
-        let verifyResult = await this.restUtil.verifyToken(req, res);
-        if (!verifyResult.auth) {
-            return { status: 401, body: '' };
-        }
-
-        let user = verifyResult.user;
-        let userDomainLinkTable = await this.modelManager.getModel('user_domain_link');
-        let userDomainLink = await userDomainLinkTable.get({ user_id: user.user_id });
-        let userDomainId = userDomainLink[0].user_domain_id;
-
-        let userDomainTable = await this.modelManager.getModel('user_domain');
-        let userDomain = await userDomainTable.get({ user_domain_id: userDomainId });
-        if (userDomain.length === 0) {
-            return { status: 404, body: '見つかりませんでした' };
-        }
-        let userDomainName = userDomain[0].domain_name;
-
-        // サイドパネルの翻訳データを事前取得（一括取得でDBアクセスを最適化）
-        const sideMenuTranslations = await this.getL10nBatch([
-            'application',
-            'table',
-            'クエリ',
-            'スクリプト'
-        ]);
-
-        let renderResult = { status: 200, body: '' };
-
-        let paneParameter = {
-            sidePanelTitle: userDomainName,
-            appendButtonVisible: false,
-            user: user,
-            basePath: process.env.BASE_PATH ? process.env.BASE_PATH : '',
-            translations: sideMenuTranslations  // 翻訳データを直接渡す
-        };
-        
-        const sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideMainPanel.ejs', paneParameter);
-        if (sidePanelRenderResult.status > 200) {
-            renderResult.status = sidePanelRenderResult.status;
-            renderResult.body += sidePanelRenderResult.message || '';
-        } else {
-            renderResult.body += sidePanelRenderResult.body || '';
-        }
-
-        if (param2 !== '') {
-            ejsParameters.basePath = process.env.BASE_PATH ? process.env.BASE_PATH : '';
-            const subMenuRenderResult = await this.renderSideSubPanel(user, param2, ejsParameters);
-            if (subMenuRenderResult.status > 200) {
-                renderResult.status = subMenuRenderResult.status;
-                renderResult.body += subMenuRenderResult.message || '';
-            } else {
-                renderResult.body += subMenuRenderResult.body || '';
-            }
-        }
-
-        return renderResult;
-    }
-
-    /**
-     * サブサイドパネルをレンダリングする
-     * @param {*} user ユーザー情報
-     * @param {*} path パス
-     * @param {*} ejsParameters EJSパラメータ
-     * @returns {Promise<object>} レンダリング結果
-     */
-    async renderSideSubPanel(user, path, ejsParameters) {
-        let list = [];
-        switch (path) {
-            case 'application':
-                list = await this.getApplications(user.user_domain_id);
-                break;
-            case 'table':
-                list = await this.getTables(user.user_domain_id);
-                break;
-            case 'query':
-                // クエリリストの取得処理
-                break;
-            case 'script':
-                // スクリプトリストの取得処理
-                break;
-            default:
-                break;
-        }
-
-        let paneParameter = { 
-            sidePanelTitle: path,
-            appendButtonVisible: false,
-            user: user,
-            list: list,
-            basePath: process.env.BASE_PATH ? process.env.BASE_PATH : ''
-        };
-        
-        const sidePanelRenderResult = await this.renderHtml('views/controls/sidePanel/sideSubPanel.ejs', paneParameter);
-        return sidePanelRenderResult;
-    }
-
-    /**
-     * テーブルリストを取得する
-     * @param {number} userDomainId ユーザードメインID
-     * @returns {Array} テーブルリスト
-     */
-    async getTables(userDomainId) {
-        let tableList = this.modelManager.models;
-        if (userDomainId > 1) {
-            tableList = tableList.filter((table) => table.user_domain_id === userDomainId);
-        }
-        // テーブルの名前でソート
-        tableList.sort((a, b) => {
-            if (a.tableDefinition.table_name < b.tableDefinition.table_name) {
-                return -1;
-            }
-            if (a.tableDefinition.table_name > b.tableDefinition.table_name) {
-                return 1;
-            }
-            return 0;
-        });
-
-        return tableList;
-    }
-
-    /**
-     * アプリケーションリストを取得する
-     * @param {number} userDomainId ユーザードメインID
-     * @returns {Promise<Array>} アプリケーションリスト
-     */
-    async getApplications(userDomainId) {
-        try {
-            const applicationTable = await this.modelManager.getModel('application');
-            let applicationList = await applicationTable.get({});
-            
-            // ユーザードメインIDでフィルタリング（必要に応じて）
-            if (userDomainId > 1) {
-                // アプリケーションとドメインの関連付けを取得
-                const appDomainLinkTable = await this.modelManager.getModel('application_domain_link');
-                const appDomainLinks = await appDomainLinkTable.get({ user_domain_id: userDomainId });
-                
-                // 関連するアプリケーションIDのリストを作成
-                const appIds = appDomainLinks.map(link => link.application_id);
-                
-                // フィルタリング
-                applicationList = applicationList.filter(app => appIds.includes(app.application_id));
-            }
-            
-            // アプリケーション名でソート
-            applicationList.sort((a, b) => {
-                if (a.application_name < b.application_name) return -1;
-                if (a.application_name > b.application_name) return 1;
-                return 0;
-            });
-            
-            return applicationList;
-        } catch (error) {
-            console.error('アプリケーションリスト取得エラー:', error);
-            return [];
         }
     }
 

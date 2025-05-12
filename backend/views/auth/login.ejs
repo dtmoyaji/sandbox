@@ -6,29 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ログイン</title>
   <link rel="stylesheet" href="<%= basePath %>/theme/style.css">
+  <link rel="stylesheet" href="<%= basePath %>/theme/auth.css">
 </head>
 
 <body>
   <div class="auth-page">
-    <div class="fixed-dialog">
+    <div class="login-container">
       <h1>ログイン</h1>
-      <% if (typeof error !== 'undefined' && error) { %>
+      <% if (typeof error !=='undefined' && error) { %>
         <div class="error-message">
           <%= error %>
         </div>
-      <% } %>
-      <form action="<%= basePath %>/login" method="POST">
-        <input type="hidden" name="redirectUrl" value="<%= redirectUrl %>">
-        <div class="form-group">
-          <label for="username">ユーザー名:</label>
-          <input type="text" id="username" name="username" required>
-        </div>
-        <div class="form-group">
-          <label for="password">パスワード:</label>
-          <input type="password" id="password" name="password" required>
-        </div>
-        <button type="submit">ログイン</button>
-      </form>
+        <% } %>
+          <form action="<%= basePath %>/login" method="POST">
+            <input type="hidden" name="redirectUrl" value="<%= redirectUrl %>">
+            <div class="form-group">
+              <label for="username">ユーザー名:</label>
+              <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+              <label for="password">パスワード:</label>
+              <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="login-button">ログイン</button>
+          </form>
     </div>
   </div>
 </body>
