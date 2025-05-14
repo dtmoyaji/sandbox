@@ -12,17 +12,22 @@ SANDBOX-JSは、テーブル定義に基づいてCRUDおよびRESTful APIを自�
   - `src/legacy-views/` - バックエンドから移行されたビュー（移行段階）
 - `backend/` - バックエンドアプリケーション (Node.js)
   - `views/` - レガシービューテンプレート（フロントエンドへ移行中）
+    - `controls/centerPanel/` - 管理UIの主要パネル。現在は部品化・分割が進行中
+      - 各パネル（例: `tablePanel`, `queryPanel`, `scriptPanel` など）は専用フォルダに分割
+      - 各フォルダにはビュー・スクリプト・スタイルのEJS部品（例: `overviewView.ejs`, `script.ejs`, `style.ejs` など）が格納されている
 - `postgresql/` - データベース関連のファイルと設定
 
 ## 移行計画
 
 プロジェクトは現在、以下の移行目標を持つ過渡期にあります：
 
-1. **ビューの移行**: バックエンドからフロントエンドへのビューテンプレートの移動
-   - 状況: 進行中 - ビューを`frontend/src/legacy-views/`にコピー済み
-   - 今後: バックエンドの参照をフロントエンドコンポーネントを使用するように更新
-   
-2. **TypeScript移行**: JavaScriptファイルからTypeScriptへの変換
+1. **ビューの部品化・移行**  
+   - `backend/views/controls/centerPanel/`配下のEJSテンプレートをパネルごとに分割し、各種部品（ビュー・スクリプト・スタイル）として整理
+   - 状況: 進行中 - 多くのパネルがフォルダ単位で部品化されている
+   - 今後: `frontend/src/legacy-views/`への完全移行と、バックエンド参照の整理
+
+2. **TypeScript移行**  
+   - JavaScriptファイルからTypeScriptへの変換
    - 状況: 進行中
 
 ## プロジェクトの解決したいテーマ
@@ -44,4 +49,4 @@ docker内のpostgresqlのインスタンス作成をサポートします。
 
 ## システムの動作定義
 
-システム動作定義の内、重要なものは sysdesign 内の各 .bpmn にワークフローが定義してあります。
+システム動作定義のうち重要なものは `documents` 内の各 `.bpmn` ファイルにワークフローとして定義してあります。
