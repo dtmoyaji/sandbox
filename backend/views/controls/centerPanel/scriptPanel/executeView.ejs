@@ -1,0 +1,27 @@
+<div class="centerView" id="executeView" style="display: none;">
+    <h3>スクリプト実行</h3>
+    <div id="scriptExecute">
+        <div class="execute-container">
+            <h4>パラメータ</h4>
+            <div id="paramHelp" style="display: none;">
+                <h5>パラメータヘルプ</h5>
+                <div id="paramHelpContent">
+                    パラメータ定義が読み込まれていません。
+                </div>
+            </div>
+            <div id="scriptParams">
+                <textarea id="scriptParamsEditor" rows="10">{
+    // スクリプトに渡すパラメータをJSON形式で入力してください
+}</textarea>
+            </div>
+            <div class="button-container">
+                <button id="executeScriptBtn" class="btn btn-primary">実行</button>
+                <button id="showParamHelpBtn" class="btn btn-secondary" style="margin-left: 10px;">パラメータヘルプ</button>
+            </div>
+            <h4>実行結果</h4>
+            <div id="scriptResult">
+                <pre id="scriptResultDisplay">結果はここに表示されます</pre>
+            </div>
+        </div>
+    </div>
+</div>

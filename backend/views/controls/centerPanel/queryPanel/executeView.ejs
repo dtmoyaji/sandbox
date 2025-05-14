@@ -1,0 +1,21 @@
+<div class="centerView" id="executeView" style="display: none;">
+    <h3>クエリ実行</h3>
+    <div id="queryExecute">
+        <div class="execute-container">
+            <h4>パラメータ</h4>
+            <div id="queryParams">
+                <textarea id="queryParamsEditor" rows="10" style="width: 100%; font-family: monospace;">{
+    // クエリに渡すパラメータをJSON形式で入力してください
+}</textarea>
+            </div>
+            <div class="button-container" style="margin-top: 10px; margin-bottom: 20px;">
+                <button id="executeQueryBtn" class="btn btn-primary">実行</button>
+            </div>
+            
+            <h4>実行結果</h4>
+            <div id="queryResultDisplay" style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
+                実行結果はここに表示されます
+            </div>
+        </div>
+    </div>
+</div>

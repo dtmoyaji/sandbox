@@ -1,0 +1,184 @@
+<script>
+    // グローバル変数
+    window.currentTableName = '<%= targetTable %>';
+    window.basePath = '<%= typeof basePath !== "undefined" ? basePath : "" %>';
+    
+    // ページロード時の処理
+    document.addEventListener('DOMContentLoaded', function() {
+        // テーブル名が設定されているか確認
+        if (!window.currentTableName || window.currentTableName === 'undefined') {
+            console.warn('テーブル名が指定されていません。デフォルトテーブルに設定します。');
+            // データテーブルからテーブル名を取得（フォールバック）
+            const tableElement = document.querySelector('.genericTable');
+            if (tableElement && tableElement.dataset.table) {
+                window.currentTableName = tableElement.dataset.table;
+            } else {
+                // デフォルトテーブル名
+                window.currentTableName = 'application';
+            }
+        }
+        
+        // タブ切り替え
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // タブ選択状態変更
+                document.querySelectorAll('.tab').forEach(t => t.removeAttribute('selected'));
+                this.setAttribute('selected', 'true');
+                
+                // ビュー表示切替
+                const viewId = `${this.id}View`;
+                document.querySelectorAll('.centerView').forEach(view => {
+                    view.classList.remove('view-visible', 'view-hidden');
+                    view.classList.add(view.id === viewId ? 'view-visible' : 'view-hidden');
+                });
+                
+                // ビュー固有処理
+                if (this.id === 'definition') loadTableDefinition();
+                else if (this.id === 'rest') showRestApiInfo();
+            });
+        });
+    });
+    
+    // テーブル定義読み込み
+    async function loadTableDefinition() {
+        try {
+            const definitionElement = document.getElementById('tableDefinition');
+            if (!definitionElement) return;
+            
+            definitionElement.textContent = 'テーブル定義を読み込んでいます...';
+            
+            const response = await fetch(`${window.basePath}/api/models/${window.currentTableName}/definition`);
+            
+            if (!response.ok) throw new Error(`API エラー: ${response.status}`);
+            
+            const definition = await response.json();
+            definitionElement.textContent = JSON.stringify(definition, null, 2);
+            
+        } catch (error) {
+            console.error('定義読み込みエラー:', error);
+            const definitionElement = document.getElementById('tableDefinition');
+            if (definitionElement) {
+                definitionElement.textContent = `読み込みエラー: ${error.message}`;
+            }
+        }
+    }
+    
+    // REST API情報表示
+    function showRestApiInfo() {
+        const restView = document.getElementById('restView');
+        if (!restView) return;
+        
+        const baseUrl = `${window.basePath}/api/models/${window.currentTableName}`;
+        
+        restView.innerHTML = `
+            <h3>REST API</h3>
+            <div class="api-docs-container">
+                <div class="api-section">
+                    <h4 class="api-section-title">エンドポイント</h4>
+                    <div class="api-endpoint-list">
+                        <div class="api-endpoint-item">
+                            <div class="api-method api-method-get">GET</div>
+                            <div class="api-details">
+                                <div class="api-url">${baseUrl}</div>
+                                <div class="api-description">全レコード取得</div>
+                            </div>
+                        </div>
+                        <div class="api-endpoint-item">
+                            <div class="api-method api-method-get">GET</div>
+                            <div class="api-details">
+                                <div class="api-url">${baseUrl}/{id}</div>
+                                <div class="api-description">1件取得</div>
+                            </div>
+                        </div>
+                        <div class="api-endpoint-item">
+                            <div class="api-method api-method-post">POST</div>
+                            <div class="api-details">
+                                <div class="api-url">${baseUrl}</div>
+                                <div class="api-description">新規作成</div>
+                            </div>
+                        </div>
+                        <div class="api-endpoint-item">
+                            <div class="api-method api-method-put">PUT</div>
+                            <div class="api-details">
+                                <div class="api-url">${baseUrl}/{id}</div>
+                                <div class="api-description">更新</div>
+                            </div>
+                        </div>
+                        <div class="api-endpoint-item">
+                            <div class="api-method api-method-delete">DELETE</div>
+                            <div class="api-details">
+                                <div class="api-url">${baseUrl}/{id}</div>
+                                <div class="api-description">削除</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-section-title">クエリパラメータ</h4>
+                    <table class="api-param-table">
+                        <thead>
+                            <tr>
+                                <th>パラメータ</th>
+                                <th>説明</th>
+                                <th>例</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="param-name">limit</td>
+                                <td>取得する最大レコード件数</td>
+                                <td class="param-example">${baseUrl}?limit=10</td>
+                            </tr>
+                            <tr>
+                                <td class="param-name">offset</td>
+                                <td>取得開始位置（ページネーション用）</td>
+                                <td class="param-example">${baseUrl}?offset=20</td>
+                            </tr>
+                            <tr>
+                                <td class="param-name">sort</td>
+                                <td>並び替えの対象となるフィールド名</td>
+                                <td class="param-example">${baseUrl}?sort=created_at</td>
+                            </tr>
+                            <tr>
+                                <td class="param-name">order</td>
+                                <td>並び順（昇順=asc、降順=desc）</td>
+                                <td class="param-example">${baseUrl}?sort=created_at&order=desc</td>
+                            </tr>
+                            <tr>
+                                <td class="param-name">search</td>
+                                <td>テキスト検索クエリ</td>
+                                <td class="param-example">${baseUrl}?search=keyword</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="api-section">
+                    <h4 class="api-section-title">リクエスト例</h4>
+                    <div class="api-example-container">
+                        <div class="api-example">
+                            <h5>レコード作成（POST）</h5>
+                            <pre class="api-code">fetch('${baseUrl}', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    // レコードのデータ
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));</pre>
+                        </div>
+                        
+                        <div class="api-example">
+                            <h5>レコード取得（GET）</h5>
+                            <pre class="api-code">fetch('${baseUrl}?limit=10&sort=created_at&order=desc')
+  .then(response => response.json())
+  .then(data => console.log(data));</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+</script>

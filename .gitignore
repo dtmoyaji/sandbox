@@ -1,3 +1,28 @@
+# Node.js
+node_modules/
+# OS
+.DS_Store
+Thumbs.db
+# dotenv
+.env
+.env.*
+# VSCode
+.vscode/
+# テストや一時ファイル
+tmp/
+temp/
+*.tmp
+# Docker/PostgreSQL
+postgresql/db_data/
+postgresql/docker-entrypoint-initdb.d/
+# その他
+*.swp
+*.swo
+# バックアップ
+*~
+# アプリケーション固有
+backend/token.txt
+# 既存ルール
 bun.lockb
 db_data
 pnpm-lock.yaml
@@ -16,3 +41,4 @@ nodejs/tmp
 .pnpm-store
 backend/tmp/*
 !/backend/tmp/README.md
+copilot_order.md

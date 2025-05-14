@@ -1,0 +1,85 @@
+<script>
+    // スクリプト一覧を取得する
+    (function() {
+        const basePath = '<%= basePath %>';
+        
+        fetch(`${basePath}/api/models/script`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('スクリプト一覧の取得に失敗しました');
+                }
+                return response.json();
+            })
+            .then(response => {
+                const scriptListBody = document.getElementById('scriptListBody');
+                const scripts = response.data || [];
+                
+                if (scripts && scripts.length > 0) {
+                    scriptListBody.innerHTML = '';
+                    
+                    scripts.forEach(script => {
+                        const row = document.createElement('tr');
+                        const scriptName = script.script_name || script.name || '不明';
+                        row.dataset.scriptName = scriptName;
+                        row.addEventListener('click', function() {
+                            // スクリプト詳細ページへの遷移
+                            window.location.href = `${basePath}/admin/script/${scriptName}`;
+                        });
+                        
+                        // スクリプト名
+                        const nameCell = document.createElement('td');
+                        nameCell.textContent = scriptName;
+                        row.appendChild(nameCell);
+                        
+                        // 説明
+                        const descCell = document.createElement('td');
+                        descCell.textContent = script.description || '説明なし';
+                        row.appendChild(descCell);
+                        
+                        // 最終更新日
+                        const updatedCell = document.createElement('td');
+                        if (script.updated_at) {
+                            const date = new Date(script.updated_at);
+                            updatedCell.textContent = date.toLocaleString('ja-JP');
+                        } else {
+                            updatedCell.textContent = '不明';
+                        }
+                        row.appendChild(updatedCell);
+                        
+                        // アクション
+                        const actionCell = document.createElement('td');
+                        
+                        // 表示リンク
+                        const viewLink = document.createElement('a');
+                        viewLink.href = `${basePath}/admin/script/${script.script_name || script.name}`;
+                        viewLink.textContent = '表示';
+                        viewLink.classList.add('action-link');
+                        actionCell.appendChild(viewLink);
+                        
+                        // 実行リンク
+                        const runLink = document.createElement('a');
+                        runLink.href = `${basePath}/admin/script/${script.script_name || script.name}/run`;
+                        runLink.textContent = '実行';
+                        runLink.classList.add('action-link', 'run-link');
+                        runLink.style.marginLeft = '10px';
+                        actionCell.appendChild(runLink);
+                        
+                        row.appendChild(actionCell);
+                        
+                        scriptListBody.appendChild(row);
+                    });
+                } else {
+                    scriptListBody.innerHTML = '<tr><td colspan="4">スクリプトが見つかりませんでした</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('スクリプト一覧の取得エラー:', error);
+                const scriptListBody = document.getElementById('scriptListBody');
+                scriptListBody.innerHTML = `<tr><td colspan="4" class="error-message">エラー: ${error.message}</td></tr>`;
+                
+                // デバッグ情報を追加
+                console.debug('API URL:', `${basePath}/api/models/script`);
+                console.debug('ユーザーエージェント:', navigator.userAgent);
+            });
+    })();
+</script>

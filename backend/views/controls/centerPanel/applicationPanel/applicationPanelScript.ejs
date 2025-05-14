@@ -1,0 +1,203 @@
+<script>
+    // この関数はページ読み込み時とパネル表示時に両方呼び出されるようにする
+    function initializeApplicationPanel() {
+        console.log('initializeApplicationPanel: アプリケーションパネルを初期化します');
+        
+        // タブの切り替え
+        const tabs = document.querySelectorAll('.application-panel .tab');
+        const views = document.querySelectorAll('.application-panel .centerView');
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                tabs.forEach((t) => {
+                    t.removeAttribute('selected');
+                });
+                tab.setAttribute('selected', 'true');
+
+                views.forEach((view) => {
+                    view.style.display = 'none';
+                });
+                document.getElementById(tab.id + 'View').style.display = 'block';
+            });
+        });
+
+        // アプリケーションデータ読み込み
+        loadApplicationData();
+    }
+
+    // アプリケーションデータ読み込み
+    async function loadApplicationData() {
+        try {
+            const applicationName = '<%= targetApplication %>';
+            console.log('アプリケーション情報を取得します:', applicationName);
+
+            // アプリケーション情報取得 - キャッシュを回避するためのタイムスタンプを追加
+            const timestamp = new Date().getTime();
+            const appResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/application?t=${timestamp}`);
+            if (!appResponse.ok) {
+                throw new Error(`サーバーエラー: ${appResponse.status} ${appResponse.statusText}`);
+            }
+              const appData = await appResponse.json();
+            console.log('アプリケーションデータ取得完了:', { 
+                データ件数: appData.data ? appData.data.length : 0,
+                検索名: applicationName 
+            });
+            
+            // デバッグ用：すべてのアプリケーション名をログに出力
+            if (appData.data && appData.data.length > 0) {
+                console.log('取得済アプリケーション一覧:', appData.data.map(app => app.application_name).join(', '));
+            }
+            
+            const application = appData.data.find(app => app.application_name === applicationName);
+            
+            if (!application) {
+                throw new Error(`アプリケーション ${applicationName} が見つかりません`);
+            }
+            
+            console.log('選択されたアプリケーション情報:', { 
+                名前: application.application_name,
+                ID: application.application_id,
+                説明: application.application_description || '説明なし'
+            });
+
+            // 概要ビューを更新
+            const overviewHtml = `
+                <div class="app-info">
+                    <div class="app-info-row">
+                        <div class="app-info-label">アプリケーション名:</div>
+                        <div class="app-info-value">${application.application_name}</div>
+                    </div>
+                    <div class="app-info-row">
+                        <div class="app-info-label">説明:</div>
+                        <div class="app-info-value">${application.application_description || '説明なし'}</div>
+                    </div>
+                    <div class="app-info-row">
+                        <div class="app-info-label">保護:</div>
+                        <div class="app-info-value">${application.application_protection || 'なし'}</div>
+                    </div>
+                    <div class="app-info-row">
+                        <div class="app-info-label">作成日:</div>
+                        <div class="app-info-value">${new Date(application.created_at).toLocaleString()}</div>
+                    </div>
+                    <div class="app-info-row">
+                        <div class="app-info-label">更新日:</div>
+                        <div class="app-info-value">${new Date(application.updated_at).toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('applicationOverview').innerHTML = overviewHtml;            // application_idの型を確認して適切な比較を行う
+            const appId = application.application_id;
+            console.log('アプリケーションIDの型:', typeof appId, appId);
+            
+            // テーブル一覧を取得
+            const tablesResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/application_table_def?t=${timestamp}`);
+            if (!tablesResponse.ok) {
+                throw new Error(`テーブル一覧の取得エラー: ${tablesResponse.status} ${tablesResponse.statusText}`);
+            }
+              const tablesData = await tablesResponse.json();
+            // data プロパティがある場合はそこから取得、ない場合は直接使用
+            const tablesList = tablesData.data || tablesData;
+            console.log('テーブル一覧取得完了:', { 
+                テーブル件数: tablesList.length,
+                アプリケーションID: application.application_id 
+            });
+              const appTables = tablesList.filter(table => {
+                // IDの型に注意して比較（文字列化して比較する）
+                const tableAppId = table.application_id;
+                console.log('テーブル比較:', { 
+                    テーブル: table.table_id || table.table_logical_name,
+                    テーブルのアプリID: tableAppId,
+                    型: typeof tableAppId
+                });
+                return String(tableAppId) === String(appId);
+            });
+            console.log('アプリケーションに紐づくテーブル:', { 
+                件数: appTables.length, 
+                テーブルID: appTables.length > 0 ? appTables.map(t => t.table_id || t.table_logical_name).join(', ') : 'なし' 
+            });
+            
+            if (appTables.length === 0) {
+                document.getElementById('applicationTables').innerHTML = '<p>このアプリケーションには登録されているテーブルがありません。</p>';
+            } else {
+                let tablesHtml = '<table class="data-table"><thead><tr><th>テーブル名</th><th>説明</th></tr></thead><tbody>';
+                  appTables.forEach(table => {
+                    tablesHtml += `
+                        <tr>
+                            <td><a href="<%= typeof basePath !== 'undefined' ? basePath : '' %>/admin/table/${table.table_logical_name}">${table.table_logical_name}</a></td>
+                            <td>${table.description || ''}</td>
+                        </tr>
+                    `;
+                });
+                
+                tablesHtml += '</tbody></table>';
+                document.getElementById('applicationTables').innerHTML = tablesHtml;
+            }
+
+            // スクリプト一覧を取得
+            const scriptsResponse = await fetch(`<%= typeof basePath !== 'undefined' ? basePath : '' %>/api/models/script?t=${timestamp}`);
+            if (!scriptsResponse.ok) {
+                throw new Error(`スクリプト一覧の取得エラー: ${scriptsResponse.status} ${scriptsResponse.statusText}`);
+            }
+              const scriptsData = await scriptsResponse.json();
+            console.log('スクリプト一覧取得完了:', { 
+                スクリプト件数: scriptsData.data ? scriptsData.data.length : 0,
+                アプリケーションID: application.application_id 
+            });
+              const appScripts = scriptsData.data.filter(script => {
+                // IDの型に注意して比較（文字列化して比較する）
+                const scriptAppId = script.application_id;
+                return String(scriptAppId) === String(appId);
+            });
+            console.log('アプリケーションに紐づくスクリプト:', { 
+                件数: appScripts.length, 
+                スクリプト名: appScripts.length > 0 ? appScripts.map(s => s.script_name).join(', ') : 'なし' 
+            });
+            
+            if (appScripts.length === 0) {
+                document.getElementById('applicationScripts').innerHTML = '<p>このアプリケーションには登録されているスクリプトがありません。</p>';
+            } else {
+                let scriptsHtml = '<table class="data-table"><thead><tr><th>スクリプト名</th><th>説明</th></tr></thead><tbody>';
+                  appScripts.forEach(script => {
+                    scriptsHtml += `
+                        <tr>
+                            <td><a href="<%= typeof basePath !== 'undefined' ? basePath : '' %>/admin/script/${script.script_name}">${script.script_name}</a></td>
+                            <td>${script.description || ''}</td>
+                        </tr>
+                    `;
+                });
+                
+                scriptsHtml += '</tbody></table>';
+                document.getElementById('applicationScripts').innerHTML = scriptsHtml;
+            }
+            
+        } catch (error) {
+            console.error('アプリケーションデータの取得エラー:', error);
+            document.getElementById('applicationOverview').innerHTML = `<p>エラー: ${error.message}</p>`;
+            document.getElementById('applicationTables').innerHTML = `<p>エラー: ${error.message}</p>`;
+            document.getElementById('applicationScripts').innerHTML = `<p>エラー: ${error.message}</p>`;
+        }
+    }
+      // テーブル表示関数
+    function showTable(tableName) {
+        console.log(`テーブルを表示します: ${tableName}`);
+        // 完全リロード方式に変更
+        window.location.href = '<%= typeof basePath !== "undefined" ? basePath : "" %>/admin/table/' + tableName;
+    }
+    
+    // スクリプト表示関数
+    function showScript(scriptName) {
+        console.log(`スクリプトを表示します: ${scriptName}`);
+        // 完全リロード方式に変更
+        window.location.href = '<%= typeof basePath !== "undefined" ? basePath : "" %>/admin/script/' + scriptName;
+    }
+
+    // DOMContentLoadedイベントでの初期化は一度だけ行われる
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded: アプリケーションパネル初期化を開始します');
+        initializeApplicationPanel();
+    });
+    
+    // パネルが表示された直後にも初期化を行う（2回目以降の表示用）
+    console.log('スクリプトが実行されました: 即時にアプリケーションパネル初期化を行います');
+    initializeApplicationPanel();
+</script>

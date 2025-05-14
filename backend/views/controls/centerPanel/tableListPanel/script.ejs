@@ -1,0 +1,102 @@
+<script>
+    // テーブル一覧を取得する
+    (function() {
+        const basePath = '<%= basePath %>';
+        let allTables = []; // すべてのテーブルデータを保持
+        let currentPage = 1;
+        const itemsPerPage = 10; // 1ページあたり10行表示
+        
+        fetch(`${basePath}/api/models/table_def`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('テーブル一覧の取得に失敗しました');
+                }
+                return response.json();
+            })
+            .then(tableData => {
+                const tableListBody = document.getElementById('tableListBody');
+                
+                // データ形式の確認と適切な取得
+                allTables = tableData.data || tableData;
+                
+                if (allTables && allTables.length > 0) {
+                    // ページング情報を更新
+                    updatePaginationInfo(allTables.length);
+                    // 最初のページを表示
+                    displayTablePage(currentPage);
+                } else {
+                    tableListBody.innerHTML = '<tr><td colspan="2">テーブルが見つかりませんでした</td></tr>';
+                    document.getElementById('prevPageBtn').disabled = true;
+                    document.getElementById('nextPageBtn').disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error('テーブル一覧の取得エラー:', error);
+                const tableListBody = document.getElementById('tableListBody');
+                tableListBody.innerHTML = `<tr><td colspan="2" class="error-message">エラー: ${error.message}</td></tr>`;
+                
+                // デバッグ情報を追加
+                console.debug('API URL:', `${basePath}/api/models/table_def`);
+                console.debug('ユーザーエージェント:', navigator.userAgent);
+            });
+            
+        // 指定ページのテーブルデータを表示する関数
+        function displayTablePage(page) {
+            const tableListBody = document.getElementById('tableListBody');
+            tableListBody.innerHTML = '';
+            
+            const startIndex = (page - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, allTables.length);
+            
+            // 現在のページのデータを表示
+            for (let i = startIndex; i < endIndex; i++) {
+                const table = allTables[i];
+                
+                const row = document.createElement('tr');
+                row.dataset.tableName = table.table_logical_name || table.name;
+                row.addEventListener('click', function() {
+                    // テーブル詳細ページへの遷移
+                    window.location.href = `${basePath}/admin/table/${table.table_logical_name || table.name}`;
+                });
+                
+                // テーブル名
+                const nameCell = document.createElement('td');
+                nameCell.textContent = table.table_logical_name || table.name;
+                row.appendChild(nameCell);
+                
+                // 説明
+                const descCell = document.createElement('td');
+                descCell.textContent = table.description || '説明なし';
+                row.appendChild(descCell);
+                
+                tableListBody.appendChild(row);
+            }
+            
+            // ページボタンの状態を更新
+            document.getElementById('prevPageBtn').disabled = page <= 1;
+            document.getElementById('nextPageBtn').disabled = page >= Math.ceil(allTables.length / itemsPerPage);
+            document.getElementById('currentPage').textContent = page;
+        }
+        
+        // ページング情報を更新する関数
+        function updatePaginationInfo(totalItems) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            document.getElementById('totalPages').textContent = totalPages;
+            
+            // ページングボタンのイベントリスナー設定
+            document.getElementById('prevPageBtn').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayTablePage(currentPage);
+                }
+            });
+            
+            document.getElementById('nextPageBtn').addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayTablePage(currentPage);
+                }
+            });
+        }
+    })();
+</script>

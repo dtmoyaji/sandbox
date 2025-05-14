@@ -1,0 +1,391 @@
+<script>
+    // ページ読み込み時に実行される処理を定義したIIFE
+    (function() {        // クエリデータを保持する変数（グローバルにならないようにスコープを限定）
+        let queryData = null;
+        let queryResult = null;
+        
+        // 初期化処理
+        function initializeQueryPanel() {
+            // タブの切り替え
+            const tabs = document.querySelectorAll('.tab');
+            const views = document.querySelectorAll('.centerView');
+
+            tabs.forEach((tab) => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach((t) => {
+                        t.removeAttribute('selected');
+                    });
+                    tab.setAttribute('selected', 'true');
+
+                    views.forEach((view) => {
+                        view.style.display = 'none';
+                    });
+                    document.getElementById(tab.id + 'View').style.display = 'block';
+                    
+                    // ログタブが選択された場合、ログを更新
+                    if (tab.id === 'logs') {
+                        updateLogsView();
+                    }
+                });
+            });
+
+            // ボタンイベントリスナー設定
+            document.getElementById('executeQueryBtn')?.addEventListener('click', executeQuery);
+            
+            // 初期データ読み込み
+            loadQueryData();
+        }
+        
+        // クエリデータ読み込み
+        async function loadQueryData() {
+            try {
+                const queryName = '<%= targetQuery %>';
+                console.log('クエリ情報を取得します:', queryName);            // クエリ情報取得
+                const apiUrl = `${typeof basePath !== 'undefined' ? basePath : ''}/api/models/query_template?name=${encodeURIComponent(queryName)}`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`クエリの取得に失敗しました: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('APIレスポンスデータ:', data);
+                
+                if (!data || !data.data || data.data.length === 0) {
+                    throw new Error('クエリ情報が見つかりませんでした');
+                }
+                  queryData = data.data[0];
+                
+                // 各ビューを更新
+                updateOverviewView();
+                updateSqlView();
+                
+            } catch (error) {
+                console.error('クエリデータの取得エラー:', error);
+                document.getElementById('queryOverview').innerHTML = `
+                    <div class="error-panel">
+                        <h3>クエリ情報取得エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('querySql').innerHTML = `
+                    <div class="error-panel">
+                        <h3>クエリSQL取得エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('queryLogs').innerHTML = `
+                    <div class="error-panel">
+                        <h3>クエリログ取得エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 概要ビューの更新
+        function updateOverviewView() {            if (!queryData) {
+                document.getElementById('queryOverview').innerHTML = `
+                    <div class="no-data-panel">
+                        <p>クエリ情報がありません</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // パラメータの表示用整形
+            let parametersStr = 'なし';
+            let parametersDetail = '';
+            try {
+                // バインド変数の解析（パラメータとして扱う）
+                const bindVariables = extractBindVariables(queryData.query || '');
+                
+                if (bindVariables.length > 0) {
+                    parametersStr = bindVariables.join(', ');
+                    
+                    // 詳細表示用
+                    parametersDetail = '<table class="data-table" style="width: 100%; margin-top: 10px;">' +
+                        '<thead><tr><th>パラメータ名</th></tr></thead>' +
+                        '<tbody>';
+                    
+                    for (const variable of bindVariables) {
+                        parametersDetail += `<tr><td>${variable}</td></tr>`;
+                    }
+                    
+                    parametersDetail += '</tbody></table>';
+                }
+            } catch (e) {
+                console.error('パラメータの解析エラー:', e);
+                parametersStr = 'パラメータの解析エラー';
+            }
+            
+            // クエリ情報の表示
+            const overviewHtml = `
+                <div class="query-info">
+                    <div class="info-row">
+                        <div class="info-label">クエリ名:</div>
+                        <div class="info-value">${queryData.name || 'なし'}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">説明:</div>
+                        <div class="info-value">${queryData.description || '説明なし'}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">パラメータ:</div>
+                        <div class="info-value">${parametersStr}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">作成日:</div>
+                        <div class="info-value">${queryData.created_at ? new Date(queryData.created_at).toLocaleString() : 'なし'}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">更新日:</div>
+                        <div class="info-value">${queryData.updated_at ? new Date(queryData.updated_at).toLocaleString() : 'なし'}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4>パラメータ詳細</h4>
+                    ${parametersDetail || '<p>パラメータはありません</p>'}
+                </div>
+            `;
+            
+            document.getElementById('queryOverview').innerHTML = overviewHtml;
+        }        // SQLビューの更新
+        function updateSqlView() {
+            if (!queryData) {
+                document.getElementById('querySql').innerHTML = `
+                    <div class="error-panel">
+                        <h3>エラー</h3>
+                        <p>クエリSQL情報がありません</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const sqlContent = queryData.query || '';
+            const sqlHtml = `
+                <div class="sql-container">
+                    <textarea id="sqlEditor" rows="15" style="width: 100%; font-family: monospace;" readonly>${sqlContent}</textarea>
+                </div>
+            `;
+            
+            document.getElementById('querySql').innerHTML = sqlHtml;
+        }        // SQLからバインド変数を抽出する関数
+        function extractBindVariables(sql) {
+            if (!sql) return [];
+            
+            const bindVarPattern = /:([\w\d_]+)/g;
+            const matches = sql.match(bindVarPattern) || [];
+            
+            // 重複を削除して返す
+            return [...new Set(matches.map(match => match.substring(1)))];
+        }
+        
+        // クエリ実行処理
+        async function executeQuery() {
+            try {
+                const queryName = '<%= targetQuery %>';
+                const params = document.getElementById('queryParamsEditor').value;
+                
+                // パラメータがJSON形式か確認
+                let parameters;
+                try {
+                    parameters = JSON.parse(params);
+                } catch (e) {                    alert('パラメータは有効なJSON形式で入力してください');
+                    return;
+                }
+                
+                // 実行中表示
+                document.getElementById('queryResultDisplay').innerHTML = `
+                    <div class="loading-container">
+                        <div class="spinner"></div>
+                        <p>実行中...</p>
+                    </div>
+                `;
+                
+                // APIリクエスト - クエリ実行
+                const execUrl = `${typeof basePath !== 'undefined' ? basePath : ''}/api/query/exec`;
+                const response = await fetch(execUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: queryName,
+                        parameters: parameters
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`クエリ実行に失敗しました: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+                  // レスポンス取得
+                queryResult = await response.json();
+                
+                // 結果表示を更新
+                updateQueryResult();
+                
+                // ログビューを更新
+                updateLogsView();
+                
+            } catch (error) {
+                console.error('クエリ実行エラー:', error);
+                document.getElementById('queryResultDisplay').innerHTML = `
+                    <div class="error-panel">
+                        <h3>クエリ実行エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // クエリ結果の表示を更新
+        function updateQueryResult() {
+            const resultDisplay = document.getElementById('queryResultDisplay');
+            
+            if (!queryResult || !queryResult.data) {
+                resultDisplay.innerHTML = `
+                    <div class="no-data-panel">
+                        <p>結果がありません</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const data = queryResult.data;
+            
+            if (data.length === 0) {
+                resultDisplay.innerHTML = `
+                    <div class="no-data-panel">
+                        <p>該当するデータが見つかりませんでした</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 結果をテーブル形式で表示
+            let html = '<table class="data-table" style="width: 100%;">';
+            
+            // テーブルヘッダー
+            html += '<thead><tr>';
+            const headers = Object.keys(data[0]);
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead>';
+            
+            // テーブルボディ
+            html += '<tbody>';
+            data.forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    const cellValue = row[header];
+                    const displayValue = cellValue !== null && cellValue !== undefined 
+                        ? (typeof cellValue === 'object' ? JSON.stringify(cellValue) : cellValue) 
+                        : '';
+                    html += `<td>${displayValue}</td>`;
+                });                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            
+            resultDisplay.innerHTML = html;
+        }
+        
+        // ログビューの更新
+        async function updateLogsView() {
+            try {
+                const queryName = '<%= targetQuery %>';
+                
+                // ここではダミーデータを表示していますが、実際のAPIが実装されたら置き換えてください
+                // 例えば、/api/query/logs?name=クエリ名 のようなエンドポイントからデータを取得
+                const now = new Date();
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                // ダミーのログデータ
+                const logs = [
+                    {
+                        execution_time: now.toLocaleString(),
+                        status: '成功',
+                        user: 'システム',
+                        duration: '0.35秒',
+                        message: '正常に完了しました'
+                    },
+                    {
+                        execution_time: yesterday.toLocaleString(),
+                        status: '成功',
+                        user: 'システム',
+                        duration: '0.42秒',
+                        message: '正常に完了しました'
+                    }
+                ];
+                
+                if (logs.length === 0) {
+                    document.getElementById('queryLogs').innerHTML = `
+                        <div class="no-data-panel">
+                            <p>実行ログはありません</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // ログをテーブル形式で表示
+                let html = `
+                    <div class="logs-container">
+                        <p>クエリ "${queryName}" の実行ログ</p>
+                        <table class="data-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>実行日時</th>
+                                    <th>ステータス</th>
+                                    <th>実行ユーザー</th>
+                                    <th>実行時間</th>
+                                    <th>メッセージ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                logs.forEach(log => {
+                    html += `
+                        <tr>
+                            <td>${log.execution_time}</td>
+                            <td>${log.status}</td>
+                            <td>${log.user}</td>
+                            <td>${log.duration}</td>
+                            <td>${log.message}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                        <p class="mt-10"><small>※ ログは最新の20件のみ表示されます</small></p>
+                    </div>
+                `;
+                
+                document.getElementById('queryLogs').innerHTML = html;
+                
+            } catch (error) {
+                console.error('ログ取得エラー:', error);
+                document.getElementById('queryLogs').innerHTML = `
+                    <div class="error-panel">
+                        <h3>ログ取得エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // DOMContentLoadedイベントで初期化を実行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeQueryPanel);
+        } else {
+            // DOMがすでに読み込まれている場合は直接実行
+            initializeQueryPanel();
+        }
+    })();
+</script>

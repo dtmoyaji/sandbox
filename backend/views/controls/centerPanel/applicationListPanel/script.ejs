@@ -1,0 +1,65 @@
+<script>
+    // アプリケーション一覧を取得する
+    (function() {
+        const basePath = '<%= basePath %>';
+        
+        fetch(`${basePath}/api/models/application`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('アプリケーション一覧の取得に失敗しました');
+                }
+                return response.json();
+            })
+            .then(applications => {
+                const applicationListBody = document.getElementById('applicationListBody');
+                
+                // データ形式の確認と適切な取得
+                const appData = applications.data || applications;
+                
+                if (appData && appData.length > 0) {
+                    applicationListBody.innerHTML = '';
+                    
+                    appData.forEach(app => {
+                        const row = document.createElement('tr');
+                        row.dataset.appName = app.application_name;
+                        row.addEventListener('click', function() {
+                            // アプリケーション詳細ページへの遷移
+                            window.location.href = `${basePath}/admin/application/${app.application_name}`;
+                        });
+                        
+                        // アプリケーション名
+                        const nameCell = document.createElement('td');
+                        nameCell.textContent = app.application_name;
+                        row.appendChild(nameCell);
+                        
+                        // 説明
+                        const descCell = document.createElement('td');
+                        descCell.textContent = app.application_description || '説明なし';
+                        row.appendChild(descCell);
+                        
+                        // 保護レベル
+                        const protectionCell = document.createElement('td');
+                        const protectionBadge = document.createElement('span');
+                        protectionBadge.textContent = app.application_protection || 'protected';
+                        protectionBadge.classList.add('status-badge', 
+                            app.application_protection === 'public' ? 'enabled' : 'disabled');
+                        protectionCell.appendChild(protectionBadge);
+                        row.appendChild(protectionCell);
+                        
+                        applicationListBody.appendChild(row);
+                    });
+                } else {
+                    applicationListBody.innerHTML = '<tr><td colspan="3">アプリケーションが見つかりませんでした</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('アプリケーション一覧の取得エラー:', error);
+                const applicationListBody = document.getElementById('applicationListBody');
+                applicationListBody.innerHTML = `<tr><td colspan="3" class="error-message">エラー: ${error.message}</td></tr>`;
+                
+                // デバッグ情報を追加
+                console.debug('API URL:', `${basePath}/api/models/application`);
+                console.debug('ユーザーエージェント:', navigator.userAgent);
+            });
+    })();
+</script>

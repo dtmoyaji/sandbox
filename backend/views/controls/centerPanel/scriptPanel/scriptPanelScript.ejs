@@ -1,0 +1,482 @@
+<script>
+    // ページ読み込み時に実行される処理を定義したIIFE
+    (function() {
+        // スクリプトデータを保持する変数（グローバルにならないようにスコープを限定）
+        let scriptData = null;
+        
+        // 初期化処理
+        function initializeScriptPanel() {
+            // タブの切り替え
+            const tabs = document.querySelectorAll('.tab');
+            const views = document.querySelectorAll('.centerView');
+
+            tabs.forEach((tab) => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach((t) => {
+                        t.removeAttribute('selected');
+                    });
+                    tab.setAttribute('selected', 'true');
+
+                    views.forEach((view) => {
+                        view.style.display = 'none';
+                    });
+                    document.getElementById(tab.id + 'View').style.display = 'block';
+                });
+            });
+
+            // ボタンイベントリスナー設定
+            document.getElementById('saveScriptBtn')?.addEventListener('click', saveScript);
+            document.getElementById('resetScriptBtn')?.addEventListener('click', resetScript);
+            document.getElementById('executeScriptBtn')?.addEventListener('click', executeScript);
+            document.getElementById('showParamHelpBtn')?.addEventListener('click', toggleParamHelp);
+            
+            // 初期データ読み込み
+            loadScriptData();
+        }
+        
+        // スクリプトデータ読み込み
+        async function loadScriptData() {
+            try {
+                const scriptName = '<%= targetScript %>';
+                console.log('スクリプト情報を取得します:', scriptName);
+
+                // スクリプト情報取得
+                const apiUrl = `${typeof basePath !== 'undefined' ? basePath : ''}/api/models/script?script_name=${encodeURIComponent(scriptName)}`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`スクリプトの取得に失敗しました: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('APIレスポンスデータ:', data);
+                
+                if (!data || !data.data) {
+                    throw new Error('APIレスポンスの形式が正しくありません');
+                }
+                
+                scriptData = data.data[0];
+                
+                // 各ビューを更新
+                updateOverviewView();
+                updateEditorView();
+                updateParamHelp();
+                updateLogsView();
+                
+            } catch (error) {
+                console.error('スクリプトデータの取得エラー:', error);
+                document.getElementById('scriptOverview').innerHTML = `
+                    <div class="error-panel">
+                        <h3>エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('scriptEditor').innerHTML = `
+                    <div class="error-panel">
+                        <h3>エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('scriptLogs').innerHTML = `
+                    <div class="error-panel">
+                        <h3>エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 概要ビューの更新
+        function updateOverviewView() {
+            if (!scriptData) return;
+            
+            // バインドモジュールの表示用整形
+            let bindModuleStr = 'なし';
+            let bindModuleDetail = '';
+            try {
+                const bindModule = JSON.parse(scriptData.bind_module || '[]');
+                if (bindModule && bindModule.length > 0) {
+                    bindModuleStr = bindModule.map(m => `${m.name}: ${m.from}`).join('<br>');
+                    
+                    // 詳細表示用
+                    bindModuleDetail = '<table class="data-table">' +
+                        '<thead><tr><th>モジュール名</th><th>インポート元</th><th>説明</th></tr></thead>' +
+                        '<tbody>';
+                    
+                    for (const module of bindModule) {
+                        bindModuleDetail += `<tr>
+                            <td>${module.name || ''}</td>
+                            <td>${module.from || ''}</td>
+                            <td>${module.description || ''}</td>
+                        </tr>`;
+                    }
+                    
+                    bindModuleDetail += '</tbody></table>';
+                }
+            } catch (e) {
+                bindModuleStr = scriptData.bind_module || 'なし';
+                console.error('バインドモジュールの解析エラー:', e);
+            }
+            
+            // パラメータの表示用整形
+            let parametersStr = 'なし';
+            let parametersDetail = '';
+            try {
+                const parameters = JSON.parse(scriptData.parameters || '{}');
+                if (parameters && Object.keys(parameters).length > 0) {
+                    parametersStr = Object.keys(parameters).join(', ');
+                    
+                    // 詳細表示用
+                    parametersDetail = '<table class="data-table mt-10">' +
+                        '<thead><tr><th>パラメータ名</th><th>型</th><th>説明</th><th>必須</th><th>デフォルト値</th></tr></thead>' +
+                        '<tbody>';
+                    
+                    for (const [key, param] of Object.entries(parameters)) {
+                        parametersDetail += `<tr>
+                            <td>${key}</td>
+                            <td>${param.type || '-'}</td>
+                            <td>${param.description || '-'}</td>
+                            <td>${param.required ? '必須' : '任意'}</td>
+                            <td>${param.default !== undefined ? JSON.stringify(param.default) : '-'}</td>
+                        </tr>`;
+                    }
+                    
+                    parametersDetail += '</tbody></table>';
+                }
+            } catch (e) {
+                parametersStr = scriptData.parameters || 'なし';
+                console.error('パラメータの解析エラー:', e);
+            }
+            
+            // スクリプトレコード情報の表示
+            const recordInfoHtml = `
+                <div class="script-info">
+                    <div class="script-info-row">
+                        <div class="script-info-label">スクリプト名:</div>
+                        <div class="script-info-value">${scriptData.script_name || 'なし'}</div>
+                    </div>
+                    <div class="script-info-row">
+                        <div class="script-info-label">スクリプトID:</div>
+                        <div class="script-info-value">${scriptData.script_id || 'なし'}</div>
+                    </div>
+                    <div class="script-info-row">
+                        <div class="script-info-label">アプリケーションID:</div>
+                        <div class="script-info-value">${scriptData.application_id || 'なし'}</div>
+                    </div>
+                    <div class="script-info-row">
+                        <div class="script-info-label">説明:</div>
+                        <div class="script-info-value">${scriptData.description || '説明なし'}</div>
+                    </div>
+                    <div class="script-info-row">
+                        <div class="script-info-label">バインドモジュール:</div>
+                        <div class="script-info-value">${bindModuleStr}</div>
+                    </div>
+                    <div class="script-info-row">
+                        <div class="script-info-label">パラメータ:</div>
+                        <div class="script-info-value">${parametersStr}</div>
+                    </div>
+                    <div class="script-info-row">
+                        <div class="script-info-label">作成日:</div>
+                        <div class="script-info-value">${scriptData.created_at ? new Date(scriptData.created_at).toLocaleString() : 'なし'}</div>
+                    </div>
+                    <div class="script-info-row">
+                        <div class="script-info-label">更新日:</div>
+                        <div class="script-info-value">${scriptData.updated_at ? new Date(scriptData.updated_at).toLocaleString() : 'なし'}</div>
+                    </div>
+                    <div class="script-info-row">
+                        <div class="script-info-label">削除日:</div>
+                        <div class="script-info-value">${scriptData.deleted_at ? new Date(scriptData.deleted_at).toLocaleString() : 'なし'}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4>バインドモジュール詳細</h4>
+                    ${bindModuleDetail || '<p>バインドモジュールはありません</p>'}
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4>パラメータ詳細</h4>
+                    ${parametersDetail || '<p>パラメータ定義はありません</p>'}
+                </div>
+            `;
+            
+            document.getElementById('scriptOverview').innerHTML = recordInfoHtml;
+        }
+        
+        // スクリプトエディタにスクリプト内容を表示
+        function updateEditorView() {
+            if (!scriptData || !scriptData.script) {
+                document.getElementById('scriptCodeEditor').value = 'スクリプトが見つかりません。';
+                return;
+            }
+
+            // スクリプト内容の\nを改行に変換してエディタに設定
+            const formattedScript = scriptData.script.replace(/\\n/g, '\n');
+            document.getElementById('scriptCodeEditor').value = formattedScript;
+        }
+        
+        // パラメータヘルプの更新
+        function updateParamHelp() {
+            if (!scriptData) return;
+            
+            try {
+                const parameters = JSON.parse(scriptData.parameters || '{}');
+                if (parameters && Object.keys(parameters).length > 0) {
+                    // パラメータのサンプル値を作成
+                    const sampleParams = {};
+                    for (const [key, param] of Object.entries(parameters)) {
+                        if (param.default !== undefined) {
+                            sampleParams[key] = param.default;
+                        } else {
+                            // 型に基づいてサンプル値を設定
+                            switch (param.type) {
+                                case 'string':
+                                    sampleParams[key] = param.example || "";
+                                    break;
+                                case 'number':
+                                    sampleParams[key] = param.example || 0;
+                                    break;
+                                case 'boolean':
+                                    sampleParams[key] = param.example || false;
+                                    break;
+                                case 'array':
+                                    sampleParams[key] = param.example || [];
+                                    break;
+                                case 'object':
+                                    sampleParams[key] = param.example || {};
+                                    break;
+                                default:
+                                    sampleParams[key] = null;
+                            }
+                        }
+                    }
+                    
+                    // パラメータヘルプを作成
+                    let helpContent = '<div><p>このスクリプトは以下のパラメータを受け付けます：</p>';
+                    helpContent += '<table class="data-table">' +
+                        '<thead><tr><th>パラメータ名</th><th>型</th><th>説明</th><th>必須</th></tr></thead>' +
+                        '<tbody>';
+                    
+                    for (const [key, param] of Object.entries(parameters)) {
+                        helpContent += `<tr>
+                            <td>${key}</td>
+                            <td>${param.type || '-'}</td>
+                            <td>${param.description || '-'}</td>
+                            <td>${param.required ? '必須' : '任意'}</td>
+                        </tr>`;
+                    }
+                    
+                    helpContent += '</tbody></table>';
+                    
+                    // サンプルパラメータを表示
+                    helpContent += '<p class="mt-10">サンプルパラメータ:</p>';
+                    helpContent += `<pre class="code-block">${JSON.stringify(sampleParams, null, 2)}</pre>`;
+                    helpContent += '<button id="useParamSampleBtn" class="btn btn-sm btn-secondary">このサンプルを使用</button>';
+                    helpContent += '</div>';
+                    
+                    document.getElementById('paramHelpContent').innerHTML = helpContent;
+                    
+                    // サンプルパラメータを使用するボタンのイベントリスナーを設定
+                    setTimeout(() => {
+                        const useParamSampleBtn = document.getElementById('useParamSampleBtn');
+                        if (useParamSampleBtn) {
+                            useParamSampleBtn.addEventListener('click', () => {
+                                document.getElementById('scriptParamsEditor').value = JSON.stringify(sampleParams, null, 2);
+                            });
+                        }
+                    }, 0);
+                } else {
+                    document.getElementById('paramHelpContent').innerHTML = '<p>このスクリプトにはパラメータ定義がありません。</p>';
+                }
+            } catch (e) {
+                console.error('パラメータヘルプの更新エラー:', e);
+                document.getElementById('paramHelpContent').innerHTML = `<p>パラメータ定義の解析に失敗しました: ${e.message}</p>`;
+            }
+        }
+        
+        // パラメータヘルプの表示/非表示切り替え
+        function toggleParamHelp() {
+            const paramHelp = document.getElementById('paramHelp');
+            const isVisible = paramHelp.style.display !== 'none';
+            
+            paramHelp.style.display = isVisible ? 'none' : 'block';
+            document.getElementById('showParamHelpBtn').textContent = isVisible ? 'パラメータヘルプ' : 'ヘルプを隠す';
+        }
+        
+        // ログビューの更新
+        async function updateLogsView() {
+            try {
+                // スクリプトログを取得する処理（APIがある場合）
+                // ここでは仮のメッセージを表示
+                document.getElementById('scriptLogs').innerHTML = `
+                    <p>ログ機能は現在実装中です。</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>実行日時</th>
+                                <th>ステータス</th>
+                                <th>メッセージ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>${new Date().toLocaleString()}</td>
+                                <td>情報</td>
+                                <td>ログ機能は開発中です</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('ログ取得エラー:', error);
+                document.getElementById('scriptLogs').innerHTML = `<p>エラー: ${error.message}</p>`;
+            }
+        }
+        
+        // スクリプト保存処理
+        async function saveScript() {
+            try {
+                const scriptContent = document.getElementById('scriptCodeEditor').value;
+                if (!scriptContent || scriptContent.trim() === '') {
+                    alert('スクリプト内容を入力してください');
+                    return;
+                }
+                
+                // APIリクエスト - スクリプト保存
+                const scriptName = '<%= targetScript %>';
+                const saveUrl = `${typeof basePath !== 'undefined' ? basePath : ''}/api/models/script/${encodeURIComponent(scriptName)}`;
+                const response = await fetch(saveUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        script: scriptContent
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`スクリプト保存に失敗しました: ${response.status} ${response.statusText}`);
+                }
+                
+                // 保存成功
+                alert('スクリプトを保存しました');
+                
+                // データを再取得
+                await loadScriptData();
+            } catch (error) {
+                console.error('スクリプト保存エラー:', error);
+                alert(`エラー: ${error.message}`);
+            }
+        }
+        
+        // スクリプトリセット処理
+        function resetScript() {
+            if (confirm('編集中の内容を破棄して元に戻しますか？')) {
+                updateEditorView();
+            }
+        }
+        
+        // スクリプト実行処理
+        async function executeScript() {
+            try {
+                const scriptName = '<%= targetScript %>';
+                const params = document.getElementById('scriptParamsEditor').value;
+                
+                // パラメータがJSON形式か確認
+                let parameters;
+                try {
+                    parameters = JSON.parse(params);
+                } catch (e) {
+                    alert('パラメータは有効なJSON形式で入力してください');
+                    return;
+                }
+                
+                // 実行中表示
+                document.getElementById('scriptResultDisplay').textContent = '実行中...';
+                
+                // APIリクエスト - スクリプト実行
+                const execUrl = `${typeof basePath !== 'undefined' ? basePath : ''}/api/script/exec`;
+                const response = await fetch(execUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        script_name: scriptName,
+                        parameters: parameters
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`スクリプト実行に失敗しました: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+                
+                // レスポンス取得
+                const result = await response.json();
+                
+                // 結果表示を更新
+                updateScriptResult(result);
+                
+                // ログビューを更新
+                updateLogsView();
+            } catch (error) {
+                console.error('スクリプト実行エラー:', error);
+                document.getElementById('scriptResultDisplay').innerHTML = `
+                    <div class="error-panel">
+                        <h3>実行エラー</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // スクリプト結果の表示を更新
+        function updateScriptResult(response) {
+            const resultDisplay = document.getElementById('scriptResultDisplay');
+            if (!response || !response.text || !response.text.成分) {
+                resultDisplay.textContent = '結果がありません。';
+                return;
+            }
+
+            const elements = response.text.成分;
+            if (elements.length === 0) {
+                resultDisplay.textContent = '該当する成分が見つかりませんでした。';
+                return;
+            }
+
+            // 結果をHTMLに整形
+            let html = '<h4>検索結果:</h4><ul class="result-item-list">';
+            for (const element of elements) {
+                html += '<li class="result-item">';
+                html += `<strong>成分名:</strong> ${element.成分名 || '不明'}<br>`;
+                html += `<strong>説明:</strong> ${element.説明 || '説明なし'}<br>`;
+                html += `<strong>該当商品数:</strong> ${element.全商品数 || 0}<br>`;
+
+                if (element.商品 && element.商品.length > 0) {
+                    html += '<strong>商品:</strong><ul class="product-list">';
+                    for (const product of element.商品) {
+                        html += `<li>${product.商品名 || '商品名不明'}</li>`;
+                    }
+                    html += '</ul>';
+                } else {
+                    html += '<strong>商品:</strong> 該当商品なし<br>';
+                }
+
+                html += '</li>';
+            }
+            html += '</ul>';
+
+            resultDisplay.innerHTML = html;
+        }
+        
+        // DOMContentLoadedイベントで初期化を実行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeScriptPanel);
+        } else {
+            // DOMがすでに読み込まれている場合は直接実行
+            initializeScriptPanel();
+        }
+    })();
+</script>
